@@ -2,15 +2,31 @@
 
 import { useState } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
+import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
 import { fetchAndParseM3U } from "@/services/fetchAndParseM3U";
 import { services } from "@/config/services";
 import ChannelCard from "@/components/ChannelCard/ChannelCard";
+import { StreamFormat } from "@/types/StreamFormat";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
-    const [searchTerm, setSearchTerm] = useState("");
-    const filteredEntries = entries.filter((entry) => entry.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const [searchName, setSearchName] = useState("");
+    const [searchGroup, setSearchGroup] = useState("");
+    const [searchTvgId, setSearchTvgId] = useState("");
+    const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
+    const filteredEntries = entries.filter((entry) => {
+        const nameMatch = searchName ? entry.name.toLowerCase().includes(searchName.toLowerCase()) : true;
+
+        const groupMatch = searchGroup ? entry.groupTitle.toLowerCase().includes(searchGroup.toLowerCase()) : true;
+
+        const idMatch = searchTvgId ? entry.tvgId.toLowerCase().includes(searchTvgId.toLowerCase()) : true;
+
+        const formatMatch = searchFormat ? entry.url.toLowerCase().endsWith(`.${searchFormat}`) : true;
+
+        return nameMatch && groupMatch && idMatch && formatMatch;
+    });
+
     const [currentPage, setCurrentPage] = useState(1);
 
     const pageSize = 50;
@@ -38,17 +54,57 @@ export default function HomePage() {
                 </button>
             ))}
 
-            <div className="mt-4 mb-4">
+            <div className="flex flex-wrap gap-2 items-center my-4">
                 <input
                     type="text"
-                    placeholder="Search channels..."
-                    value={searchTerm}
+                    placeholder={`Search ${M3UEntryFieldLabel.name}`}
+                    title={M3UEntryFieldLabel.name}
+                    value={searchName}
                     onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setCurrentPage(1); // reset to page 1 when searching
+                        setSearchName(e.target.value);
+                        setCurrentPage(1);
                     }}
-                    className="w-full max-w-md px-4 py-2 border rounded"
+                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
                 />
+                <input
+                    type="text"
+                    placeholder={`Search ${M3UEntryFieldLabel.groupTitle}`}
+                    title={M3UEntryFieldLabel.groupTitle}
+                    value={searchGroup}
+                    onChange={(e) => {
+                        setSearchGroup(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
+                />
+                <input
+                    type="text"
+                    placeholder={`Search ${M3UEntryFieldLabel.tvgId}`}
+                    title={M3UEntryFieldLabel.tvgId}
+                    value={searchTvgId}
+                    onChange={(e) => {
+                        setSearchTvgId(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
+                />
+                <select
+                    value={searchFormat}
+                    onChange={(e) => {
+                        setSearchFormat(e.target.value as StreamFormat);
+                        setCurrentPage(1);
+                    }}
+                    className="flex-[0.25] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
+
+                    title="Stream Format"
+                >
+                    <option value="">All Formats</option>
+                    {Object.values(StreamFormat).map((format) => (
+                        <option key={format} value={format}>
+                            {format.toUpperCase()}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             <p className="text-sm text-gray-500 mb-2">
