@@ -47,27 +47,37 @@ export default function ChannelCard({ entry }: Props) {
       {/* Metadata */}
       <div className="p-4">
         <h2
-          className="text-lg font-semibold truncate"
-          title={M3UEntryFieldLabel.name}
+          className={`font-semibold truncate ${
+            entry.name.length > 30 ? 'text-sm' : 'text-lg'
+          }`}
+          title={`${M3UEntryFieldLabel.name}='${entry.name}'`}  
         >
           {entry.name}
         </h2>
 
         <p
           className="text-sm text-gray-400 truncate"
-          title={M3UEntryFieldLabel.groupTitle}
+          title={`${M3UEntryFieldLabel.groupTitle}='${entry.groupTitle}'`}
         >
           {entry.groupTitle}
         </p>
+        <div>
+            {extension && (
+            <p
+                className="text-xs text-gray-500 mt-1 text-left"
+            >
+                Format: <code>{extension}</code>
+            </p>
+            )}
+            {entry.tvgId && (
+            <p className="text-xs text-gray-500 mt-1 text-right"
+                 title={`${M3UEntryFieldLabel.tvgId}='${entry.tvgId}'`}
+            >
+                    {entry.tvgId}
 
-        {extension && (
-          <p
-            className="text-xs text-gray-500 mt-1"
-            title={M3UEntryFieldLabel.url}
-          >
-            Format: <code>{extension}</code>
-          </p>
-        )}
+            </p>
+            )}
+        </div>
       </div>
     </div>
   );

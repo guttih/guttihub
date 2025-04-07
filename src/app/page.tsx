@@ -8,6 +8,7 @@ import { fetchAndParseM3U } from "@/services/fetchAndParseM3U";
 import { services } from "@/config/services";
 import ChannelCard from "@/components/ChannelCard/ChannelCard";
 import { StreamFormat } from "@/types/StreamFormat";
+import { APP_NAME, DEFAULT_PAGE_SIZE } from "@/config";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -29,7 +30,7 @@ export default function HomePage() {
 
     const [currentPage, setCurrentPage] = useState(1);
 
-    const pageSize = 50;
+    const pageSize = `${DEFAULT_PAGE_SIZE}`;
 
     const totalPages = Math.ceil(filteredEntries.length / pageSize);
     const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -46,7 +47,7 @@ export default function HomePage() {
 
     return (
         <main className="p-4">
-            <h1 className="text-xl font-bold mb-4">Streaming Client</h1>
+            <h1 className="text-xl font-bold mb-4">{APP_NAME}</h1>
 
             {services.map((service) => (
                 <button key={service.id} onClick={() => handleFetch(service)} className="bg-blue-600 text-white px-4 py-2 rounded mr-2">
@@ -107,8 +108,8 @@ export default function HomePage() {
                 </select>
             </div>
 
-            <p className="text-sm text-gray-500 mb-2">
-                Showing {filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}
+            <p className="text-sm text-gray-500 mb-2 text-center">
+                Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;<i>{filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}</i> 
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
@@ -122,7 +123,7 @@ export default function HomePage() {
                     <button
                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
-                        className="bg-gray-200 px-4 py-2 rounded disabled:opacity-50"
+                        className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
                     >
                         ⬅ Prev
                     </button>
@@ -134,7 +135,7 @@ export default function HomePage() {
                     <button
                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
-                        className="bg-gray-200 px-4 py-2 rounded disabled:opacity-50"
+                        className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
                     >
                         Next ➡
                     </button>
