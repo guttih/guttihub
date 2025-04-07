@@ -1,0 +1,10 @@
+= Development 
+
+This document is intended for developers and here we show some useful development tips and tricks.
+
+== Useful commands
+
+.List all relevant project files
+[source,sh]
+find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" -print
+
