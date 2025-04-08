@@ -1,6 +1,6 @@
 import { M3UEntry } from '@/types/M3UEntry';
 
-export function m3uParser(content: string): M3UEntry[] {
+export function parseM3U(content: string): M3UEntry[] {
     const lines = content.split(/\r?\n/);
     const entries: M3UEntry[] = [];
   

@@ -8,3 +8,51 @@ This document is intended for developers and here we show some useful developmen
 [source,sh]
 find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" -print
 
+== Naming Conventions
+
+We aim to keep naming consistent and meaningful across the project.
+
+=== General
+
+- Use `camelCase` for variables, constants, and most functions
+- Use `PascalCase` for React components, types, and folders
+- Use `kebab-case` or lowercase for filenames that aren't components (e.g. `parseM3U.ts`)
+- Match function names to filenames when there’s a 1:1 relationship (e.g. `parseM3U()` in `parseM3U.ts`)
+
+=== Components
+
+- Place each component in its own folder under `src/components/`
+- Component folder and file should match (`ChannelCard/ChannelCard.tsx`)
+- Optionally include an `index.ts` file to simplify imports
+
+.Example
+[source,ts]
+----
+import ChannelCard from '@/components/ChannelCard';
+----
+
+=== Utilities
+
+- Single-purpose utility functions go in `src/utils/` (e.g. `parseM3U.ts`)
+- Multi-function modules may use a folder with `index.ts`
+
+=== Types
+
+- All TypeScript types go in `src/types/`
+- Use `PascalCase` for filenames and type names (e.g. `M3UEntry.ts`)
+- If a type is domain-specific, prefix accordingly (e.g. `FetchM3URequest.ts`)
+
+=== Configuration
+
+- Use `config/index.ts` as an entry point if needed
+- Example and default configs are named like `services.example.ts` / `services.ts`
+
+=== Tests
+
+- Unit tests go in `test/` or near their source file (`__tests__` folder optional)
+- Use the same name as the file being tested, but suffixed with `.test.ts`
+- Real input assets (e.g. `.m3u` files) go in `test/assets/`
+
+---
+
+Let me know if you'd prefer this in its own file (`naming-conventions.adoc`) or want a `README-style` summary version for the GitHub front page.

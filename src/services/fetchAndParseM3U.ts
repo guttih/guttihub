@@ -1,6 +1,6 @@
 import { M3UEntry } from "@/types/M3UEntry";
 import { StreamingService } from "@/types/StreamingService";
-import { m3uParser } from "@/utils/m3uParser";
+import { parseM3U } from "@/utils/parseM3U";
 import { FetchM3URequest } from "@/types/FetchM3URequest";
 
 export async function fetchAndParseM3U(service: StreamingService): Promise<M3UEntry[]> {
@@ -23,7 +23,7 @@ export async function fetchAndParseM3U(service: StreamingService): Promise<M3UEn
             throw new Error(errorMessage);
         }
 
-        const parsedEntries = m3uParser(json.data);
+        const parsedEntries = parseM3U(json.data);
 
         return parsedEntries;
     } catch (error: any) {
