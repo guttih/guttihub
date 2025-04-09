@@ -2,7 +2,7 @@
 
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
-import PlayerButton from "@/components/PlayerButton/PlayerButton";
+import { PlayerButton } from "@/components/PlayerButton/PlayerButton";
 
 interface Props {
     entry: M3UEntry;
@@ -18,7 +18,7 @@ function getExtension(url: string): string | null {
     }
 }
 
-export default function ChannelCard({ entry }: Props) {
+export function ChannelCard({ entry }: Props) {
     const extension = getExtension(entry.url);
 
     return (
@@ -29,7 +29,7 @@ export default function ChannelCard({ entry }: Props) {
                     src={entry.tvgLogo || "/fallback.png"}
                     alt={`${entry.name} logo`}
                     className="w-full h-48 object-contain bg-gray-950"
-                    title={M3UEntryFieldLabel.tvgLogo}
+                    title={`${M3UEntryFieldLabel.tvgLogo}='${entry.tvgLogo}'`}
                     onError={(e) => {
                         (e.target as HTMLImageElement).src = "/fallback.png";
                     }}

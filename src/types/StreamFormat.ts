@@ -12,7 +12,7 @@ export enum StreamFormat {
   
 
   // Supported directly by browser or hls.js:
-export const SupportedFormats: StreamFormat[] = [
+export const supportedFormats: StreamFormat[] = [
     StreamFormat.MP4,
     StreamFormat.MKV,
     // StreamFormat.M3U8 //No wideo with this format was found on servers

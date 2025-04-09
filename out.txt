@@ -1,0 +1,877 @@
+./.next/types/app/api/fetch-m3u/route.ts
+// File: C:\Users\gutti\source\repos\react\streaming-client\src\app\api\fetch-m3u\route.ts
+import * as entry from '../../../../../src/app/api/fetch-m3u/route.js'
+import type { NextRequest } from 'next/server.js'
+
+type TEntry = typeof import('../../../../../src/app/api/fetch-m3u/route.js')
+
+type SegmentParams<T extends Object = any> = T extends Record<string, any>
+  ? { [K in keyof T]: T[K] extends string ? string | string[] | undefined : never }
+  : T
+
+// Check that the entry is a valid entry
+checkFields<Diff<{
+  GET?: Function
+  HEAD?: Function
+  OPTIONS?: Function
+  POST?: Function
+  PUT?: Function
+  DELETE?: Function
+  PATCH?: Function
+  config?: {}
+  generateStaticParams?: Function
+  revalidate?: RevalidateRange<TEntry> | false
+  dynamic?: 'auto' | 'force-dynamic' | 'error' | 'force-static'
+  dynamicParams?: boolean
+  fetchCache?: 'auto' | 'force-no-store' | 'only-no-store' | 'default-no-store' | 'default-cache' | 'only-cache' | 'force-cache'
+  preferredRegion?: 'auto' | 'global' | 'home' | string | string[]
+  runtime?: 'nodejs' | 'experimental-edge' | 'edge'
+  maxDuration?: number
+  
+}, TEntry, ''>>()
+
+type RouteContext = { params: Promise<SegmentParams> }
+// Check the prop type of the entry function
+if ('GET' in entry) {
+  checkFields<
+    Diff<
+      ParamCheck<Request | NextRequest>,
+      {
+        __tag__: 'GET'
+        __param_position__: 'first'
+        __param_type__: FirstArg<MaybeField<TEntry, 'GET'>>
+      },
+      'GET'
+    >
+  >()
+  checkFields<
+    Diff<
+      ParamCheck<RouteContext>,
+      {
+        __tag__: 'GET'
+        __param_position__: 'second'
+        __param_type__: SecondArg<MaybeField<TEntry, 'GET'>>
+      },
+      'GET'
+    >
+  >()
+  
+  checkFields<
+    Diff<
+      {
+        __tag__: 'GET',
+        __return_type__: Response | void | never | Promise<Response | void | never>
+      },
+      {
+        __tag__: 'GET',
+        __return_type__: ReturnType<MaybeField<TEntry, 'GET'>>
+      },
+      'GET'
+    >
+  >()
+}
+// Check the prop type of the entry function
+if ('HEAD' in entry) {
+  checkFields<
+    Diff<
+      ParamCheck<Request | NextRequest>,
+      {
+        __tag__: 'HEAD'
+        __param_position__: 'first'
+        __param_type__: FirstArg<MaybeField<TEntry, 'HEAD'>>
+      },
+      'HEAD'
+    >
+  >()
+  checkFields<
+    Diff<
+      ParamCheck<RouteContext>,
+      {
+        __tag__: 'HEAD'
+        __param_position__: 'second'
+        __param_type__: SecondArg<MaybeField<TEntry, 'HEAD'>>
+      },
+      'HEAD'
+    >
+  >()
+  
+  checkFields<
+    Diff<
+      {
+        __tag__: 'HEAD',
+        __return_type__: Response | void | never | Promise<Response | void | never>
+      },
+      {
+        __tag__: 'HEAD',
+        __return_type__: ReturnType<MaybeField<TEntry, 'HEAD'>>
+      },
+      'HEAD'
+    >
+  >()
+}
+// Check the prop type of the entry function
+if ('OPTIONS' in entry) {
+  checkFields<
+    Diff<
+      ParamCheck<Request | NextRequest>,
+      {
+        __tag__: 'OPTIONS'
+        __param_position__: 'first'
+        __param_type__: FirstArg<MaybeField<TEntry, 'OPTIONS'>>
+      },
+      'OPTIONS'
+    >
+  >()
+  checkFields<
+    Diff<
+      ParamCheck<RouteContext>,
+      {
+        __tag__: 'OPTIONS'
+        __param_position__: 'second'
+        __param_type__: SecondArg<MaybeField<TEntry, 'OPTIONS'>>
+      },
+      'OPTIONS'
+    >
+  >()
+  
+  checkFields<
+    Diff<
+      {
+        __tag__: 'OPTIONS',
+        __return_type__: Response | void | never | Promise<Response | void | never>
+      },
+      {
+        __tag__: 'OPTIONS',
+        __return_type__: ReturnType<MaybeField<TEntry, 'OPTIONS'>>
+      },
+      'OPTIONS'
+    >
+  >()
+}
+// Check the prop type of the entry function
+if ('POST' in entry) {
+  checkFields<
+    Diff<
+      ParamCheck<Request | NextRequest>,
+      {
+        __tag__: 'POST'
+        __param_position__: 'first'
+        __param_type__: FirstArg<MaybeField<TEntry, 'POST'>>
+      },
+      'POST'
+    >
+  >()
+  checkFields<
+    Diff<
+      ParamCheck<RouteContext>,
+      {
+        __tag__: 'POST'
+        __param_position__: 'second'
+        __param_type__: SecondArg<MaybeField<TEntry, 'POST'>>
+      },
+      'POST'
+    >
+  >()
+  
+  checkFields<
+    Diff<
+      {
+        __tag__: 'POST',
+        __return_type__: Response | void | never | Promise<Response | void | never>
+      },
+      {
+        __tag__: 'POST',
+        __return_type__: ReturnType<MaybeField<TEntry, 'POST'>>
+      },
+      'POST'
+    >
+  >()
+}
+// Check the prop type of the entry function
+if ('PUT' in entry) {
+  checkFields<
+    Diff<
+      ParamCheck<Request | NextRequest>,
+      {
+        __tag__: 'PUT'
+        __param_position__: 'first'
+        __param_type__: FirstArg<MaybeField<TEntry, 'PUT'>>
+      },
+      'PUT'
+    >
+  >()
+  checkFields<
+    Diff<
+      ParamCheck<RouteContext>,
+      {
+        __tag__: 'PUT'
+        __param_position__: 'second'
+        __param_type__: SecondArg<MaybeField<TEntry, 'PUT'>>
+      },
+      'PUT'
+    >
+  >()
+  
+  checkFields<
+    Diff<
+      {
+        __tag__: 'PUT',
+        __return_type__: Response | void | never | Promise<Response | void | never>
+      },
+      {
+        __tag__: 'PUT',
+        __return_type__: ReturnType<MaybeField<TEntry, 'PUT'>>
+      },
+      'PUT'
+    >
+  >()
+}
+// Check the prop type of the entry function
+if ('DELETE' in entry) {
+  checkFields<
+    Diff<
+      ParamCheck<Request | NextRequest>,
+      {
+        __tag__: 'DELETE'
+        __param_position__: 'first'
+        __param_type__: FirstArg<MaybeField<TEntry, 'DELETE'>>
+      },
+      'DELETE'
+    >
+  >()
+  checkFields<
+    Diff<
+      ParamCheck<RouteContext>,
+      {
+        __tag__: 'DELETE'
+        __param_position__: 'second'
+        __param_type__: SecondArg<MaybeField<TEntry, 'DELETE'>>
+      },
+      'DELETE'
+    >
+  >()
+  
+  checkFields<
+    Diff<
+      {
+        __tag__: 'DELETE',
+        __return_type__: Response | void | never | Promise<Response | void | never>
+      },
+      {
+        __tag__: 'DELETE',
+        __return_type__: ReturnType<MaybeField<TEntry, 'DELETE'>>
+      },
+      'DELETE'
+    >
+  >()
+}
+// Check the prop type of the entry function
+if ('PATCH' in entry) {
+  checkFields<
+    Diff<
+      ParamCheck<Request | NextRequest>,
+      {
+        __tag__: 'PATCH'
+        __param_position__: 'first'
+        __param_type__: FirstArg<MaybeField<TEntry, 'PATCH'>>
+      },
+      'PATCH'
+    >
+  >()
+  checkFields<
+    Diff<
+      ParamCheck<RouteContext>,
+      {
+        __tag__: 'PATCH'
+        __param_position__: 'second'
+        __param_type__: SecondArg<MaybeField<TEntry, 'PATCH'>>
+      },
+      'PATCH'
+    >
+  >()
+  
+  checkFields<
+    Diff<
+      {
+        __tag__: 'PATCH',
+        __return_type__: Response | void | never | Promise<Response | void | never>
+      },
+      {
+        __tag__: 'PATCH',
+        __return_type__: ReturnType<MaybeField<TEntry, 'PATCH'>>
+      },
+      'PATCH'
+    >
+  >()
+}
+
+// Check the arguments and return type of the generateStaticParams function
+if ('generateStaticParams' in entry) {
+  checkFields<Diff<{ params: SegmentParams }, FirstArg<MaybeField<TEntry, 'generateStaticParams'>>, 'generateStaticParams'>>()
+  checkFields<Diff<{ __tag__: 'generateStaticParams', __return_type__: any[] | Promise<any[]> }, { __tag__: 'generateStaticParams', __return_type__: ReturnType<MaybeField<TEntry, 'generateStaticParams'>> }>>()
+}
+
+export interface PageProps {
+  params?: Promise<SegmentParams>
+  searchParams?: Promise<any>
+}
+export interface LayoutProps {
+  children?: React.ReactNode
+
+  params?: Promise<SegmentParams>
+}
+
+// =============
+// Utility types
+type RevalidateRange<T> = T extends { revalidate: any } ? NonNegative<T['revalidate']> : never
+
+// If T is unknown or any, it will be an empty {} type. Otherwise, it will be the same as Omit<T, keyof Base>.
+type OmitWithTag<T, K extends keyof any, _M> = Omit<T, K>
+type Diff<Base, T extends Base, Message extends string = ''> = 0 extends (1 & T) ? {} : OmitWithTag<T, keyof Base, Message>
+
+type FirstArg<T extends Function> = T extends (...args: [infer T, any]) => any ? unknown extends T ? any : T : never
+type SecondArg<T extends Function> = T extends (...args: [any, infer T]) => any ? unknown extends T ? any : T : never
+type MaybeField<T, K extends string> = T extends { [k in K]: infer G } ? G extends Function ? G : never : never
+
+type ParamCheck<T> = {
+  __tag__: string
+  __param_position__: string
+  __param_type__: T
+}
+
+function checkFields<_ extends { [k in keyof any]: never }>() {}
+
+// https://github.com/sindresorhus/type-fest
+type Numeric = number | bigint
+type Zero = 0 | 0n
+type Negative<T extends Numeric> = T extends Zero ? never : `${T}` extends `-${string}` ? T : never
+type NonNegative<T extends Numeric> = T extends Zero ? T : Negative<T> extends never ? T : '__invalid_negative_number__'
+./src/app/api/fetch-m3u/route.ts
+import axios from "axios";
+import { NextRequest, NextResponse } from "next/server";
+import { ensureCacheDir, getCacheFilePath, isFileFresh, readFile, writeFile } from "@/utils/fileHandler";
+
+const cacheDurationMs = 6 * 60 * 60 * 1000; // 6 hours
+
+export async function POST(req: NextRequest) {
+    const { url, username, serviceName } = await req.json();
+
+    try {
+        await ensureCacheDir();
+        const cacheFilePath = getCacheFilePath(username, serviceName);
+
+        if (await isFileFresh(cacheFilePath, cacheDurationMs)) {
+            console.log("[CACHE] Using cached file:", cacheFilePath);
+            const cachedContent = await readFile(cacheFilePath);
+            return NextResponse.json({ data: cachedContent });
+        }
+
+        console.log(`[FETCH]Downloading fresh .m3u file for ${serviceName}`);
+        const response = await axios.get(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0",
+            },
+            responseType: "text",
+        });
+
+        await writeFile(cacheFilePath, response.data);
+
+        return NextResponse.json({ data: response.data });
+    } catch (err: unknown) {
+        if (err instanceof Error) {
+            console.error("[M3U FETCH ERROR]", err.message);
+            return NextResponse.json({ error: err.message }, { status: 500 });
+        } else {
+            console.error("[M3U FETCH ERROR]", "Unknown error caught:", err);
+            return NextResponse.json({ error: "[M3U FETCH ERROR] Unknown error" }, { status: 500 });
+        }
+    }
+}
+./src/app/page.tsx
+"use client";
+
+import { useState } from "react";
+import { M3UEntry } from "@/types/M3UEntry";
+import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
+import { StreamingService } from "@/types/StreamingService";
+import { fetchAndParseM3U } from "@/services/fetchAndParseM3U";
+import { services } from "@/config/services";
+import { ChannelCard } from "@/components/ChannelCard/ChannelCard";
+import { StreamFormat } from "@/types/StreamFormat";
+import { appConfig } from "@/config";
+
+export default function HomePage() {
+    const [entries, setEntries] = useState<M3UEntry[]>([]);
+    const [searchName, setSearchName] = useState("");
+    const [searchGroup, setSearchGroup] = useState("");
+    const [searchTvgId, setSearchTvgId] = useState("");
+    const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
+    const filteredEntries = entries.filter((entry) => {
+        const nameMatch = searchName ? entry.name.toLowerCase().includes(searchName.toLowerCase()) : true;
+
+        const groupMatch = searchGroup ? entry.groupTitle.toLowerCase().includes(searchGroup.toLowerCase()) : true;
+
+        const idMatch = searchTvgId ? entry.tvgId.toLowerCase().includes(searchTvgId.toLowerCase()) : true;
+
+        const formatMatch = searchFormat ? entry.url.toLowerCase().endsWith(`.${searchFormat}`) : true;
+
+        return nameMatch && groupMatch && idMatch && formatMatch;
+    });
+
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const pageSize = Number(appConfig.defaultPageSize);
+
+    const totalPages = Math.ceil(filteredEntries.length / pageSize);
+    const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    const handleFetch = async (service: StreamingService) => {
+        try {
+            const parsed = await fetchAndParseM3U(service);
+            setEntries(parsed);
+            setCurrentPage(1); // reset to first page on new fetch
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    return (
+        <main className="p-4">
+            <h1 className="text-xl font-bold mb-4">{appConfig.appName}</h1>
+
+            {services.map((service) => (
+                <button key={service.id} onClick={() => handleFetch(service)} className="bg-blue-600 text-white px-4 py-2 rounded mr-2">
+                    Load {service.name}
+                </button>
+            ))}
+
+            <div className="flex flex-wrap gap-2 items-center my-4">
+                <input
+                    type="text"
+                    placeholder={`Search ${M3UEntryFieldLabel.name}`}
+                    title={M3UEntryFieldLabel.name}
+                    value={searchName}
+                    onChange={(e) => {
+                        setSearchName(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
+                />
+                <input
+                    type="text"
+                    placeholder={`Search ${M3UEntryFieldLabel.groupTitle}`}
+                    title={M3UEntryFieldLabel.groupTitle}
+                    value={searchGroup}
+                    onChange={(e) => {
+                        setSearchGroup(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
+                />
+                <input
+                    type="text"
+                    placeholder={`Search ${M3UEntryFieldLabel.tvgId}`}
+                    title={M3UEntryFieldLabel.tvgId}
+                    value={searchTvgId}
+                    onChange={(e) => {
+                        setSearchTvgId(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
+                />
+                <select
+                    value={searchFormat}
+                    onChange={(e) => {
+                        setSearchFormat(e.target.value as StreamFormat);
+                        setCurrentPage(1);
+                    }}
+                    className="flex-[0.25] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
+
+                    title="Stream Format"
+                >
+                    <option value="">All Formats</option>
+                    {Object.values(StreamFormat).map((format) => (
+                        <option key={format} value={format}>
+                            {format.toUpperCase()}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-2 text-center">
+                Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;<i>{filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}</i> 
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                {paginatedEntries.map((entry) => (
+                    <ChannelCard key={entry.url} entry={entry} />
+                ))}
+            </div>
+
+            {entries.length > 0 && (
+                <div className="flex justify-center items-center mt-6 space-x-2">
+                    <button
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
+                    >
+                        ⬅ Prev
+                    </button>
+
+                    <span className="font-semibold">
+                        Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
+                    >
+                        Next ➡
+                    </button>
+                </div>
+            )}
+        </main>
+    );
+}
+./src/app/player/[serviceId]/[...rest]/page.tsx
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+import { PlayerClient } from "@/components/Player/PlayerClient";
+import { ServiceController } from "@/utils/ServiceController";
+
+export default async function PlayerPage({ params }: { params: { serviceId: string; rest?: string[] } }) {
+    const { serviceId, rest = [] } = params;
+
+    let url = "";
+    if (rest.length == 2) {
+        url = ServiceController.makeViewingUrl(serviceId, rest[0], rest[1]);
+    } else {
+        url = ServiceController.makeViewingUrl(serviceId, null, rest[0]);
+    }
+
+    console.log("viewurl:", url); // Debug line
+
+    if (!url) {
+        return <div className="text-red-500 p-4">Stream not found or expired.</div>;
+    }
+
+    return (
+        <main className="p-4 max-w-4xl mx-auto">
+            <h1 className="text-xl font-bold mb-4">Stream Player</h1>
+            <PlayerClient url={url} />
+        </main>
+    );
+}
+./src/components/ChannelCard/ChannelCard.tsx
+"use client";
+
+import { M3UEntry } from "@/types/M3UEntry";
+import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
+import { PlayerButton } from "@/components/PlayerButton/PlayerButton";
+
+interface Props {
+    entry: M3UEntry;
+}
+
+function getExtension(url: string): string | null {
+    try {
+        const path = new URL(url).pathname;
+        const extMatch = path.match(/\.([a-zA-Z0-9]+)(\?.*)?$/);
+        return extMatch ? extMatch[1] : null;
+    } catch {
+        return null;
+    }
+}
+
+export function ChannelCard({ entry }: Props) {
+    const extension = getExtension(entry.url);
+
+    return (
+        <div className="relative bg-gray-900 text-white rounded-lg shadow-md overflow-hidden hover:bg-gray-800 transition duration-600 w-full max-w-xs">
+            {/* Image area with play button */}
+            <div className="relative">
+                <img
+                    src={entry.tvgLogo || "/fallback.png"}
+                    alt={`${entry.name} logo`}
+                    className="w-full h-48 object-contain bg-gray-950"
+                    title={M3UEntryFieldLabel.tvgLogo}
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/fallback.png";
+                    }}
+                />
+
+            {/* Metadata */}
+            <div className="p-4">
+                <h2
+                    className={`font-semibold truncate ${entry.name.length > 30 ? "text-sm" : "text-lg"}`}
+                    title={`${M3UEntryFieldLabel.name}='${entry.name}'`}
+                >
+                    {entry.name}
+                </h2>
+
+                <p className="text-sm text-gray-400 truncate" title={`${M3UEntryFieldLabel.groupTitle}='${entry.groupTitle}'`}>
+                    {entry.groupTitle}
+                </p>
+                <PlayerButton streamUrl={entry.url} className="mt-2" />
+                <div>
+                    {extension && (
+                        <p className="text-xs text-gray-500 mt-1 text-left">
+                            Format: <code>{extension}</code>
+                        </p>
+                    )}
+                    {entry.tvgId && (
+                        <p className="text-xs text-gray-500 mt-1 text-right" title={`${M3UEntryFieldLabel.tvgId}='${entry.tvgId}'`}>
+                            {entry.tvgId}
+                        </p>
+                    )}
+                </div>
+            </div>
+        </div>
+    </div>
+    );
+    
+}
+./src/components/Player/PlayerClient.tsx
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { StreamFormat, supportedFormats } from '@/types/StreamFormat';
+
+interface PlayerProps {
+  url: string;
+  autoPlay?: boolean;
+}
+
+function getFormat(url: string): StreamFormat | undefined {
+  const ext = url.split('.').pop()?.toLowerCase();
+  return ext as StreamFormat | undefined;
+}
+
+export function PlayerClient({ url, autoPlay = true }: PlayerProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [unsupported, setUnsupported] = useState(false);
+
+  useEffect(() => {
+    if (!url) return;
+
+    const format = getFormat(url);
+    const video = videoRef.current;
+
+    console.log('🔄 Player mounted with URL:', url, 'Format:', format);
+
+    if (!format || !supportedFormats.includes(format)) {
+      console.warn('❌ Unsupported format:', format);
+      setUnsupported(true);
+      return;
+    }
+
+    // M3U8 needs HLS.js
+    if (format === StreamFormat.M3U8 && video) {
+      import('hls.js').then(HlsModule => {
+        const Hls = HlsModule.default;
+        if (Hls.isSupported()) {
+          const hls = new Hls();
+          hls.loadSource(url);
+          hls.attachMedia(video);
+        } else {
+          console.warn('HLS.js not supported');
+          setUnsupported(true);
+        }
+      });
+    } else if (video) {
+      video.load();
+    }
+
+    video.onerror = () => {
+      console.error('❌ VIDEO ERROR:', video?.error);
+    };
+
+    video.onloadeddata = () => {
+      console.log('✅ VIDEO LOADED');
+    };
+  }, [url]);
+
+  if (unsupported) {
+    return (
+      <div className="text-center p-4">
+        <p className="text-red-500 mb-2">⚠ This format is not supported in the browser.</p>
+        <a
+          href={url}
+          download
+          className="text-blue-500 underline"
+        >
+          ⬇ Download Stream
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <video
+      ref={videoRef}
+      controls
+      autoPlay={autoPlay}
+      className="w-full h-auto rounded-lg shadow-lg bg-black"
+    >
+      <source src={url} />
+      Your browser does not support video playback.
+    </video>
+  );
+}
+./src/components/PlayerButton/PlayerButton.tsx
+"use client";
+
+import React from "react";
+import { supportedFormats } from "@/types/StreamFormat";
+import { ServiceController } from "@/utils/ServiceController";
+
+interface PlayerButtonProps {
+    streamUrl: string;
+    className?: string;
+}
+
+export function PlayerButton({ streamUrl, className = "" }: PlayerButtonProps) {
+    const extension = streamUrl.split(".").pop()?.toLowerCase();
+    const supported = supportedFormats.map((format) => format.toLowerCase());
+    const serviceObj = ServiceController.findStreamingServiceByViewingUrl(streamUrl);
+    const urlValues = ServiceController.splitStreamingSearchUrl(streamUrl);
+    console.log(`PlayerButton::Got Service Object: ${JSON.stringify(urlValues)}`);
+    const serviceId = serviceObj?.id || null;
+    const streamId = ServiceController.extractLastPartOfUrl(streamUrl);
+
+    console.log(`PlayerButton::Got Service ID: ${serviceId}, Stream ID: ${streamId}`);
+    console.log("Urlvalues", JSON.stringify(urlValues, null, 4));
+
+    let playUrl = `/player/${serviceId}/${streamId}`;
+    console.log(`1PlayerButton::playUrl: ${playUrl}`);
+    if (urlValues) {
+        playUrl = `/player/${serviceId}/${urlValues.pathStart}/${streamId}`;
+    }
+    console.log(`2PlayerButton::playUrl: ${playUrl}`);
+
+    if (!extension) {
+        return null; // skip if extension missing
+    }
+    // Change this to get /player/serviceId/streamId
+    // For supported formats, show the play button
+    if (supported.includes(extension)) {
+        console.log(`PlayerButton::making get request to /player/${serviceId}/${streamId}`);
+        return (
+            <a href={`${playUrl}`} className={`text-blue-400 text-sm hover:underline ${className}`} title="Play stream">
+                ▶ Play Stream
+            </a>
+        );
+    }
+
+    //   if (supported.includes(extension)) {
+    //     return (
+    //       <form action="/player/submit" method="POST" className={className}>
+    //         <input type="hidden" name="url" value={streamUrl} />
+    //         <button type="submit" className="text-blue-400 text-sm hover:underline" title="Play stream">
+    //           ▶ Play Stream
+    //         </button>
+    //       </form>
+    //     );
+    //   }
+
+    // For unsupported formats, show download link
+    return (
+        <a href={streamUrl} download className="text-green-400 text-sm hover:underline" title={`Download ${extension.toUpperCase()} file`}>
+            ⬇ Download {extension.toUpperCase()}
+        </a>
+    );
+}
+./src/services/fetchAndParseM3U.ts
+import { M3UEntry } from "@/types/M3UEntry";
+import { StreamingService } from "@/types/StreamingService";
+import { parseM3U } from "@/utils/parseM3U";
+import { FetchM3URequest } from "@/types/FetchM3URequest";
+
+export async function fetchAndParseM3U(service: StreamingService): Promise<M3UEntry[]> {
+    try {
+        const payload: FetchM3URequest = {
+            url: service.refreshUrl,
+            username: service.username,
+            serviceName: service.name,
+        };
+        const apiResponse = await fetch("/api/fetch-m3u", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+        const json = await apiResponse.json();
+
+        if (!apiResponse.ok) {
+            const errorMessage = json.error || "Failed to fetch M3U";
+            console.error("[FETCH ERROR]", errorMessage);
+            throw new Error(errorMessage);
+        }
+
+        const parsedEntries = parseM3U(json.data);
+
+        return parsedEntries;
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error('Error:', error.message);
+        } else {
+          console.error('Unknown error caught:', error);
+        }
+    }
+}
+./src/types/M3UEntry.ts
+
+export interface M3UEntry {
+    tvgId: string;
+    tvgName: string;
+    tvgLogo: string;
+    groupTitle: string;
+    name: string;
+    url: string;
+  }./src/types/StreamingService.ts
+export interface StreamingService {
+    id: string;
+    name: string;
+    server: string;
+    refreshUrl: string;
+    viewingBaseUrl: string;
+    username: string;
+    password: string;
+  }
+  ./src/utils/parseM3U.ts
+import { M3UEntry } from '@/types/M3UEntry';
+
+export function parseM3U(content: string): M3UEntry[] {
+    const lines = content.split(/\r?\n/);
+    const entries: M3UEntry[] = [];
+  
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+  
+      if (line.startsWith('#EXTINF')) {
+        const url = lines[i + 1]?.trim() || '';
+  
+        const tvgIdMatch = line.match(/tvg-id="(.*?)"/i);
+        const tvgNameMatch = line.match(/tvg-name="(.*?)"/i);
+        const tvgLogoMatch = line.match(/tvg-logo="(.*?)"/i);
+        const groupTitleMatch = line.match(/group-title="(.*?)"/i);
+        const nameMatch = line.match(/,(.*)$/);
+  
+        entries.push({
+          tvgId: tvgIdMatch?.[1] || '',
+          tvgName: tvgNameMatch?.[1] || '',
+          tvgLogo: tvgLogoMatch?.[1] || '',
+          groupTitle: groupTitleMatch?.[1] || '',
+          name: nameMatch?.[1]?.trim() || '',
+          url,
+        });
+  
+        i++; // skip the URL line
+      }
+    }
+  
+    return entries;
+  }

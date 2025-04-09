@@ -1,6 +1,16 @@
 // src/config/index.ts
 
-export const APP_NAME = 'Guttihub Stream';
-export const DEFAULT_PAGE_SIZE = 60;
-export const FALLBACK_IMAGE = '/fallback.png';
-export const SUPPORTED_VIDEO_FORMATS = ['m3u8', 'mp4'];
+interface AppConfigType {
+  appName: string;
+  defaultPageSize: number | string; // Allows both number and string
+  fallbackImage: string;
+  hideCredentialsInUrl: boolean; // Show or hide credentials in URL client-side
+}
+
+// Use the defined type for AppConfig
+export const appConfig: AppConfigType = {
+  appName: 'Guttihub Stream',
+  defaultPageSize: 60,
+  fallbackImage: '/fallback.png',
+  hideCredentialsInUrl: true, // Set to true to hide credentials in URL client-side
+};

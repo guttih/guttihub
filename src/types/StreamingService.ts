@@ -3,7 +3,7 @@ export interface StreamingService {
     name: string;
     server: string;
     refreshUrl: string;
-    viewingUrl: string;
+    viewingBaseUrl: string;
     username: string;
     password: string;
   }

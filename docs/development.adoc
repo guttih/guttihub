@@ -8,6 +8,12 @@ This document is intended for developers and here we show some useful developmen
 [source,sh]
 find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" -print
 
+.List and cat files you specify by name
+[source,sh]
+----
+find . -type f \( -name "fetchAndParseM3U.ts" -o -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "parseM3U.ts" -o -name "route.ts" -o -name "page.tsx" -o -name "PlayerClient.tsx" -o -name "PlayerButton.tsx" -o -name "ChannelCard.tsx" \) -exec sh -c 'echo {}; cat {}' \; 
+----
+
 == Naming Conventions
 
 We aim to keep naming consistent and meaningful across the project.

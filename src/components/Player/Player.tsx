@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+
 import Hls from 'hls.js';
 
 interface PlayerProps {
@@ -10,7 +11,7 @@ interface PlayerProps {
 
 export default function Player({ url, autoPlay = true }: PlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-
+    console.log('🔄 Player.tsx mounted with URL:', url);
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;

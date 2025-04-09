@@ -6,9 +6,9 @@ import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
 import { fetchAndParseM3U } from "@/services/fetchAndParseM3U";
 import { services } from "@/config/services";
-import ChannelCard from "@/components/ChannelCard/ChannelCard";
+import { ChannelCard } from "@/components/ChannelCard/ChannelCard";
 import { StreamFormat } from "@/types/StreamFormat";
-import { APP_NAME, DEFAULT_PAGE_SIZE } from "@/config";
+import { appConfig } from "@/config";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -30,7 +30,7 @@ export default function HomePage() {
 
     const [currentPage, setCurrentPage] = useState(1);
 
-    const pageSize = `${DEFAULT_PAGE_SIZE}`;
+    const pageSize = Number(appConfig.defaultPageSize);
 
     const totalPages = Math.ceil(filteredEntries.length / pageSize);
     const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -38,6 +38,12 @@ export default function HomePage() {
     const handleFetch = async (service: StreamingService) => {
         try {
             const parsed = await fetchAndParseM3U(service);
+            if (!parsed) {
+                console.error("Failed to fetch or parse M3U entries");
+                return;
+            }
+            // Let's console log the first 5 entries for debugging
+            console.log("Fetched Entries:", parsed.slice(0, 5));
             setEntries(parsed);
             setCurrentPage(1); // reset to first page on new fetch
         } catch (err) {
@@ -47,7 +53,7 @@ export default function HomePage() {
 
     return (
         <main className="p-4">
-            <h1 className="text-xl font-bold mb-4">{APP_NAME}</h1>
+            <h1 className="text-xl font-bold mb-4">{appConfig.appName}</h1>
 
             {services.map((service) => (
                 <button key={service.id} onClick={() => handleFetch(service)} className="bg-blue-600 text-white px-4 py-2 rounded mr-2">

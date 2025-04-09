@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { StreamFormat, SupportedFormats } from '@/types/StreamFormat';
+import { StreamFormat, supportedFormats } from '@/types/StreamFormat';
 
 interface PlayerProps {
   url: string;
@@ -13,7 +13,7 @@ function getFormat(url: string): StreamFormat | undefined {
   return ext as StreamFormat | undefined;
 }
 
-export default function PlayerClient({ url, autoPlay = true }: PlayerProps) {
+export function PlayerClient({ url, autoPlay = true }: PlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
 
@@ -25,7 +25,7 @@ export default function PlayerClient({ url, autoPlay = true }: PlayerProps) {
 
     console.log('🔄 Player mounted with URL:', url, 'Format:', format);
 
-    if (!format || !SupportedFormats.includes(format)) {
+    if (!format || !supportedFormats.includes(format)) {
       console.warn('❌ Unsupported format:', format);
       setUnsupported(true);
       return;
