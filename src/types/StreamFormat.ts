@@ -2,8 +2,8 @@
 export enum StreamFormat {
     MP4 = 'mp4',
     MKV = 'mkv',
-    TS = 'ts',
-    AVI = 'avi',
+    // TS = 'ts',
+    // AVI = 'avi',
     //M3U8 = 'm3u8',
     // FLV = 'flv',
     // MOV = 'mov',

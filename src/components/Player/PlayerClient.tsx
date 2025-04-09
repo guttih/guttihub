@@ -23,7 +23,7 @@ export function PlayerClient({ url, autoPlay = true }: PlayerProps) {
     const format = getFormat(url);
     const video = videoRef.current;
 
-    console.log('🔄 Player mounted with URL:', url, 'Format:', format);
+    console.log('🔄 Player mounted with URL:', url, 'Format:', format);  // Debug line
 
     if (!format || !supportedFormats.includes(format)) {
       console.warn('❌ Unsupported format:', format);
@@ -32,21 +32,23 @@ export function PlayerClient({ url, autoPlay = true }: PlayerProps) {
     }
 
     // M3U8 needs HLS.js
-    if (format === StreamFormat.M3U8 && video) {
-      import('hls.js').then(HlsModule => {
-        const Hls = HlsModule.default;
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(url);
-          hls.attachMedia(video);
-        } else {
-          console.warn('HLS.js not supported');
-          setUnsupported(true);
-        }
-      });
-    } else if (video) {
-      video.load();
-    }
+    // if (format === StreamFormat.M3U8 && video) {
+    //   import('hls.js').then(HlsModule => {
+    //     const Hls = HlsModule.default;
+    //     if (Hls.isSupported()) {
+    //       const hls = new Hls();
+    //       hls.loadSource(url);
+    //       hls.attachMedia(video);
+    //     } else {
+    //       console.warn('HLS.js not supported');
+    //       setUnsupported(true);
+    //     }
+    //   });
+    // } else if (video) {
+    //   video.load();
+    // }
+
+    video.load(); // Load the video source
 
     video.onerror = () => {
       console.error('❌ VIDEO ERROR:', video?.error);

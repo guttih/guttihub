@@ -1,3 +1,5 @@
+// Copy this file to an adjacent file named services.ts and fill in the details.
+
 import { StreamingService } from "@/types/StreamingService";
 
 if (process.env.NODE_ENV === "production") {

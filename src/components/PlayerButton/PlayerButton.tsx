@@ -2,39 +2,26 @@
 
 import React from "react";
 import { supportedFormats } from "@/types/StreamFormat";
-import { ServiceController } from "@/utils/ServiceController";
 
 interface PlayerButtonProps {
     streamUrl: string;
     className?: string;
+    showUnsupported?: boolean; 
 }
 
-export function PlayerButton({ streamUrl, className = "" }: PlayerButtonProps) {
+export function PlayerButton({ streamUrl, className = "", showUnsupported }: PlayerButtonProps) {
     const extension = streamUrl.split(".").pop()?.toLowerCase();
     const supported = supportedFormats.map((format) => format.toLowerCase());
-    const serviceObj = ServiceController.findStreamingServiceByViewingUrl(streamUrl);
-    const urlValues = ServiceController.splitStreamingSearchUrl(streamUrl);
-    console.log(`PlayerButton::Got Service Object: ${JSON.stringify(urlValues)}`);
-    const serviceId = serviceObj?.id || null;
-    const streamId = ServiceController.extractLastPartOfUrl(streamUrl);
 
-    console.log(`PlayerButton::Got Service ID: ${serviceId}, Stream ID: ${streamId}`);
-    console.log("Urlvalues", JSON.stringify(urlValues, null, 4));
 
-    let playUrl = `/player/${serviceId}/${streamId}`;
-    console.log(`1PlayerButton::playUrl: ${playUrl}`);
-    if (urlValues) {
-        playUrl = `/player/${serviceId}/${urlValues.pathStart}/${streamId}`;
-    }
-    console.log(`2PlayerButton::playUrl: ${playUrl}`);
+    const playUrl = `/player?streamUrl=${encodeURIComponent(streamUrl)}`; // Debug line
 
     if (!extension) {
         return null; // skip if extension missing
     }
     // Change this to get /player/serviceId/streamId
     // For supported formats, show the play button
-    if (supported.includes(extension)) {
-        console.log(`PlayerButton::making get request to /player/${serviceId}/${streamId}`);
+    if (showUnsupported || supported.includes(extension)) {
         return (
             <a href={`${playUrl}`} className={`text-blue-400 text-sm hover:underline ${className}`} title="Play stream">
                 ▶ Play Stream

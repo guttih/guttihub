@@ -1,4 +1,3 @@
-import { appConfig } from "@/config";
 import { services } from "@/config/services";
 import { StreamingService } from "@/types/StreamingService";
 import { StreamingServiceUrlValues } from "@/types/StreamingServiceUrlValues";
@@ -8,11 +7,12 @@ import { unsanitizeUrl } from "@/utils/urlSanitizer";
  * ServiceController is a utility class that manages streaming services.
  * It provides methods to find services by ID or viewing URL, and to extract the last part of a URL.
  */
-export class ServiceController {
+export class StreamingServiceResolver {
     static findStreamingServiceById(serviceId: string): StreamingService | undefined {
         return services.find((service) => service.id === serviceId);
     }
     static splitStreamingSearchUrl(viewingBaseUrl: string): StreamingServiceUrlValues | undefined {
+
         let parsed: URL;
         try {
             parsed = new URL(viewingBaseUrl);
@@ -20,37 +20,38 @@ export class ServiceController {
             console.error("Invalid URL:", err);
             return undefined;
         }
-
-        // Preserve port if explicitly present
-        const hostParts = parsed.host.split(":");
-        const hostWithOptionalPort = hostParts.length === 2 ? `${hostParts[0]}:${hostParts[1]}` : hostParts[0];
-
         const ret: StreamingServiceUrlValues = {
-            server: `${parsed.protocol}//${hostWithOptionalPort}`,
+            server: parsed.origin,
             pathStart: "",
             username: "",
-            password: ""
+            password: "",
         };
-        const pathParts = parsed.pathname.split("/").filter(Boolean);
+        if (parsed.origin.split(":").length > 1) {
+            ret.server += ":80";
+        }
+        const pathParts = parsed.pathname.split("/").filter((part) => part.length > 0);
         //Now if the first part of path is movie or series we want to remove it
+        
+        
+        // should we also support this kind of strings?  http://bigotvpro.com:8080/get.php?username=k5W1gNfZWQ0C&password=naz4Zgthg3dn&type=m3u_plus&output=ts
         if (pathParts[0] === "movie" || pathParts[0] === "series") {
             ret.pathStart = pathParts[0];
             pathParts.shift();
         }
-
+        
         if (pathParts.length < 2 || !pathParts[0] || !pathParts[1]) {
             return undefined;
         }
-
+        
         ret.username = pathParts[0];
         ret.password = pathParts[1];
-     
+        
         return ret;
     }
-
+    
     static findStreamingServiceByStreamingServiceUrlValues(urlValues: StreamingServiceUrlValues): StreamingService | undefined {
-        //remove the last part of the url and check if it is in the services array
-        console.log(`searching for service with url values`, urlValues);
+        // Remove the last part of the url and check if it is in the services array
+        console.log(`searching for service with url values`, urlValues);  // Debug line
         if (!urlValues) {
             return undefined;
         }
@@ -59,8 +60,42 @@ export class ServiceController {
         );
     }
 
-    static findStreamingServiceByViewingUrl(viewingBaseUrl: string): StreamingService | undefined {
+    static findStreamingServiceByServerValue(ServerValue: string): StreamingService | undefined {
+        if (!ServerValue) {
+            return undefined;
+        }
+        return services.find((service) => service.server === ServerValue);
+    }
 
+    static unsanitizeUrl(viewingBaseUrl: string, username: string, password: string): string {
+        if (!username || !password) {
+            throw new Error("Username and password are required to unsanitizeUrl the URL in ServiceController.");
+        }
+        return unsanitizeUrl(viewingBaseUrl, username, password);
+    }
+
+    static unsanitizeUrlFromUrl(viewingBaseUrl: string): string  {
+        if (!viewingBaseUrl) {
+            throw new Error("viewingBaseUrl is required to unsanitizeUrl the URL in ServiceController.");
+        }
+        const service = StreamingServiceResolver.findStreamingServiceByServerValue(viewingBaseUrl);
+        if (!service) {
+            return viewingBaseUrl;
+        }
+
+        
+        return unsanitizeUrl(viewingBaseUrl, service.username, service.password);
+    }
+
+    static sanitizeUrl(viewingBaseUrl: string, username: string, password: string): string {
+        if (!username || !password) {
+            throw new Error("Username and password are required to sanitize the URL in ServiceController.");
+        }
+
+        return this.sanitizeUrl(viewingBaseUrl, username, password);
+    }
+
+    static findStreamingServiceByViewingUrl(viewingBaseUrl: string): StreamingService | undefined {
         const service = services.find((service) => {
             const serviceIndex = viewingBaseUrl.indexOf(service.server);
             const usernameIndex = viewingBaseUrl.indexOf(service.username);
@@ -86,8 +121,8 @@ export class ServiceController {
         }
     }
 
-    static makeViewingUrl(serviceId: string, prefix: string|null, streamId: string): string {
-        const service = ServiceController.findStreamingServiceById(serviceId);
+    static makeViewingUrl(serviceId: string, prefix: string | null, streamId: string): string {
+        const service = StreamingServiceResolver.findStreamingServiceById(serviceId);
         if (!service) {
             throw new Error(`Service with ID ${serviceId} not found`);
         }
@@ -96,36 +131,6 @@ export class ServiceController {
             url += `/${prefix}`;
         }
         url += `/${service.username}/${service.password}/${streamId}`;
-        return url
+        return url;
     }
-
-    
-    static makeClientUrl(service: StreamingService | undefined, url: string): string { 
-        if (!appConfig.hideCredentialsInUrl) {
-            return url;
-        }
-
-        if (!service) {
-            throw new Error("Service passed is undefined cannot create URL");
-        }
-
-        // We need to sanitize the URL to hide credentials
-        const urlOut = unsanitizeUrl(url, service.username, service.password);
-        return urlOut;
-    }
-
-    private service: StreamingService | undefined;
-
-    //create a constrctor that accepts a serviceId  //todo: do we need instance of this class?
-    constructor(serviceId: string) {
-        if (serviceId === undefined) {
-            throw new Error("Constructor must be called with a parameter");
-        }
-        this.service = ServiceController.findStreamingServiceById(serviceId);
-        if (!this.service) {
-            throw new Error(`Service with ID ${serviceId} not found`);
-        }
-    }
-
-    
 }

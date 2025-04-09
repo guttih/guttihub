@@ -6,7 +6,7 @@ import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
 import { fetchAndParseM3U } from "@/services/fetchAndParseM3U";
 import { services } from "@/config/services";
-import { ChannelCard } from "@/components/ChannelCard/ChannelCard";
+import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
 
@@ -43,7 +43,6 @@ export default function HomePage() {
                 return;
             }
             // Let's console log the first 5 entries for debugging
-            console.log("Fetched Entries:", parsed.slice(0, 5));
             setEntries(parsed);
             setCurrentPage(1); // reset to first page on new fetch
         } catch (err) {
@@ -120,7 +119,7 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                 {paginatedEntries.map((entry) => (
-                    <ChannelCard key={entry.url} entry={entry} />
+                    <StreamCard key={entry.url} entry={entry} showCopy={!appConfig.hideCredentialsInUrl} />
                 ))}
             </div>
 

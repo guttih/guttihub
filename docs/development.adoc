@@ -11,7 +11,7 @@ find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.lo
 .List and cat files you specify by name
 [source,sh]
 ----
-find . -type f \( -name "fetchAndParseM3U.ts" -o -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "parseM3U.ts" -o -name "route.ts" -o -name "page.tsx" -o -name "PlayerClient.tsx" -o -name "PlayerButton.tsx" -o -name "ChannelCard.tsx" \) -exec sh -c 'echo {}; cat {}' \; 
+find . -type f \( -name "fetchAndParseM3U.ts" -o -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "parseM3U.ts" -o -name "route.ts" -o -name "page.tsx" -o -name "PlayerClient.tsx" -o -name "PlayerButton.tsx" -o -name "StreamCard.tsx" \) -exec sh -c 'echo {}; cat {}' \; 
 ----
 
 == Naming Conventions
@@ -28,13 +28,13 @@ We aim to keep naming consistent and meaningful across the project.
 === Components
 
 - Place each component in its own folder under `src/components/`
-- Component folder and file should match (`ChannelCard/ChannelCard.tsx`)
+- Component folder and file should match (`StreamCard/StreamCard.tsx`)
 - Optionally include an `index.ts` file to simplify imports
 
 .Example
 [source,ts]
 ----
-import ChannelCard from '@/components/ChannelCard';
+import StreamCard from '@/components/StreamCard';
 ----
 
 === Utilities

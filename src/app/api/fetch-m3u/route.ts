@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
         const cacheFilePath = getCacheFilePath(username, serviceName);
 
         if (await isFileFresh(cacheFilePath, cacheDurationMs)) {
-            console.log("[CACHE] Using cached file:", cacheFilePath);
+            console.log("[CACHE] Using cached file:", cacheFilePath); // Debug line
             const cachedContent = await readFile(cacheFilePath);
             return NextResponse.json({ data: cachedContent });
         }
