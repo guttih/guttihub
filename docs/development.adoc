@@ -62,3 +62,10 @@ import StreamCard from '@/components/StreamCard';
 ---
 
 Let me know if you'd prefer this in its own file (`naming-conventions.adoc`) or want a `README-style` summary version for the GitHub front page.
+
+
+== Next.js Basics
+
+For an overview of how this project uses Next.js, see:
+
+include::next.adoc[]

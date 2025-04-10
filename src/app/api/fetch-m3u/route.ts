@@ -2,7 +2,7 @@ import axios from "axios";
 import { NextRequest, NextResponse } from "next/server";
 import { ensureCacheDir, getCacheFilePath, isFileFresh, readFile, writeFile } from "@/utils/fileHandler";
 
-const cacheDurationMs = 6 * 60 * 60 * 1000; // 6 hours
+const cacheDurationMs = 24 * 60 * 60 * 1000; // 6 hours
 
 export async function POST(req: NextRequest) {
     const { url, username, serviceName } = await req.json();

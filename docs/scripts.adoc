@@ -1,0 +1,52 @@
+= Project NPM Scripts
+:guttihub:
+
+This document describes the npm/yarn scripts available in the `guttihub` project.
+
+== Development
+
+[cols="1,3"]
+|===
+| Command | Description
+
+| `npm run dev`
+| Starts the development server using Next.js with Turbopack enabled.
+
+| `npm run build`
+| Builds the Next.js application for production.
+
+| `npm run start`
+| Starts the production build after it has been compiled.
+|===
+
+== Linting
+
+[cols="1,3"]
+|===
+| Command | Description
+
+| `npm run lint:next`
+| Runs Next.js's built-in linting (`next lint`). It checks only core Next.js folders (`pages/`, `components/`, etc.) and uses internal config.
+
+| `npm run lint`
+| Runs full-project ESLint over all files with `.js`, `.jsx`, `.ts`, and `.tsx` extensions using your `eslint.config.mjs`. This respects the `ignores` block (e.g., `.next/`, `node_modules/`, etc.).
+
+| `npm run lint:fix`
+| Same as `lint`, but attempts to auto-fix fixable issues.
+|===
+
+== Testing
+
+[cols="1,3"]
+|===
+| Command | Description
+
+| `npm run test`
+| Runs all tests using Vitest once.
+
+| `npm run test:watch`
+| Runs Vitest in watch mode, re-running tests on file changes.
+
+| `npm run test:ui`
+| Opens the Vitest UI interface in the browser.
+|===

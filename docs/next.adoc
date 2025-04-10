@@ -1,0 +1,38 @@
+=== Next.js Overview
+
+This project is a https://nextjs.org[Next.js] application bootstrapped with https://nextjs.org/docs/app/api-reference/cli/create-next-app[`create-next-app`].
+
+==== Getting Started
+
+To run the development server:
+
+[source,sh]
+----
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+----
+
+Open http://localhost:3000 with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses https://nextjs.org/docs/app/building-your-application/optimizing/fonts[`next/font`] to automatically optimize and load https://vercel.com/font[Geist], a new font family created by Vercel.
+
+==== Learn More
+
+To learn more about Next.js, check out these resources:
+
+- https://nextjs.org/docs[Next.js Documentation] – Learn about features and APIs.
+- https://nextjs.org/learn[Learn Next.js] – An interactive tutorial for learning Next.js.
+- https://github.com/vercel/next.js[Next.js GitHub Repository] – Your feedback and contributions are welcome!
+
+==== Deploy on Vercel
+
+The easiest way to deploy your Next.js app is using the https://vercel.com[Vercel Platform].
+
+Check out the https://nextjs.org/docs/app/building-your-application/deploying[Next.js deployment documentation] for more details.

@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Guttihub
 
-## Getting Started
+IPTV streaming client built with [Next.js](https://nextjs.org).  
+This project is designed to download and play IPTV streams from `.m3u` playlists, supporting playback and metadata management in a modern web interface.
 
-First, run the development server:
+---
+
+## 🚀 Getting Started
+
+To start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# or: yarn dev / pnpm dev / bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can edit the main page by modifying `app/page.tsx`. The page supports hot reload during development.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🧑‍💻 Development Resources
 
-To learn more about Next.js, take a look at the following resources:
+- 📘 [Development Guide (`development.adoc`)](./docs/development.adoc)  
+  Tips, tricks, naming conventions, and useful shell commands for working on this project.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 📦 [Available Scripts (`scripts.adoc`)](./scripts.adoc)  
+  Full list of `npm` scripts and what they do — including linting, testing, and build commands.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🧪 Testing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This project uses [Vitest](https://vitest.dev) for unit testing.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run test         # Run all tests once
+npm run test:watch   # Watch mode
+npm run test:ui      # Open Vitest UI
+```
+
+---
+
+## ✨ Features
+
+- Built with the latest [Next.js](https://nextjs.org) (App Router & Turbopack)
+- React 19
+- Tailwind CSS for UI
+- M3U playlist support (via HLS.js)
+- Modern component structure and strict ESLint/TypeScript setup
+
+---
+
+## 📚 Learn More
+
+- [Next.js Documentation](https://nextjs.org/docs) — features, APIs, and best practices
+- [Learn Next.js](https://nextjs.org/learn) — interactive Next.js tutorial
+
+---
+
+## ☁️ Deploying
+
+The recommended deployment method is via [Vercel](https://vercel.com).  
+For more info, check out [Next.js deployment docs](https://nextjs.org/docs/app/building-your-application/deploying).
