@@ -49,4 +49,7 @@ This document describes the npm/yarn scripts available in the `guttihub` project
 
 | `npm run test:ui`
 | Opens the Vitest UI interface in the browser.
+
+| `npm run test:coverage`
+| Runs Vitest tests and generates a code coverage report using the `@vitest/coverage-v8` provider.
 |===

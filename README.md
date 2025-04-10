@@ -25,7 +25,7 @@ You can edit the main page by modifying `app/page.tsx`. The page supports hot re
 - 📘 [Development Guide (`development.adoc`)](./docs/development.adoc)  
   Tips, tricks, naming conventions, and useful shell commands for working on this project.
 
-- 📦 [Available Scripts (`scripts.adoc`)](./scripts.adoc)  
+- 📦 [Available Scripts (`scripts.adoc`)](./docs/scripts.adoc)  
   Full list of `npm` scripts and what they do — including linting, testing, and build commands.
 
 ---

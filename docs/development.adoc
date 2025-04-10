@@ -59,13 +59,31 @@ import StreamCard from '@/components/StreamCard';
 - Use the same name as the file being tested, but suffixed with `.test.ts`
 - Real input assets (e.g. `.m3u` files) go in `test/assets/`
 
----
+== Testing
 
-Let me know if you'd prefer this in its own file (`naming-conventions.adoc`) or want a `README-style` summary version for the GitHub front page.
+This project uses the https://vitest.dev[Vitest] testing framework, which is fast, lightweight, and compatible with Jest-style syntax.
 
+Tests live in the `test/` directory or close to source files (using `.test.ts` naming convention).
+
+[cols="1,3"]
+|===
+| Command | Description
+
+| `npm run test`
+| Runs all tests using Vitest once.
+
+| `npm run test:watch`
+| Runs Vitest in watch mode, re-running tests on file changes.
+
+| `npm run test:ui`
+| Opens the Vitest UI interface in the browser.
+
+| `npm run test:coverage`
+| Runs Vitest tests and generates a code coverage report.
+|===
+
+You can read more about Vitest at the official documentation: https://vitest.dev
 
 == Next.js Basics
-
-For an overview of how this project uses Next.js, see:
 
 include::next.adoc[]
