@@ -1,9 +1,10 @@
-= Project NPM Scripts
+== Project NPM Scripts
 :guttihub:
 
-This document describes the npm/yarn scripts available in the `guttihub` project.
+This section describes the `npm` scripts available in this project.
 
-== Development
+[[npm-script-dev]]
+=== Development
 
 [cols="1,3"]
 |===
@@ -16,33 +17,34 @@ This document describes the npm/yarn scripts available in the `guttihub` project
 | Builds the Next.js application for production.
 
 | `npm run start`
-| Starts the production build after it has been compiled.
+| Starts the compiled production server.
 |===
 
-== Linting
+[[npm-script-lint]]
+=== Linting
 
 [cols="1,3"]
 |===
 | Command | Description
 
 | `npm run lint:next`
-| Runs Next.js's built-in linting (`next lint`). It checks only core Next.js folders (`pages/`, `components/`, etc.) and uses internal config.
+| Runs Next.js’s built-in linter (`next lint`). Targets only core Next.js directories and uses the default Next.js lint config.
 
 | `npm run lint`
-| Runs full-project ESLint over all files with `.js`, `.jsx`, `.ts`, and `.tsx` extensions using your `eslint.config.mjs`. This respects the `ignores` block (e.g., `.next/`, `node_modules/`, etc.).
+| Runs ESLint across all `.js`, `.jsx`, `.ts`, and `.tsx` files using the custom configuration (`eslint.config.mjs`).
 
 | `npm run lint:fix`
-| Same as `lint`, but attempts to auto-fix fixable issues.
+| Same as `lint`, but automatically fixes fixable issues.
 |===
 
-== Testing
+[[npm-script-test]]
+=== Testing
 
 [cols="1,3"]
 |===
 | Command | Description
-
 | `npm run test`
-| Runs all tests using Vitest once.
+| Runs all XXXX unit tests using https://vitest.dev/[Vitest] once.
 
 | `npm run test:watch`
 | Runs Vitest in watch mode, re-running tests on file changes.
@@ -51,5 +53,12 @@ This document describes the npm/yarn scripts available in the `guttihub` project
 | Opens the Vitest UI interface in the browser.
 
 | `npm run test:coverage`
-| Runs Vitest tests and generates a code coverage report using the `@vitest/coverage-v8` provider.
+| Runs all tests and generates a code coverage report using the `@vitest/coverage-v8` provider.
+
+| `npm run test:report`
+| Runs tests with coverage and prints the relative path to the HTML report (`coverage/index.html`). The path is ctrl+clickable in most terminals.
+
+| `npm run test:file path/to/test.ts`
+| Runs a specific test file using Vitest with verbose output (`--reporter=verbose`). Replace `path/to/test.ts` with the path to your test.
+
 |===

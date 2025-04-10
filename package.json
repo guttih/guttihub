@@ -12,12 +12,15 @@
         "test": "vitest",
         "test:watch": "vitest --watch",
         "test:ui": "vitest --ui",
-        "test:coverage": "vitest run --coverage"
+        "test:coverage": "vitest run --coverage",
+        "test:report": "vitest run --coverage --reporter=html && echo 'report at: coverage/index.html'",
+        "test:file": "vitest run --reporter=verbose"
     },
     "dependencies": {
         "@heroicons/react": "^2.2.0",
         "axios": "^1.8.4",
         "hls.js": "^1.6.1",
+        "lodash": "^4.17.21",
         "next": "15.2.4",
         "react": "^19.0.0",
         "react-dom": "^19.0.0"

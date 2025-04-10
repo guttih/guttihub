@@ -1,5 +1,6 @@
 import path from 'path';
 import { promises as fs, readFileSync } from 'fs';
+import { getProjectCacheDir as projectCasceDir } from '@/utils/fileHandler';
 
 /**
  * Resolves the full path to a test asset in test/assets/
@@ -18,6 +19,9 @@ export async function readFileAsset(filename: string): Promise<string> {
 
 export function readFileAssetSync(filename: string): string {
     return readFileSync(getAssetPath(filename), 'utf-8');
-  }
+}
 
-export { fs }; // re-export so tests can still use fs directly if needed
+export function getProjectCacheDir(): string {
+  return projectCasceDir();
+}
+

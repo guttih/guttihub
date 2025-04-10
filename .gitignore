@@ -18,6 +18,7 @@
 
 # testing
 /coverage
+/html
 
 # next.js
 /.next/

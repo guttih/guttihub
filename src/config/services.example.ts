@@ -15,5 +15,10 @@ export const services: StreamingService[] = [
         viewingBaseUrl: "http://example.com/USERNAME/PASSWORD",
         username: "USERNAME",
         password: "PASSWORD",
+        contentCategories: [
+            "movies",   // Movies
+            "series",   // TV shows
+            "",         // TV channels
+        ]
     },
 ];

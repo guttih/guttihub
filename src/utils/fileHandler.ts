@@ -3,10 +3,23 @@ import path from 'path';
 
 const CACHE_DIR = path.resolve(process.cwd(), 'public/cache');
 
+export function  getCacheDir(): string {
+  return CACHE_DIR;
+}
+
 //todo: Makesure all paths will work on all OS
 
 export async function ensureCacheDir() {
   await fs.mkdir(CACHE_DIR, { recursive: true });
+}
+
+export async function fileExists(filePath: string) {
+    await fs.access(filePath).catch(() => {
+        return false;
+    }, 
+    );
+    return true;
+
 }
 
 export function getCacheFilePath(username: string, serviceName: string): string {
@@ -29,4 +42,8 @@ export async function readFile(filePath: string): Promise<string> {
 
 export async function writeFile(filePath: string, content: string): Promise<void> {
   await fs.writeFile(filePath, content);
+}
+
+export function getProjectCacheDir(): string {
+  return CACHE_DIR;
 }

@@ -14,6 +14,8 @@ export async function POST(req: NextRequest) {
         if (await isFileFresh(cacheFilePath, cacheDurationMs)) {
             console.log("[CACHE] Using cached file:", cacheFilePath); // Debug line
             const cachedContent = await readFile(cacheFilePath);
+            // todo: parse the m3u file and return a more structured response if needed
+            // todo: even better, save the json file in the cache dir and return it
             return NextResponse.json({ data: cachedContent });
         }
 

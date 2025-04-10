@@ -9,6 +9,8 @@ import { services } from "@/config/services";
 import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
+import { StreamingServiceResolver } from "@/utils/StreamingServiceResolver";
+import { ContentCategoryFieldLabel, inferContentCategory } from "@/types/ContentCategoryFieldLabel";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -16,16 +18,16 @@ export default function HomePage() {
     const [searchGroup, setSearchGroup] = useState("");
     const [searchTvgId, setSearchTvgId] = useState("");
     const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
+    const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
+
     const filteredEntries = entries.filter((entry) => {
         const nameMatch = searchName ? entry.name.toLowerCase().includes(searchName.toLowerCase()) : true;
-
         const groupMatch = searchGroup ? entry.groupTitle.toLowerCase().includes(searchGroup.toLowerCase()) : true;
-
         const idMatch = searchTvgId ? entry.tvgId.toLowerCase().includes(searchTvgId.toLowerCase()) : true;
-
         const formatMatch = searchFormat ? entry.url.toLowerCase().endsWith(`.${searchFormat}`) : true;
+        const categoryMatch = searchCategory ? inferContentCategory(entry.url) === searchCategory : true;
 
-        return nameMatch && groupMatch && idMatch && formatMatch;
+        return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
     });
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -43,6 +45,12 @@ export default function HomePage() {
                 return;
             }
             // Let's console log the first 5 entries for debugging
+            console.log(`Fetched ${parsed.length} entries from ${service.name}:`);
+            const unique = StreamingServiceResolver.getUniquePathsFromUrl(parsed);
+            console.log("Unique URLs count:", unique.length);
+            if (unique.length < 100) {
+                console.log("Unique URLs:", unique);
+            }
             setEntries(parsed);
             setCurrentPage(1); // reset to first page on new fetch
         } catch (err) {
@@ -95,13 +103,29 @@ export default function HomePage() {
                     className="flex-1 min-w-[150px] px-3 py-2 border rounded"
                 />
                 <select
+                    value={searchCategory}
+                    onChange={(e) => {
+                        setSearchCategory(e.target.value as ContentCategoryFieldLabel);
+                        setCurrentPage(1);
+                    }}
+                    className="flex-[0.3] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
+                    title="Content Category"
+                >
+                    <option value="">All Categories</option>
+                    {Object.values(ContentCategoryFieldLabel).map((cat) => (
+                        <option key={cat} value={cat}>
+                            {cat}
+                        </option>
+                    ))}
+                </select>
+
+                <select
                     value={searchFormat}
                     onChange={(e) => {
                         setSearchFormat(e.target.value as StreamFormat);
                         setCurrentPage(1);
                     }}
-                    className="flex-[0.25] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
-
+                    className="flex-[0.2] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
                     title="Stream Format"
                 >
                     <option value="">All Formats</option>
@@ -114,7 +138,10 @@ export default function HomePage() {
             </div>
 
             <p className="text-sm text-gray-500 mb-2 text-center">
-                Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;<i>{filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}</i> 
+                Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
+                <i>
+                    {filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}
+                </i>
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
