@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
@@ -13,166 +13,174 @@ import { StreamingServiceResolver } from "@/utils/StreamingServiceResolver";
 import { ContentCategoryFieldLabel, inferContentCategory } from "@/types/ContentCategoryFieldLabel";
 
 export default function HomePage() {
-    const [entries, setEntries] = useState<M3UEntry[]>([]);
-    const [searchName, setSearchName] = useState("");
-    const [searchGroup, setSearchGroup] = useState("");
-    const [searchTvgId, setSearchTvgId] = useState("");
-    const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
-    const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
+  const [entries, setEntries] = useState<M3UEntry[]>([]);
+  const [searchNameInput, setSearchNameInput] = useState("");
+  const [searchGroupInput, setSearchGroupInput] = useState("");
+  const [searchTvgIdInput, setSearchTvgIdInput] = useState("");
 
-    const filteredEntries = entries.filter((entry) => {
-        const nameMatch = searchName ? entry.name.toLowerCase().includes(searchName.toLowerCase()) : true;
-        const groupMatch = searchGroup ? entry.groupTitle.toLowerCase().includes(searchGroup.toLowerCase()) : true;
-        const idMatch = searchTvgId ? entry.tvgId.toLowerCase().includes(searchTvgId.toLowerCase()) : true;
-        const formatMatch = searchFormat ? entry.url.toLowerCase().endsWith(`.${searchFormat}`) : true;
-        const categoryMatch = searchCategory ? inferContentCategory(entry.url) === searchCategory : true;
+  const [searchName, setSearchName] = useState("");
+  const [searchGroup, setSearchGroup] = useState("");
+  const [searchTvgId, setSearchTvgId] = useState("");
+  const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
+  const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
+  const [currentPage, setCurrentPage] = useState(1);
 
-        return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
-    });
+  const pageSize = Number(appConfig.defaultPageSize);
 
-    const [currentPage, setCurrentPage] = useState(1);
+  // Debounce using useEffect and setTimeout
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchName(searchNameInput);
+      setSearchGroup(searchGroupInput);
+      setSearchTvgId(searchTvgIdInput);
+    }, 300);
 
-    const pageSize = Number(appConfig.defaultPageSize);
+    return () => clearTimeout(handler);
+  }, [searchNameInput, searchGroupInput, searchTvgIdInput]);
 
-    const totalPages = Math.ceil(filteredEntries.length / pageSize);
-    const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const filteredEntries = entries.filter((entry) => {
+    const nameMatch = searchName ? entry.name.toLowerCase().includes(searchName.toLowerCase()) : true;
+    const groupMatch = searchGroup ? entry.groupTitle.toLowerCase().includes(searchGroup.toLowerCase()) : true;
+    const idMatch = searchTvgId ? entry.tvgId.toLowerCase().includes(searchTvgId.toLowerCase()) : true;
+    const formatMatch = searchFormat ? entry.url.toLowerCase().endsWith(`.${searchFormat}`) : true;
+    const categoryMatch = searchCategory ? inferContentCategory(entry.url) === searchCategory : true;
 
-    const handleFetch = async (service: StreamingService) => {
-        try {
-            const parsed = await fetchAndParseM3U(service);
-            if (!parsed) {
-                console.error("Failed to fetch or parse M3U entries");
-                return;
-            }
-            // Let's console log the first 5 entries for debugging
-            console.log(`Fetched ${parsed.length} entries from ${service.name}:`);
-            const unique = StreamingServiceResolver.getUniquePathsFromUrl(parsed);
-            console.log("Unique URLs count:", unique.length);
-            if (unique.length < 100) {
-                console.log("Unique URLs:", unique);
-            }
-            setEntries(parsed);
-            setCurrentPage(1); // reset to first page on new fetch
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
+  });
 
-    return (
-        <main className="p-4">
-            <h1 className="text-xl font-bold mb-4">{appConfig.appName}</h1>
+  const totalPages = Math.ceil(filteredEntries.length / pageSize);
+  const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-            {services.map((service) => (
-                <button key={service.id} onClick={() => handleFetch(service)} className="bg-blue-600 text-white px-4 py-2 rounded mr-2">
-                    Load {service.name}
-                </button>
-            ))}
+  const handleFetch = async (service: StreamingService) => {
+    try {
+      const parsed = await fetchAndParseM3U(service);
+      if (!parsed) {
+        console.error("Failed to fetch or parse M3U entries");
+        return;
+      }
+      setEntries(parsed);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-            <div className="flex flex-wrap gap-2 items-center my-4">
-                <input
-                    type="text"
-                    placeholder={`Search ${M3UEntryFieldLabel.name}`}
-                    title={M3UEntryFieldLabel.name}
-                    value={searchName}
-                    onChange={(e) => {
-                        setSearchName(e.target.value);
-                        setCurrentPage(1);
-                    }}
-                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
-                />
-                <input
-                    type="text"
-                    placeholder={`Search ${M3UEntryFieldLabel.groupTitle}`}
-                    title={M3UEntryFieldLabel.groupTitle}
-                    value={searchGroup}
-                    onChange={(e) => {
-                        setSearchGroup(e.target.value);
-                        setCurrentPage(1);
-                    }}
-                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
-                />
-                <input
-                    type="text"
-                    placeholder={`Search ${M3UEntryFieldLabel.tvgId}`}
-                    title={M3UEntryFieldLabel.tvgId}
-                    value={searchTvgId}
-                    onChange={(e) => {
-                        setSearchTvgId(e.target.value);
-                        setCurrentPage(1);
-                    }}
-                    className="flex-1 min-w-[150px] px-3 py-2 border rounded"
-                />
-                <select
-                    value={searchCategory}
-                    onChange={(e) => {
-                        setSearchCategory(e.target.value as ContentCategoryFieldLabel);
-                        setCurrentPage(1);
-                    }}
-                    className="flex-[0.3] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
-                    title="Content Category"
-                >
-                    <option value="">All Categories</option>
-                    {Object.values(ContentCategoryFieldLabel).map((cat) => (
-                        <option key={cat} value={cat}>
-                            {cat}
-                        </option>
-                    ))}
-                </select>
+  return (
+    <main className="p-4">
+      <h1 className="text-xl font-bold mb-4">{appConfig.appName}</h1>
 
-                <select
-                    value={searchFormat}
-                    onChange={(e) => {
-                        setSearchFormat(e.target.value as StreamFormat);
-                        setCurrentPage(1);
-                    }}
-                    className="flex-[0.2] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
-                    title="Stream Format"
-                >
-                    <option value="">All Formats</option>
-                    {Object.values(StreamFormat).map((format) => (
-                        <option key={format} value={format}>
-                            {format.toUpperCase()}
-                        </option>
-                    ))}
-                </select>
-            </div>
+      {services.map((service) => (
+        <button
+          key={service.id}
+          onClick={() => handleFetch(service)}
+          className="bg-blue-600 text-white px-4 py-2 rounded mr-2"
+        >
+          Load {service.name}
+        </button>
+      ))}
 
-            <p className="text-sm text-gray-500 mb-2 text-center">
-                Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
-                <i>
-                    {filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}
-                </i>
-            </p>
+      <div className="flex flex-wrap gap-2 items-center my-4">
+        <input
+          type="text"
+          placeholder={`Search ${M3UEntryFieldLabel.name}`}
+          title={M3UEntryFieldLabel.name}
+          value={searchNameInput}
+          onChange={(e) => {
+            setSearchNameInput(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="flex-1 min-w-[150px] px-3 py-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder={`Search ${M3UEntryFieldLabel.groupTitle}`}
+          title={M3UEntryFieldLabel.groupTitle}
+          value={searchGroupInput}
+          onChange={(e) => {
+            setSearchGroupInput(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="flex-1 min-w-[150px] px-3 py-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder={`Search ${M3UEntryFieldLabel.tvgId}`}
+          title={M3UEntryFieldLabel.tvgId}
+          value={searchTvgIdInput}
+          onChange={(e) => {
+            setSearchTvgIdInput(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="flex-1 min-w-[150px] px-3 py-2 border rounded"
+        />
+        <select
+          value={searchCategory}
+          onChange={(e) => {
+            setSearchCategory(e.target.value as ContentCategoryFieldLabel);
+            setCurrentPage(1);
+          }}
+          className="flex-[0.3] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
+          title="Content Category"
+        >
+          <option value="">All Categories</option>
+          {Object.values(ContentCategoryFieldLabel).map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+        <select
+          value={searchFormat}
+          onChange={(e) => {
+            setSearchFormat(e.target.value as StreamFormat);
+            setCurrentPage(1);
+          }}
+          className="flex-[0.2] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
+          title="Stream Format"
+        >
+          <option value="">All Formats</option>
+          {Object.values(StreamFormat).map((format) => (
+            <option key={format} value={format}>
+              {format.toUpperCase()}
+            </option>
+          ))}
+        </select>
+      </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-                {paginatedEntries.map((entry) => (
-                    <StreamCard key={entry.url} entry={entry} showCopy={!appConfig.hideCredentialsInUrl} />
-                ))}
-            </div>
+      <p className="text-sm text-gray-500 mb-2 text-center">
+        Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
+        <i>
+          {filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}
+        </i>
+      </p>
 
-            {entries.length > 0 && (
-                <div className="flex justify-center items-center mt-6 space-x-2">
-                    <button
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
-                    >
-                        ⬅ Prev
-                    </button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+        {paginatedEntries.map((entry) => (
+          <StreamCard key={entry.url} entry={entry} showCopy={!appConfig.hideCredentialsInUrl} />
+        ))}
+      </div>
 
-                    <span className="font-semibold">
-                        Page {currentPage} of {totalPages}
-                    </span>
-
-                    <button
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
-                    >
-                        Next ➡
-                    </button>
-                </div>
-            )}
-        </main>
-    );
+      {entries.length > 0 && (
+        <div className="flex justify-center items-center mt-6 space-x-2">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
+          >
+            ⬅ Prev
+          </button>
+          <span className="font-semibold">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
+          >
+            Next ➡
+          </button>
+        </div>
+      )}
+    </main>
+  );
 }
