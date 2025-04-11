@@ -12,6 +12,7 @@ import { ContentCategoryFieldLabel, inferContentCategory } from "@/types/Content
 import { useDebouncedState } from "./hooks/useDebouncedState";
 import { ApiResponse } from "@/types/ApiResponse";
 import { M3UResponse } from "@/types/M3UResponse";
+import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCardInteractive";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -26,6 +27,7 @@ export default function HomePage() {
     const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [useInteractiveCard, setUseInteractiveCard] = useState(true);
 
     const pageSize = Number(appConfig.defaultPageSize);
     console.log("searchNameInput", searchNameInput);
@@ -191,6 +193,21 @@ export default function HomePage() {
                 </select>
             </div>
 
+            <div className="flex items-center gap-2 my-2">
+                <label htmlFor="cardToggle" className="text-sm text-gray-300">
+                    Card Style:
+                </label>
+                <select
+                    id="cardToggle"
+                    value={useInteractiveCard ? "interactive" : "default"}
+                    onChange={(e) => setUseInteractiveCard(e.target.value === "interactive")}
+                    className="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded"
+                >
+                    <option value="default">Default</option>
+                    <option value="interactive">Inline Player</option>
+                </select>
+            </div>
+
             <p className="text-sm text-gray-500 mb-2 text-center">
                 Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
                 <i>
@@ -199,12 +216,16 @@ export default function HomePage() {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-                {paginatedEntries.map((entry) => (
-                    <StreamCard key={entry.url} entry={entry} showCopy={!appConfig.hideCredentialsInUrl} />
-                ))}
+                {paginatedEntries.map((entry) =>
+                    useInteractiveCard ? (
+                        <StreamCardInteractive key={entry.url} entry={entry} />
+                    ) : (
+                        <StreamCard key={entry.url} entry={entry} showCopy={!appConfig.hideCredentialsInUrl} />
+                    )
+                )}
             </div>
 
-            {entries && (entries.length > 0) && (
+            {entries && entries.length > 0 && (
                 <div className="flex justify-center items-center mt-6 space-x-2">
                     <button
                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
