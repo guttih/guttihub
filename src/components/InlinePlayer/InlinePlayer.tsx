@@ -2,33 +2,17 @@
 
 "use client";
 
+import React, { useRef, useEffect, useState } from "react";
 import { appConfig } from "@/config";
 import { StreamingServiceResolver } from "@/utils/StreamingServiceResolver";
-import React, { useRef, useEffect, useState } from "react";
 
 export interface InlinePlayerProps {
   url: string;
   autoPlay?: boolean;
   controls?: boolean;
   className?: string;
-}
-
-function normalizeUrl(playUrl: string): string {
-  if (!appConfig.hideCredentialsInUrl) {
-    return playUrl;
-  }
-
-    const urlServiceValues = StreamingServiceResolver.splitStreamingSearchUrl(playUrl || "");
-    if (!urlServiceValues) {
-      return playUrl;
-    }
-    const resolver = new StreamingServiceResolver();
-    const service = resolver.findByServer(urlServiceValues.server);
-    if (!service) {
-      return playUrl;
-    }
-    return StreamingServiceResolver.unsanitizeUrl(playUrl, service.username, service.password);
-
+  showCloseButton?: boolean;
+  onClose?: () => void;
 }
 
 export const InlinePlayer: React.FC<InlinePlayerProps> = ({
@@ -36,6 +20,8 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
   autoPlay = true,
   controls = true,
   className = "w-full aspect-video rounded shadow-md",
+  showCloseButton = false,
+  onClose,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [canPlay, setCanPlay] = useState(false);
@@ -59,6 +45,17 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
           Loading stream...
         </div>
       )}
+
+      {showCloseButton && onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 bg-black bg-opacity-60 text-white rounded-full w-8 h-8 flex items-center justify-center z-20"
+          title="Close player"
+        >
+          ✕
+        </button>
+      )}
+
       <video
         ref={videoRef}
         src={normalizeUrl(url)}
@@ -70,3 +67,18 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     </div>
   );
 };
+
+function normalizeUrl(playUrl: string): string {
+  if (!appConfig.hideCredentialsInUrl) {
+    return playUrl;
+  }
+
+  const urlServiceValues = StreamingServiceResolver.splitStreamingSearchUrl(playUrl || "");
+  if (!urlServiceValues) return playUrl;
+
+  const resolver = new StreamingServiceResolver();
+  const service = resolver.findByServer(urlServiceValues.server);
+  if (!service) return playUrl;
+
+  return StreamingServiceResolver.unsanitizeUrl(playUrl, service.username, service.password);
+}

@@ -1,13 +1,14 @@
+// components/StreamCard/StreamCard.tsx
 "use client";
 
 import { useState } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
-import { PlayerButton } from "@/components/PlayerButton/PlayerButton";
 
 interface Props {
   entry: M3UEntry;
   showCopy?: boolean;
+  onPlay?: (url: string) => void;  // <- Added
 }
 
 function getExtension(url: string): string | null {
@@ -20,7 +21,7 @@ function getExtension(url: string): string | null {
   }
 }
 
-export function StreamCard({ entry, showCopy }: Props) {
+export function StreamCard({ entry, showCopy, onPlay }: Props) {
   const extension = getExtension(entry.url);
   const [copied, setCopied] = useState(false);
 
@@ -62,7 +63,14 @@ export function StreamCard({ entry, showCopy }: Props) {
             {entry.groupTitle}
           </p>
 
-          <PlayerButton streamUrl={entry.url} showUnsupported={true}  className="mt-2" />
+          {onPlay && (
+            <button
+              onClick={() => onPlay(entry.url)}
+              className="text-sm bg-blue-600 px-3 py-1 rounded mt-2 hover:bg-blue-500 transition"
+            >
+              ▶ Play
+            </button>
+          )}
 
           <div className="flex items-center justify-between mt-2">
             {extension && (
@@ -71,13 +79,15 @@ export function StreamCard({ entry, showCopy }: Props) {
               </p>
             )}
 
-            {showCopy && (<button
-              onClick={handleCopy}
-              className="text-xs text-blue-400 hover:text-blue-200 ml-2"
-              title={`Copy to clipboard \nURL: ${entry.url}`}
-            >
-              📋 {copied && <span className="ml-1 text-green-400">Copied!</span>}
-            </button>)}
+            {showCopy && (
+              <button
+                onClick={handleCopy}
+                className="text-xs text-blue-400 hover:text-blue-200 ml-2"
+                title={`Copy to clipboard \nURL: ${entry.url}`}
+              >
+                📋 {copied && <span className="ml-1 text-green-400">Copied!</span>}
+              </button>
+            )}
           </div>
 
           {entry.tvgId && (

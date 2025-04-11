@@ -13,12 +13,23 @@ import { useDebouncedState } from "./hooks/useDebouncedState";
 import { ApiResponse } from "@/types/ApiResponse";
 import { M3UResponse } from "@/types/M3UResponse";
 import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCardInteractive";
+import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
+import { set } from "lodash";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
     const [searchNameInput, setSearchNameInput] = useState("");
     const [searchGroupInput, setSearchGroupInput] = useState("");
     const [searchTvgIdInput, setSearchTvgIdInput] = useState("");
+    const [player, setPlayer] = useState<{
+        url: string;
+        mode: "popup" | "inline";
+        visible: boolean;
+    }>({
+        url: "",
+        mode: "popup",
+        visible: false,
+    });
 
     const searchName = useDebouncedState(searchNameInput, 200);
     const searchTvgId = useDebouncedState(searchTvgIdInput, 200);
@@ -28,6 +39,8 @@ export default function HomePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [useInteractiveCard, setUseInteractiveCard] = useState(true);
+    
+
 
     const pageSize = Number(appConfig.defaultPageSize);
     console.log("searchNameInput", searchNameInput);
@@ -60,6 +73,10 @@ export default function HomePage() {
 
     const totalPages = Math.ceil(filteredEntries.length / pageSize);
     const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    function handlePlay(url: string) {
+        setPlayer({ url, mode: "popup", visible: true });
+    }
 
     const handleFetch = async (service: StreamingService) => {
         try {
@@ -192,6 +209,15 @@ export default function HomePage() {
                     ))}
                 </select>
             </div>
+            {player.visible && player.url && player.mode === "popup" && (
+                <div className={player.mode === "popup" ? "fixed bottom-4 right-4 z-50 w-[480px]" : "mt-4"}>
+                    <InlinePlayer 
+                        url={player.url} 
+                        showCloseButton={true}
+                        onClose={() => setPlayer((prev) => ({ ...prev, visible: false }))} />
+
+                </div>
+            )}
 
             <div className="flex items-center gap-2 my-2">
                 <label htmlFor="cardToggle" className="text-sm text-gray-300">
@@ -220,7 +246,9 @@ export default function HomePage() {
                     useInteractiveCard ? (
                         <StreamCardInteractive key={entry.url} entry={entry} />
                     ) : (
-                        <StreamCard key={entry.url} entry={entry} showCopy={!appConfig.hideCredentialsInUrl} />
+                        <StreamCard 
+                            key={entry.url} entry={entry} onPlay={handlePlay}
+                            showCopy={!appConfig.hideCredentialsInUrl}  />
                     )
                 )}
             </div>
