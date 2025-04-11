@@ -17,7 +17,7 @@ find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.lo
 .List and display specific files
 [source,sh]
 ----
-find . -type f \( -name "fetchAndParseM3U.ts" -o -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "parseM3U.ts" -o -name "route.ts" -o -name "page.tsx" -o -name "PlayerClient.tsx" -o -name "PlayerButton.tsx" -o -name "StreamCard.tsx" \) -exec sh -c 'echo {}; cat {}' \; 
+find . -type f \( -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "parseM3U.ts" -o -name "route.ts" -o -name "page.tsx" -o -name "PlayerClient.tsx" -o -name "PlayerButton.tsx" -o -name "StreamCard.tsx" \) -exec sh -c 'echo {}; cat {}' \; 
 ----
 
 [[npm-scripts]]

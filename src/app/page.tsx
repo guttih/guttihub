@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
-import { fetchAndParseM3U } from "@/services/fetchAndParseM3U";
 import { services } from "@/config/services";
 import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
 import { ContentCategoryFieldLabel, inferContentCategory } from "@/types/ContentCategoryFieldLabel";
 import { useDebouncedState } from "./hooks/useDebouncedState";
+import { ApiResponse } from "@/types/ApiResponse";
+import { M3UResponse } from "@/types/M3UResponse";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -33,27 +34,27 @@ export default function HomePage() {
 
     const [filtering, setIsFiltering] = useState(false);
 
+    useEffect(() => {
+        setIsFiltering(true);
+
+        const timer = setTimeout(() => {
+            setIsFiltering(false);
+        }, 10); // Small timeout lets UI commit changes
+
+        return () => clearTimeout(timer);
+    }, [searchName, searchGroup, searchTvgId, searchFormat, searchCategory, entries]);
+
     const filteredEntries = useMemo(() => {
-      setIsFiltering(true);
-    
-      const result = entries.filter((entry) => {
-        const nameMatch = searchName ? entry.name.toLowerCase().includes(searchName.toLowerCase()) : true;
-        const groupMatch = searchGroup ? entry.groupTitle.toLowerCase().includes(searchGroup.toLowerCase()) : true;
-        const idMatch = searchTvgId ? entry.tvgId.toLowerCase().includes(searchTvgId.toLowerCase()) : true;
-        const formatMatch = searchFormat ? entry.url.toLowerCase().endsWith(`.${searchFormat}`) : true;
-        const categoryMatch = searchCategory ? inferContentCategory(entry.url) === searchCategory : true;
-    
-        return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
-      });
-    
-      // Let React commit UI updates before marking filtering as done
-      setTimeout(() => setIsFiltering(false), 0);
-    
-      return result;
+        return entries.filter((entry) => {
+            const nameMatch = searchName ? entry.name.toLowerCase().includes(searchName.toLowerCase()) : true;
+            const groupMatch = searchGroup ? entry.groupTitle.toLowerCase().includes(searchGroup.toLowerCase()) : true;
+            const idMatch = searchTvgId ? entry.tvgId.toLowerCase().includes(searchTvgId.toLowerCase()) : true;
+            const formatMatch = searchFormat ? entry.url.toLowerCase().endsWith(`.${searchFormat}`) : true;
+            const categoryMatch = searchCategory ? inferContentCategory(entry.url) === searchCategory : true;
+
+            return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
+        });
     }, [entries, searchName, searchGroup, searchTvgId, searchFormat, searchCategory]);
-    
-      
-    
 
     const totalPages = Math.ceil(filteredEntries.length / pageSize);
     const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -61,15 +62,37 @@ export default function HomePage() {
     const handleFetch = async (service: StreamingService) => {
         try {
             setLoading(true);
-            const parsed = await fetchAndParseM3U(service);
-            if (!parsed) {
-                console.error("Failed to fetch or parse M3U entries");
+            const res = await fetch("/api/fetch-m3u", {
+                method: "POST",
+                body: JSON.stringify({
+                    url: service.refreshUrl,
+                    username: service.username,
+                    serviceName: service.name,
+                }),
+            });
+
+            const json: ApiResponse<M3UResponse> = await res.json();
+
+            if (!json.success) {
+                // 🛑 Handle error response
+                console.error("Fetch failed:", json.error);
+                alert(`Failed to load: ${json.error}`);
                 return;
             }
-            setEntries(parsed);
+
+            // ✅ Success
+            console.log("[FETCH RESULT]", {
+                serverCount: json.data.servers?.length,
+                formatCount: json.data.formats?.length,
+                categoryCount: json.data.categories?.length,
+                entryCount: json.data.entries?.length,
+                firstEntry: json.data.entries?.[0],
+            });
+
+            setEntries(json.data.entries);
             setCurrentPage(1);
         } catch (err) {
-            console.error(err);
+            console.error("Failed to fetch:", err);
         } finally {
             setLoading(false);
         }
@@ -77,10 +100,9 @@ export default function HomePage() {
 
     function getInputClasses(loading: boolean) {
         return `flex-1 min-w-[150px] px-3 py-2 border rounded ${
-          loading ? "bg-gray-800 text-gray-400 border-gray-600 cursor-not-allowed pointer-events-none" : ""
+            loading ? "bg-gray-800 text-gray-400 border-gray-600 cursor-not-allowed pointer-events-none" : ""
         }`;
-      }
-      
+    }
 
     return (
         <main className="p-4">
@@ -112,7 +134,6 @@ export default function HomePage() {
                         setCurrentPage(1);
                     }}
                     className={getInputClasses(loading)}
-
                 />
                 <input
                     type="text"
@@ -124,7 +145,6 @@ export default function HomePage() {
                         setCurrentPage(1);
                     }}
                     className={getInputClasses(loading)}
-
                 />
                 <input
                     type="text"
@@ -136,7 +156,6 @@ export default function HomePage() {
                         setCurrentPage(1);
                     }}
                     className={getInputClasses(loading)}
-
                 />
                 <select
                     value={searchCategory}
@@ -175,7 +194,7 @@ export default function HomePage() {
             <p className="text-sm text-gray-500 mb-2 text-center">
                 Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
                 <i>
-                    {filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}
+                    {filteredEntries && filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}
                 </i>
             </p>
 
@@ -185,7 +204,7 @@ export default function HomePage() {
                 ))}
             </div>
 
-            {entries.length > 0 && (
+            {entries && (entries.length > 0) && (
                 <div className="flex justify-center items-center mt-6 space-x-2">
                     <button
                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}

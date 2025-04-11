@@ -7,8 +7,7 @@ export enum ContentCategoryFieldLabel {
     unknown = 'Unknown'
 }
 
-//Now we need some helper functions to map the content categories to the ContentCategoriesFieldLabels
-
+//Map the content categories to the ContentCategoriesFieldLabels
 export function inferContentCategory(url: string): ContentCategoryFieldLabel {
     try {
         const u = new URL(url);

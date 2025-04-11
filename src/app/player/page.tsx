@@ -17,12 +17,13 @@ export default async function PlayerPage({ searchParams }: { searchParams: Promi
     let playUrl = url;
     if (appConfig.hideCredentialsInUrl) {
         const urlServiceValues = StreamingServiceResolver.splitStreamingSearchUrl(url || "");
-
+        
         if (!urlServiceValues) {
             return <div className="text-red-500 p-4">Invalid stream URL, missing vital parts.</div>;
         }
-
-        const service = StreamingServiceResolver.findStreamingServiceByServerValue(urlServiceValues.server);
+        
+        const resolver = new StreamingServiceResolver();
+        const service = resolver.findByServer(urlServiceValues.server);
         if (!service) {
             return <div className="text-red-500 p-4">Service not found for the provided URL.</div>;
         }

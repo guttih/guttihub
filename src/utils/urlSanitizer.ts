@@ -15,10 +15,10 @@ export function sanitizeUrl(url: string, username: string, password: string): st
       .replaceAll('PWD', password);
   }
 
-  export function sanitizeM3UUrls(entries: M3UEntry[], username: string, password: string): M3UEntry[]|undefined {
+  export function sanitizeM3UUrls(entries: M3UEntry[], username: string, password: string): M3UEntry[] {
     if (!username || !password){
-
-        return null;
+        console.warn("No username or password provided for sanitization, so no sanitization will be done.");
+        return entries;
     }
     return entries.map((entry) => ({
       ...entry,

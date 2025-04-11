@@ -12,5 +12,5 @@ export const appConfig: AppConfigType = {
   appName: 'Guttihub Stream',
   defaultPageSize: 60,
   fallbackImage: '/fallback.png',
-  hideCredentialsInUrl: false, // Set to true to hide credentials in URL client-side
+  hideCredentialsInUrl: true, // Set to true to hide credentials in URL client-side
 };

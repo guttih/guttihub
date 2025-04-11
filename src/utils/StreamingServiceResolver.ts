@@ -78,7 +78,7 @@ export class StreamingServiceResolver {
       const pathParts = parsed.pathname.split('/').filter(Boolean);
 
       const result: StreamingServiceUrlValues = {
-        server: parsed.origin.includes(':') ? `${parsed.origin}:80` : parsed.origin,
+        server: !parsed.port ? `${parsed.origin}:80` : parsed.origin,
         pathStart: '',
         username: '',
         password: '',
