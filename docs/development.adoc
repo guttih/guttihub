@@ -75,3 +75,48 @@ The goal of testing here isn't perfect coverage, but meaningful validation.
 Coverage tools are helpful for identifying blind spots, but the focus is on testing the expected behavior of the code — both typical and edge cases. It's more important that tests are clear and useful than exhaustive.
 
 The tests are intended to catch unintended side effects and to help identify when a change in one part of the codebase breaks behavior elsewhere. Coverage is a tool, not a target.
+
+
+== Styling
+
+=== Tailwind CSS Utility Classes
+
+This project uses https://tailwindcss.com/[Tailwind CSS] for styling. Tailwind provides a comprehensive utility-first approach, making it easy to apply styles directly in JSX using class names.
+
+==== Why Tailwind?
+
+Tailwind enables quick prototyping and styling without needing to write custom CSS for most UI needs. It's especially helpful for creating responsive and accessible layouts.
+
+==== Where to Learn More
+
+- 📘 https://tailwindcss.com/docs[Tailwind Docs] – the official documentation
+- 💎 https://tailwindui.com[Tailwind UI] – premium components and templates
+- 🧠 https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss[VSCode IntelliSense Plugin] – class name autocompletion, preview, and linting
+
+You can search the docs by class name, like `bg-blue-500` or `rounded-xl`, to see how they're used.
+
+==== Tailwind in This Project
+
+This project was created using the Next.js CLI, with Tailwind CSS selected during setup.
+
+Tailwind was added via the official `create-next-app` template, which configured PostCSS and Tailwind automatically.
+
+Tailwind is used throughout the project in class names such as:
+
+[source,tsx]
+----
+<button className="bg-blue-600 text-white px-4 py-2 rounded">
+  Click Me
+</button>
+----
+
+==== Editor Integration
+
+For the best development experience, make sure your editor has Tailwind CSS IntelliSense support.
+
+- 🧩 https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss[Tailwind IntelliSense for VSCode]
+
+This provides real-time autocomplete, previews, and hover tooltips for Tailwind classes.
+
+
+
