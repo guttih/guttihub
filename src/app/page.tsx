@@ -43,9 +43,6 @@ export default function HomePage() {
     const [popupSize, setPopupSize] = useState({ width: 480, height: 270 });
 
     const pageSize = Number(appConfig.defaultPageSize);
-    console.log("searchNameInput", searchNameInput);
-    console.log("debounced searchName", searchName);
-    console.log("Filtering", entries.length, "entries...");
 
     const [filtering, setIsFiltering] = useState(false);
 
