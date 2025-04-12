@@ -1,10 +1,14 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # 🔐 Local secrets not tracked by Git
-/src/config/services.ts
 .env.local
 .env.development.local
 .env.test.local
+/scripts/deployAssets/
+/src/config/services.json
+
+# todo: remove this line
+/src/config/services.ts
 
 # dependencies
 /node_modules

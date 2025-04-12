@@ -12,7 +12,7 @@ include::next.adoc[]
 
 .List all relevant project files (excluding build and cache directories)
 [source,sh]
-find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" -print
+find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" ! -path "./html/*" -print
 
 .List and display specific files
 [source,sh]
@@ -119,4 +119,30 @@ For the best development experience, make sure your editor has Tailwind CSS Inte
 This provides real-time autocomplete, previews, and hover tooltips for Tailwind classes.
 
 
+== Local Deployment Setup
 
+=== Creating `services.json` for Deployment
+
+[source,json]
+----
+{
+  "services": [
+    {
+      "id": "demo-service",
+      "name": "Example IPTV",
+      "server": "http://example.com",
+      "refreshUrl": "http://example.com/get.php?username=USERNAME&password=PASSWORD&type=m3u_plus&output=ts",
+      "viewingBaseUrl": "http://example.com/USERNAME/PASSWORD",
+      "username": "USERNAME",
+      "password": "PASSWORD",
+      "contentCategories": [
+        "movies",
+        "series",
+        ""
+      ]
+    }
+  ]
+}
+----
+
+This file is required in production builds and must exist at:

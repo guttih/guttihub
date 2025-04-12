@@ -23,6 +23,11 @@ function getExtension(url: string): string | null {
     }
 }
 
+function makeImageProxyUrl(imageUrl: string): string {
+    const proxiedUrl = `/api/image-proxy?url=${encodeURIComponent(imageUrl || "/fallback.png")}`;
+    return proxiedUrl;
+}
+
 export function StreamCard({ entry, showCopy, onPlay, showUnsupported }: Props) {
     const extension = getExtension(entry.url);
     const supported = supportedFormats.map((format) => format.toLowerCase());
@@ -45,7 +50,7 @@ export function StreamCard({ entry, showCopy, onPlay, showUnsupported }: Props) 
         <div className="relative bg-gray-900 text-white rounded-lg shadow-md overflow-hidden hover:bg-gray-800 transition duration-600 w-full max-w-xs">
             <div className="relative">
                 <img
-                    src={entry.tvgLogo || "/fallback.png"}
+                    src={makeImageProxyUrl(entry.tvgLogo) || "/fallback.png"}
                     alt={`${entry.name} logo`}
                     className="w-full h-48 object-contain bg-gray-950"
                     title={`${M3UEntryFieldLabel.tvgLogo}='${entry.tvgLogo}'`}

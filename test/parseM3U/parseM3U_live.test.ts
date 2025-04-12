@@ -12,7 +12,7 @@ function testPerformance(label: string, fn: () => unknown): number {
     return duration;
 }
 
-function validateEntriesStructure(entries: any[]) {
+function validateEntriesStructure(entries: unknown[]) {
     expect(entries.length).toBeGreaterThan(0);
     const entry = entries[0];
     expect(entry).toHaveProperty("name");

@@ -1,4 +1,4 @@
-import { services as defaultServices } from '@/config/services';
+import { services as defaultServices } from '@/config';
 import { M3UEntry } from '@/types/M3UEntry';
 import { StreamingService } from '@/types/StreamingService';
 import { StreamingServiceUrlValues } from '@/types/StreamingServiceUrlValues';

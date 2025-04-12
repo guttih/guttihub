@@ -170,9 +170,17 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     );
 };
 
+
+function makeStreamProxyUrl(imageUrl: string): string {
+    const proxiedUrl = `/api/stream-proxy?url=${encodeURIComponent(imageUrl )}`;
+  
+
+    return proxiedUrl;
+}
+
 function normalizeUrl(playUrl: string): string {
     if (!appConfig.hideCredentialsInUrl) {
-        return playUrl;
+        return makeStreamProxyUrl(playUrl);
     }
 
     const urlServiceValues = StreamingServiceResolver.splitStreamingSearchUrl(playUrl || "");
@@ -180,7 +188,7 @@ function normalizeUrl(playUrl: string): string {
 
     const resolver = new StreamingServiceResolver();
     const service = resolver.findByServer(urlServiceValues.server);
-    if (!service) return playUrl;
+    if (!service) return makeStreamProxyUrl(playUrl);
 
     return StreamingServiceResolver.unsanitizeUrl(playUrl, service.username, service.password);
 }

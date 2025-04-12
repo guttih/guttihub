@@ -22,6 +22,7 @@ export function PlayerClient({ url, autoPlay = true }: PlayerProps) {
 
     const format = getFormat(url);
     const video = videoRef.current;
+    if (!video) return;
 
     console.log('🔄 Player mounted with URL:', url, 'Format:', format);  // Debug line
 
@@ -47,6 +48,7 @@ export function PlayerClient({ url, autoPlay = true }: PlayerProps) {
     // } else if (video) {
     //   video.load();
     // }
+
 
     video.load(); // Load the video source
 

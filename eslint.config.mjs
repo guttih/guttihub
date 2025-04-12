@@ -16,6 +16,7 @@ export default [
           'node_modules/**/*',
           'dist/**/*',
           'coverage/**/*',
+          'html/**/*',
         ],
       },
     ...compat.extends('next/core-web-vitals', 'next/typescript'),

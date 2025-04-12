@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
-import { services } from "@/config/services";
+import { services } from "@/config";
 import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
@@ -127,6 +127,28 @@ export default function HomePage() {
         }`;
     }
 
+    function generateM3U(entries: M3UEntry[]): string {
+        const lines = ["#EXTM3U"];
+        for (const entry of entries) {
+            const { tvgId, tvgName, tvgLogo, groupTitle, name, url } = entry;
+            const meta = [`tvg-id="${tvgId}"`, `tvg-name="${tvgName}"`, `tvg-logo="${tvgLogo}"`, `group-title="${groupTitle}"`].join(" ");
+            lines.push(`#EXTINF:-1 ${meta},${name}`);
+            lines.push(url);
+        }
+        return lines.join("\n");
+    }
+
+    function handleExport() {
+        const m3uContent = generateM3U(filteredEntries);
+        const blob = new Blob([m3uContent], { type: "audio/x-mpegurl" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "playlist.m3u";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     return (
         <main className="p-4">
             <h1 className="text-xl font-bold mb-4">{appConfig.appName}</h1>
@@ -245,7 +267,17 @@ export default function HomePage() {
                         </select>
                     </div>
                 )}
+                {filteredEntries.length > 0 && filteredEntries.length <= appConfig.maxEntryExportCount && (
+                    <button
+                        onClick={handleExport}
+                        className="bg-blue-600 text-white px-4 py-2 rounded mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Download filtered entries as .m3u playlist"
+                    >
+                        Export M3U
+                    </button>
+                )}
             </div>
+            <div></div>
             {player.visible && player.mode === "inline" && (
                 <div className="mt-6">
                     <InlinePlayer
@@ -284,12 +316,7 @@ export default function HomePage() {
                     useInteractiveCard ? (
                         <StreamCardInteractive key={entry.url} entry={entry} />
                     ) : (
-                        <StreamCard
-                            key={entry.url}
-                            entry={entry}
-                            showCopy={!appConfig.hideCredentialsInUrl}
-                            onPlay={(url) => handlePlay(url)}
-                        />
+                        <StreamCard key={entry.url} entry={entry} showCopy={!appConfig.hideCredentialsInUrl} onPlay={(url) => handlePlay(url)} />
                     )
                 )}
             </div>
