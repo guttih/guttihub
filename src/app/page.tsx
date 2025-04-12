@@ -37,8 +37,10 @@ export default function HomePage() {
     const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [useInteractiveCard, setUseInteractiveCard] = useState(true);
+    const [useInteractiveCard, setUseInteractiveCard] = useState(false);
     const [playerMode, setPlayerMode] = useState<"inline" | "popup">("popup");
+    const [popupPosition, setPopupPosition] = useState({ x: 100, y: 100 });
+    const [popupSize, setPopupSize] = useState({ width: 480, height: 270 });
 
     const pageSize = Number(appConfig.defaultPageSize);
     console.log("searchNameInput", searchNameInput);
@@ -254,10 +256,20 @@ export default function HomePage() {
                     />
                 </div>
             )}
-            {player.visible && player.mode === "popup" && player.url && (
-                <div className={player.mode === "popup" ? "fixed bottom-4 right-4 z-50 w-[480px]" : "mt-4"}>
-                    <InlinePlayer url={player.url} showCloseButton={true} onClose={handleClosePlayer} />
-                </div>
+            {player.visible && player.mode === "popup" && (
+                <InlinePlayer
+                    url={player.url}
+                    onClose={handleClosePlayer}
+                    showCloseButton={true}
+                    draggable
+                    top={popupPosition.y}
+                    left={popupPosition.x}
+                    width={popupSize.width}
+                    height={popupSize.height}
+                    onMove={({ x, y }) => setPopupPosition({ x, y })}
+                    onResize={({ width, height }) => setPopupSize({ width, height })}
+                    className="w-[400px] aspect-video bg-black shadow-xl rounded"
+                />
             )}
 
             <p className="text-sm text-gray-500 mb-2 text-center">
@@ -276,7 +288,7 @@ export default function HomePage() {
                             key={entry.url}
                             entry={entry}
                             showCopy={!appConfig.hideCredentialsInUrl}
-                            onPlay={(url) => handlePlay(url, playerMode)}
+                            onPlay={(url) => handlePlay(url)}
                         />
                     )
                 )}
