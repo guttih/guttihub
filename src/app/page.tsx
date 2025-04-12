@@ -14,7 +14,6 @@ import { ApiResponse } from "@/types/ApiResponse";
 import { M3UResponse } from "@/types/M3UResponse";
 import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCardInteractive";
 import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
-import { set } from "lodash";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -39,8 +38,7 @@ export default function HomePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [useInteractiveCard, setUseInteractiveCard] = useState(true);
-    
-
+    const [playerMode, setPlayerMode] = useState<"inline" | "popup">("popup");
 
     const pageSize = Number(appConfig.defaultPageSize);
     console.log("searchNameInput", searchNameInput);
@@ -75,7 +73,11 @@ export default function HomePage() {
     const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     function handlePlay(url: string) {
-        setPlayer({ url, mode: "popup", visible: true });
+        setPlayer({ url, mode: playerMode, visible: true });
+    }
+
+    function handleClosePlayer() {
+        setPlayer((prev) => ({ ...prev, visible: false }));
     }
 
     const handleFetch = async (service: StreamingService) => {
@@ -209,30 +211,54 @@ export default function HomePage() {
                     ))}
                 </select>
             </div>
-            {player.visible && player.url && player.mode === "popup" && (
-                <div className={player.mode === "popup" ? "fixed bottom-4 right-4 z-50 w-[480px]" : "mt-4"}>
-                    <InlinePlayer 
-                        url={player.url} 
-                        showCloseButton={true}
-                        onClose={() => setPlayer((prev) => ({ ...prev, visible: false }))} />
+            <div className="flex items-center gap-4 my-2">
+                <div>
+                    <label htmlFor="cardStyle" className="text-sm text-gray-300 mr-2">
+                        Card Style:
+                    </label>
+                    <select
+                        id="cardStyle"
+                        value={useInteractiveCard ? "interactive" : "default"}
+                        onChange={(e) => setUseInteractiveCard(e.target.value === "interactive")}
+                        className="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded"
+                    >
+                        <option value="default">StreamCard</option>
+                        <option value="interactive">StreamCardInteractive</option>
+                    </select>
+                </div>
 
+                {!useInteractiveCard && (
+                    <div>
+                        <label htmlFor="playerMode" className="text-sm text-gray-300 mr-2">
+                            Player Mode:
+                        </label>
+                        <select
+                            id="playerMode"
+                            value={playerMode}
+                            onChange={(e) => setPlayerMode(e.target.value as "inline" | "popup")}
+                            className="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded"
+                        >
+                            <option value="popup">Popup</option>
+                            <option value="inline">Inline</option>
+                        </select>
+                    </div>
+                )}
+            </div>
+            {player.visible && player.mode === "inline" && (
+                <div className="mt-6">
+                    <InlinePlayer
+                        url={player.url}
+                        onClose={handleClosePlayer}
+                        className="rounded shadow w-full max-w-3xl mx-auto"
+                        showCloseButton={true}
+                    />
                 </div>
             )}
-
-            <div className="flex items-center gap-2 my-2">
-                <label htmlFor="cardToggle" className="text-sm text-gray-300">
-                    Card Style:
-                </label>
-                <select
-                    id="cardToggle"
-                    value={useInteractiveCard ? "interactive" : "default"}
-                    onChange={(e) => setUseInteractiveCard(e.target.value === "interactive")}
-                    className="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded"
-                >
-                    <option value="default">Default</option>
-                    <option value="interactive">Inline Player</option>
-                </select>
-            </div>
+            {player.visible && player.mode === "popup" && player.url && (
+                <div className={player.mode === "popup" ? "fixed bottom-4 right-4 z-50 w-[480px]" : "mt-4"}>
+                    <InlinePlayer url={player.url} showCloseButton={true} onClose={handleClosePlayer} />
+                </div>
+            )}
 
             <p className="text-sm text-gray-500 mb-2 text-center">
                 Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
@@ -246,9 +272,12 @@ export default function HomePage() {
                     useInteractiveCard ? (
                         <StreamCardInteractive key={entry.url} entry={entry} />
                     ) : (
-                        <StreamCard 
-                            key={entry.url} entry={entry} onPlay={handlePlay}
-                            showCopy={!appConfig.hideCredentialsInUrl}  />
+                        <StreamCard
+                            key={entry.url}
+                            entry={entry}
+                            showCopy={!appConfig.hideCredentialsInUrl}
+                            onPlay={(url) => handlePlay(url, playerMode)}
+                        />
                     )
                 )}
             </div>
