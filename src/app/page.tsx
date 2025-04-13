@@ -14,6 +14,8 @@ import { ApiResponse } from "@/types/ApiResponse";
 import { M3UResponse } from "@/types/M3UResponse";
 import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCardInteractive";
 import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
+import { filter } from "lodash";
+import { FetchM3URequest } from "@/types/FetchM3URequest";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -41,6 +43,8 @@ export default function HomePage() {
     const [playerMode, setPlayerMode] = useState<"inline" | "popup">("popup");
     const [popupPosition, setPopupPosition] = useState({ x: 100, y: 100 });
     const [popupSize, setPopupSize] = useState({ width: 480, height: 270 });
+    const [snapshotId, setSnapshotId] = useState("");
+
 
     const pageSize = Number(appConfig.defaultPageSize);
 
@@ -82,13 +86,25 @@ export default function HomePage() {
     const handleFetch = async (service: StreamingService) => {
         try {
             setLoading(true);
+            const requestBody: FetchM3URequest = {
+                url: service.refreshUrl,
+                    snapshotId: snapshotId,
+                    pagination: {
+                        offset: (currentPage -1 ) * pageSize,
+                        limit: pageSize,
+                    },
+                    filters: {
+                        name: searchNameInput,
+                        groupTitle: searchGroupInput,
+                        tvgId: searchTvgIdInput,
+                        format: searchFormat,
+                        category: searchCategory,
+                    }
+            };
+            console.log("[FETCH REQUEST]", requestBody);
             const res = await fetch("/api/fetch-m3u", {
                 method: "POST",
-                body: JSON.stringify({
-                    url: service.refreshUrl,
-                    username: service.username,
-                    serviceName: service.name,
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             const json: ApiResponse<M3UResponse> = await res.json();
@@ -106,9 +122,12 @@ export default function HomePage() {
                 formatCount: json.data.formats?.length,
                 categoryCount: json.data.categories?.length,
                 entryCount: json.data.entries?.length,
+                snapshotId: json.data.snapshotId,
+                timeStamp: json.data.timeStamp,
                 firstEntry: json.data.entries?.[0],
+                pagination : JSON.stringify(json.data.pagination, null, 2),
             });
-
+            setSnapshotId(json.data.snapshotId);
             setEntries(json.data.entries);
             setCurrentPage(1);
         } catch (err) {

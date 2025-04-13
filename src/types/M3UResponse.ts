@@ -6,8 +6,15 @@ import { StreamingService } from "./StreamingService";
 type ServerUrl = StreamingService["server"];
 
 export interface M3UResponse {
-  servers: ServerUrl[];
-  entries: M3UEntry[];
-  formats: string[];
-  categories: ContentCategoryFieldLabel[];
-}
+    snapshotId: string;
+    timeStamp: string;
+    totalCount: number;
+    entries: M3UEntry[];
+    formats?: string[];
+    categories?: ContentCategoryFieldLabel[];
+    servers?: ServerUrl[]; 
+    pagination: {
+        offset: number;
+        limit: number;
+    };
+  }
