@@ -32,9 +32,9 @@ export default function HomePage() {
         visible: false,
     });
 
-    const searchName = useDebouncedState(searchNameInput, 1000);
-    const searchTvgId = useDebouncedState(searchTvgIdInput, 1000);
-    const searchGroup = useDebouncedState(searchGroupInput, 1000);
+    const searchName = useDebouncedState(searchNameInput, 500);
+    const searchTvgId = useDebouncedState(searchTvgIdInput, 500);
+    const searchGroup = useDebouncedState(searchGroupInput, 500);
     const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
     const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -44,6 +44,8 @@ export default function HomePage() {
     const [popupPosition, setPopupPosition] = useState({ x: 100, y: 100 });
     const [popupSize, setPopupSize] = useState({ width: 480, height: 270 });
     const [snapshotId, setSnapshotId] = useState("");
+    const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
 
     const [activeService, setActiveService] = useState<StreamingService | null>(null);
     const [totalEntries, setTotalEntries] = useState(0);
@@ -102,13 +104,7 @@ const isDebouncing = searchNameInput !== searchName ||
                     offset: (currentPage - 1) * pageSize,
                     limit: pageSize,
                 },
-                filters: {
-                    name: searchNameInput,
-                    groupTitle: searchGroupInput,
-                    tvgId: searchTvgIdInput,
-                    format: searchFormat,
-                    category: searchCategory,
-                },
+                filters: debouncedFilters,
             };
     
             const res = await fetch("/api/fetch-m3u", {
@@ -117,6 +113,7 @@ const isDebouncing = searchNameInput !== searchName ||
             });
     
             const json: ApiResponse<M3UResponse> = await res.json();
+    
             if (!json.success) {
                 alert(`Failed to load: ${json.error}`);
                 return;
@@ -124,6 +121,9 @@ const isDebouncing = searchNameInput !== searchName ||
     
             setSnapshotId(json.data.snapshotId);
             setEntries(json.data.entries);
+
+
+
             setTotalEntries(json.data.totalItems);
             setTotalPages(json.data.totalPages);
         } catch (err) {
@@ -131,21 +131,25 @@ const isDebouncing = searchNameInput !== searchName ||
         } finally {
             setLoading(false);
         }
-    }, [
-        activeService,
-        currentPage,
-        pageSize,
-       debouncedFilters,
-        snapshotId,
-    ]);
-
+    }, [activeService, currentPage, debouncedFilters, pageSize, snapshotId]);
+    
+    useEffect(() => {
+        if (!loading && focusedInput) {
+          const el = document.querySelector<HTMLInputElement>(`input[name="${focusedInput}"]`);
+          if (el && !el.disabled) {
+            el.focus();
+            el.setSelectionRange(el.value.length, el.value.length);
+          }
+        }
+      }, [loading, focusedInput]);
+      
         
     
     useEffect(() => {
         if (activeService) {
             handleFetch(activeService);
         }
-    }, [currentPage, activeService, debouncedFilters]);
+    }, [currentPage, activeService, debouncedFilters, handleFetch]);
     
     useEffect(() => {
         if (!activeService) return;
@@ -208,6 +212,9 @@ const isDebouncing = searchNameInput !== searchName ||
 
             <div className="flex flex-wrap gap-2 items-center my-4">
                 <input
+                name="searchName"
+                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                onBlur={() => setFocusedInput(null)}
                     type="text"
                     placeholder={`Search ${M3UEntryFieldLabel.name}`}
                     title={M3UEntryFieldLabel.name}
@@ -220,6 +227,9 @@ const isDebouncing = searchNameInput !== searchName ||
                     className={getInputClasses(loading)}
                 />
                 <input
+                name="searchGroup"
+                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                onBlur={() => setFocusedInput(null)}
                     type="text"
                     placeholder={`Search ${M3UEntryFieldLabel.groupTitle}`}
                     title={M3UEntryFieldLabel.groupTitle}
@@ -231,6 +241,9 @@ const isDebouncing = searchNameInput !== searchName ||
                     className={getInputClasses(loading)}
                 />
                 <input
+                name="searchTvgId"
+                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                onBlur={() => setFocusedInput(null)}
                     type="text"
                     placeholder={`Search ${M3UEntryFieldLabel.tvgId}`}
                     title={M3UEntryFieldLabel.tvgId}
@@ -242,6 +255,9 @@ const isDebouncing = searchNameInput !== searchName ||
                     className={getInputClasses(loading)}
                 />
                 <select
+                name="searchCategory"
+                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                onBlur={() => setFocusedInput(null)}
                     value={searchCategory}
                     onChange={(e) => {
                         setSearchCategory(e.target.value as ContentCategoryFieldLabel);
@@ -258,6 +274,9 @@ const isDebouncing = searchNameInput !== searchName ||
                     ))}
                 </select>
                 <select
+                    name="searchFormaty"
+                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                    onBlur={() => setFocusedInput(null)}
                     value={searchFormat}
                     onChange={(e) => {
                         setSearchFormat(e.target.value as StreamFormat);
