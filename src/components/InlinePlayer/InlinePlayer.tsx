@@ -173,7 +173,6 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
 
 function makeStreamProxyUrl(imageUrl: string): string {
     const proxiedUrl = `/api/stream-proxy?url=${encodeURIComponent(imageUrl )}`;
-  
 
     return proxiedUrl;
 }
