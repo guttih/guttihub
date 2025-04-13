@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
@@ -8,12 +8,13 @@ import { services } from "@/config";
 import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
-import { ContentCategoryFieldLabel, inferContentCategory } from "@/types/ContentCategoryFieldLabel";
+ import { ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
 import { useDebouncedState } from "./hooks/useDebouncedState";
 import { ApiResponse } from "@/types/ApiResponse";
 import { M3UResponse } from "@/types/M3UResponse";
 import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCardInteractive";
 import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
+import { FetchM3URequest } from "@/types/FetchM3URequest";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -30,9 +31,9 @@ export default function HomePage() {
         visible: false,
     });
 
-    const searchName = useDebouncedState(searchNameInput, 200);
-    const searchTvgId = useDebouncedState(searchTvgIdInput, 200);
-    const searchGroup = useDebouncedState(searchGroupInput, 200);
+    const searchName = useDebouncedState(searchNameInput, 500);
+    const searchTvgId = useDebouncedState(searchTvgIdInput, 500);
+    const searchGroup = useDebouncedState(searchGroupInput, 500);
     const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
     const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -41,6 +42,28 @@ export default function HomePage() {
     const [playerMode, setPlayerMode] = useState<"inline" | "popup">("popup");
     const [popupPosition, setPopupPosition] = useState({ x: 100, y: 100 });
     const [popupSize, setPopupSize] = useState({ width: 480, height: 270 });
+    const [snapshotId, setSnapshotId] = useState("");
+    const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+
+    const [activeService, setActiveService] = useState<StreamingService | null>(null);
+    const [totalEntries, setTotalEntries] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const debouncedFilters = useMemo(() => ({
+        name: searchName,
+        groupTitle: searchGroup,
+        tvgId: searchTvgId,
+        format: searchFormat,
+        category: searchCategory,
+      }), [searchName, searchGroup, searchTvgId, searchFormat, searchCategory]);
+      
+
+    /*
+// for later if we want to know if we are debouncing
+const isDebouncing = searchNameInput !== searchName ||
+                     searchGroupInput !== searchGroup ||
+                     searchTvgIdInput !== searchTvgId;
+*/
 
     const pageSize = Number(appConfig.defaultPageSize);
 
@@ -56,21 +79,6 @@ export default function HomePage() {
         return () => clearTimeout(timer);
     }, [searchName, searchGroup, searchTvgId, searchFormat, searchCategory, entries]);
 
-    const filteredEntries = useMemo(() => {
-        return entries.filter((entry) => {
-            const nameMatch = searchName ? entry.name.toLowerCase().includes(searchName.toLowerCase()) : true;
-            const groupMatch = searchGroup ? entry.groupTitle.toLowerCase().includes(searchGroup.toLowerCase()) : true;
-            const idMatch = searchTvgId ? entry.tvgId.toLowerCase().includes(searchTvgId.toLowerCase()) : true;
-            const formatMatch = searchFormat ? entry.url.toLowerCase().endsWith(`.${searchFormat}`) : true;
-            const categoryMatch = searchCategory ? inferContentCategory(entry.url) === searchCategory : true;
-
-            return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
-        });
-    }, [entries, searchName, searchGroup, searchTvgId, searchFormat, searchCategory]);
-
-    const totalPages = Math.ceil(filteredEntries.length / pageSize);
-    const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
     function handlePlay(url: string) {
         setPlayer({ url, mode: playerMode, visible: true });
     }
@@ -79,44 +87,76 @@ export default function HomePage() {
         setPlayer((prev) => ({ ...prev, visible: false }));
     }
 
-    const handleFetch = async (service: StreamingService) => {
+
+
+    const handleFetch = useCallback(async (service: StreamingService | null = activeService) => {
+        if (!service) return;
+    
+        setActiveService(service);
+        setLoading(true);
+    
         try {
-            setLoading(true);
+            const requestBody: FetchM3URequest = {
+                url: service.refreshUrl,
+                snapshotId,
+                pagination: {
+                    offset: (currentPage - 1) * pageSize,
+                    limit: pageSize,
+                },
+                filters: debouncedFilters,
+            };
+    
             const res = await fetch("/api/fetch-m3u", {
                 method: "POST",
-                body: JSON.stringify({
-                    url: service.refreshUrl,
-                    username: service.username,
-                    serviceName: service.name,
-                }),
+                body: JSON.stringify(requestBody),
             });
-
+    
             const json: ApiResponse<M3UResponse> = await res.json();
-
+    
             if (!json.success) {
-                // 🛑 Handle error response
-                console.error("Fetch failed:", json.error);
                 alert(`Failed to load: ${json.error}`);
                 return;
             }
-
-            // ✅ Success
-            console.log("[FETCH RESULT]", {
-                serverCount: json.data.servers?.length,
-                formatCount: json.data.formats?.length,
-                categoryCount: json.data.categories?.length,
-                entryCount: json.data.entries?.length,
-                firstEntry: json.data.entries?.[0],
-            });
-
+    
+            setSnapshotId(json.data.snapshotId);
             setEntries(json.data.entries);
-            setCurrentPage(1);
+
+
+
+            setTotalEntries(json.data.totalItems);
+            setTotalPages(json.data.totalPages);
         } catch (err) {
-            console.error("Failed to fetch:", err);
+            console.error("Fetch failed", err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [activeService, currentPage, debouncedFilters, pageSize, snapshotId]);
+    
+    useEffect(() => {
+        if (!loading && focusedInput) {
+          const el = document.querySelector<HTMLInputElement>(`input[name="${focusedInput}"]`);
+          if (el && !el.disabled) {
+            el.focus();
+            el.setSelectionRange(el.value.length, el.value.length);
+          }
+        }
+      }, [loading, focusedInput]);
+      
+        
+    
+    useEffect(() => {
+        if (activeService) {
+            handleFetch(activeService);
+        }
+    }, [currentPage, activeService, debouncedFilters, handleFetch]);
+    
+    useEffect(() => {
+        if (!activeService) return;
+        setCurrentPage((prev) => (prev === 1 ? prev : 1));
+    }, [activeService, debouncedFilters]);
+    
+    
+    
 
     function getInputClasses(loading: boolean) {
         return `flex-1 min-w-[150px] px-3 py-2 border rounded ${
@@ -136,7 +176,7 @@ export default function HomePage() {
     }
 
     function handleExport() {
-        const m3uContent = generateM3U(filteredEntries);
+        const m3uContent = generateM3U(entries);
         const blob = new Blob([m3uContent], { type: "audio/x-mpegurl" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -152,10 +192,15 @@ export default function HomePage() {
             <div className="flex items-center gap-3 mb-4">
                 {services.map((service) => (
                     <button
-                        key={service.id}
-                        onClick={() => handleFetch(service)}
-                        disabled={loading}
                         className="bg-blue-600 text-white px-4 py-2 rounded mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        key={service.id}
+                        disabled={loading}
+                        onClick={() => {
+                            setActiveService(service);
+                            setCurrentPage((prev) => (prev === 1 ? prev : 1)); // triggers fetch via useEffect
+                            handleFetch(service);
+                        }}
+                        
                     >
                         Load {service.name}
                     </button>
@@ -166,6 +211,9 @@ export default function HomePage() {
 
             <div className="flex flex-wrap gap-2 items-center my-4">
                 <input
+                name="searchName"
+                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                onBlur={() => setFocusedInput(null)}
                     type="text"
                     placeholder={`Search ${M3UEntryFieldLabel.name}`}
                     title={M3UEntryFieldLabel.name}
@@ -173,37 +221,46 @@ export default function HomePage() {
                     disabled={loading}
                     onChange={(e) => {
                         setSearchNameInput(e.target.value);
-                        setCurrentPage(1);
+                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
                     }}
                     className={getInputClasses(loading)}
                 />
                 <input
+                name="searchGroup"
+                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                onBlur={() => setFocusedInput(null)}
                     type="text"
                     placeholder={`Search ${M3UEntryFieldLabel.groupTitle}`}
                     title={M3UEntryFieldLabel.groupTitle}
                     value={searchGroupInput}
                     onChange={(e) => {
                         setSearchGroupInput(e.target.value);
-                        setCurrentPage(1);
+                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
                     }}
                     className={getInputClasses(loading)}
                 />
                 <input
+                name="searchTvgId"
+                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                onBlur={() => setFocusedInput(null)}
                     type="text"
                     placeholder={`Search ${M3UEntryFieldLabel.tvgId}`}
                     title={M3UEntryFieldLabel.tvgId}
                     value={searchTvgIdInput}
                     onChange={(e) => {
                         setSearchTvgIdInput(e.target.value);
-                        setCurrentPage(1);
+                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
                     }}
                     className={getInputClasses(loading)}
                 />
                 <select
+                name="searchCategory"
+                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                onBlur={() => setFocusedInput(null)}
                     value={searchCategory}
                     onChange={(e) => {
                         setSearchCategory(e.target.value as ContentCategoryFieldLabel);
-                        setCurrentPage(1);
+                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
                     }}
                     className="flex-[0.3] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
                     title="Content Category"
@@ -216,10 +273,13 @@ export default function HomePage() {
                     ))}
                 </select>
                 <select
+                    name="searchFormaty"
+                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                    onBlur={() => setFocusedInput(null)}
                     value={searchFormat}
                     onChange={(e) => {
                         setSearchFormat(e.target.value as StreamFormat);
-                        setCurrentPage(1);
+                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
                     }}
                     className="flex-[0.2] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
                     title="Stream Format"
@@ -264,7 +324,7 @@ export default function HomePage() {
                         </select>
                     </div>
                 )}
-                {filteredEntries.length > 0 && filteredEntries.length <= appConfig.maxEntryExportCount && (
+                {entries.length > 0 && entries.length <= appConfig.maxEntryExportCount && (
                     <button
                         onClick={handleExport}
                         className="bg-blue-600 text-white px-4 py-2 rounded mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -304,12 +364,12 @@ export default function HomePage() {
             <p className="text-sm text-gray-500 mb-2 text-center">
                 Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
                 <i>
-                    {filteredEntries && filteredEntries.length} result{filteredEntries.length === 1 ? "" : "s"}
+                    {totalEntries} result{totalEntries === 1 ? "" : "s"}
                 </i>
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-                {paginatedEntries.map((entry) =>
+                {entries.map((entry) =>
                     useInteractiveCard ? (
                         <StreamCardInteractive key={entry.url} entry={entry} />
                     ) : (

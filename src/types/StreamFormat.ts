@@ -4,6 +4,7 @@ export enum StreamFormat {
     MKV = 'mkv',
     TS = 'ts',
     AVI = 'avi',
+    UNKNOWN = 'unknown',
     //M3U8 = 'm3u8',
     // FLV = 'flv',
     // MOV = 'mov',
@@ -22,3 +23,16 @@ export const supportedFormats: StreamFormat[] = [
      // StreamFormat.FLV, //No wideo with this format was found on servers
     // StreamFormat.MOV, //No wideo with this format was found on servers
   ];
+
+  export const getStreamFormat = (url: string | null | undefined): StreamFormat => {
+    if (!url || typeof url !== 'string' || url.indexOf('.') < 1) {
+      return StreamFormat.UNKNOWN;
+    }
+  
+    const ext = url.slice(url.lastIndexOf('.') + 1).toLowerCase();
+  
+    // Check if the ext is one of the enum values
+    const formats = Object.values(StreamFormat);
+    return formats.includes(ext as StreamFormat) ? ext as StreamFormat : StreamFormat.UNKNOWN;
+  };
+  
