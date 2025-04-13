@@ -2,7 +2,6 @@
 import { M3UEntry } from "./M3UEntry";
 import { ContentCategoryFieldLabel } from "./ContentCategoryFieldLabel";
 import { StreamingService } from "./StreamingService";
-import { NextResponse } from "next/server";
 
 type ServerUrl = StreamingService["server"];
 

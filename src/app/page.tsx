@@ -8,14 +8,13 @@ import { services } from "@/config";
 import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
-import { ContentCategoryFieldLabel, inferContentCategory } from "@/types/ContentCategoryFieldLabel";
+ import { ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
 import { useDebouncedState } from "./hooks/useDebouncedState";
 import { ApiResponse } from "@/types/ApiResponse";
-import { M3UResponse, makePrintableM3UResponse } from "@/types/M3UResponse";
+import { M3UResponse } from "@/types/M3UResponse";
 import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCardInteractive";
 import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
 import { FetchM3URequest } from "@/types/FetchM3URequest";
-import { entriesIn } from "lodash";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);

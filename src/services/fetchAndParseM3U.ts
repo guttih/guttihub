@@ -10,8 +10,6 @@ export async function fetchAndParseM3U(service: StreamingService): Promise<M3UEn
     try {
         const payload: FetchM3URequest = {
             url: service.refreshUrl,
-            username: service.username,
-            serviceName: service.name,
         };
         const apiResponse = await fetch("/api/fetch-m3u", {
             method: "POST",
