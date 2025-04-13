@@ -15,24 +15,16 @@ import { StreamFormat, getStreamFormat } from "@/types/StreamFormat";
 
 const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-
-
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
-
     {
-        const { url, 
-                snapshotId, pagination,
-                filters    }:FetchM3URequest = await req.json();
+        const { url, snapshotId, pagination, filters }: FetchM3URequest = await req.json();
 
         try {
-            
-
-            
             // Infer server origin with fallback port
             const urlObj = new URL(url);
             let serverOrigin = urlObj.origin;
             if (!urlObj.port) {
-                 serverOrigin += ":80";
+                serverOrigin += ":80";
             }
 
             await ensureCacheDir();
@@ -48,7 +40,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             //We do not need the m3u file, but we want the json file with the entries so let's move next 3 lines to a function
             const chasedData = await getCachedOrFreshData(url, service.username, service.name);
 
-            if (snapshotId && snapshotId !== chasedData.snapshotId) {
+            if ( pagination?.offset  && snapshotId && snapshotId !== chasedData.snapshotId) {
                 console.log("[CACHE] Snapshot ID mismatch. Fetching fresh data.");
                 return makeErrorResponse(`Your list is outdated, it was updated on ${chasedData.timeStamp}, refresh it to get new data`, 400);
             }
@@ -57,37 +49,37 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
                 return makeErrorResponse("No valid entries found", 400);
             }
 
-            const filtered = hasValidFilters(filters) ?  filterEntries(chasedData.entries, filters) : chasedData.entries;
+            const filtered = hasValidFilters(filters) ? filterEntries(chasedData.entries, filters) : chasedData.entries;
 
             // ok now we need to select offset and limit
 
-            const start = pagination?.offset || 0
+            const start = pagination?.offset || 0;
             const end = pagination?.limit ? start + pagination.limit : filtered.length;
             const paginated = filtered.slice(start, end);
             // does offset not need to be sent back to the client?
             // const paginated = filtered.slice(offset || 0, limit ? (offset || 0) + limit : filtered.length);
-            
+
             console.log(`[Filtered] Entries count: ${paginated.length}, of filtered ${filtered.length} and total ${chasedData.entries.length}`);
 
             // Sanitize if needed
-            const sanitized = appConfig.hideCredentialsInUrl ? sanitizeM3UUrls(paginated, service.username, service.password) : paginated;
+            const pageItems = appConfig.hideCredentialsInUrl ? sanitizeM3UUrls(paginated, service.username, service.password) : paginated;
 
             const response: M3UResponse = {
                 snapshotId: chasedData.snapshotId,
                 timeStamp: chasedData.timeStamp,
-                totalCount: sanitized.length,
-                entries: filtered,
-                formats: extractFormats(filtered),
-                categories: extractCategories(filtered),
+                entries: pageItems,
                 servers: [chasedData.servers[0]],
                 pagination: {
                     offset: start,
-                    limit: end - start
+                    limit: end - start,
                 },
+                totalItems: filtered.length,
+                totalPages: Math.ceil(filtered.length / (end - start)),
+                formats: extractFormats(filtered),
+                categories: extractCategories(filtered),
             };
 
             return makeSuccessResponse<M3UResponse>(response);
-
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Unknown error";
             console.error("[M3U FETCH ERROR]", msg);
@@ -97,7 +89,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
     async function getCachedOrFreshData(url: string, username: string, serviceName: string): Promise<CashedEntries> {
         const filePathCashed = getCacheFilePath(username, serviceName, "cashedEntries");
-        
+
         if (await isFileFresh(filePathCashed, CACHE_DURATION_MS)) {
             console.log("[CACHE] Using cached file:", filePathCashed);
             return await readJsonFile<CashedEntries>(filePathCashed);
@@ -107,7 +99,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
         const cacheFilePathM3U = getCacheFilePath(username, serviceName, "m3u");
         const rawM3U = await getCachedOrFreshM3U(url, cacheFilePathM3U);
-        
+
         const entries = parseM3U(rawM3U);
 
         const snapshotId = crypto.createHash("sha1").update(JSON.stringify(entries)).digest("hex");
@@ -119,8 +111,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             servers: [serviceName],
             entries,
         };
-
-
 
         console.log(`[CACHE] Writing new file:", ${filePathCashed} at ${cashed.timeStamp}`);
         console.log("writing cashed entries:", {
@@ -170,22 +160,20 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
     function extractCategories(entries: { url: string }[]): ContentCategoryFieldLabel[] {
         return Array.from(new Set(entries.map((e) => inferContentCategory(e.url)))).filter(Boolean);
     }
-    
+
     function filterEntries(entries: M3UEntry[], filters: FetchM3URequest["filters"] = {}) {
         return entries.filter((entry) => {
-          const nameMatch = filters.name ? entry.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
-          const groupMatch = filters.groupTitle ? entry.groupTitle.toLowerCase().includes(filters.groupTitle.toLowerCase()) : true;
-          const idMatch = filters.tvgId ? entry.tvgId.toLowerCase().includes(filters.tvgId.toLowerCase()) : true;
-          const formatMatch = filters.format ? entry.url.toLowerCase().endsWith(`.${filters.format}`) : true;
-          const categoryMatch = filters.category ? inferContentCategory(entry.url) === filters.category : true;
-      
-          return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
+            const nameMatch = filters.name ? entry.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
+            const groupMatch = filters.groupTitle ? entry.groupTitle.toLowerCase().includes(filters.groupTitle.toLowerCase()) : true;
+            const idMatch = filters.tvgId ? entry.tvgId.toLowerCase().includes(filters.tvgId.toLowerCase()) : true;
+            const formatMatch = filters.format ? entry.url.toLowerCase().endsWith(`.${filters.format}`) : true;
+            const categoryMatch = filters.category ? inferContentCategory(entry.url) === filters.category : true;
+
+            return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
         });
-      }
-    
-    
-      function hasValidFilters(filters: FetchM3URequest["filters"] = {}): boolean {
+    }
+
+    function hasValidFilters(filters: FetchM3URequest["filters"] = {}): boolean {
         return Object.values(filters).some((value) => value && value.trim() !== "");
     }
-    
 }
