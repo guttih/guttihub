@@ -31,9 +31,9 @@ export default function HomePage() {
         visible: false,
     });
 
-    const searchName = useDebouncedState(searchNameInput, 500);
-    const searchTvgId = useDebouncedState(searchTvgIdInput, 500);
-    const searchGroup = useDebouncedState(searchGroupInput, 500);
+    const searchName = useDebouncedState(searchNameInput, 1000);
+    const searchTvgId = useDebouncedState(searchTvgIdInput, 1000);
+    const searchGroup = useDebouncedState(searchGroupInput, 1000);
     const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
     const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
     const [currentPage, setCurrentPage] = useState(1);
