@@ -16,6 +16,9 @@ import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCard
 import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
 import { FetchM3URequest } from "@/types/FetchM3URequest";
 import { FilterInput } from "@/components/FilterInput/FilterInput";
+import { PaginationControls } from "@/components/PaginationControls/PaginationControls";
+import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect";
+import { set } from "lodash";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -45,6 +48,8 @@ export default function HomePage() {
     const [popupSize, setPopupSize] = useState({ width: 480, height: 270 });
     const [snapshotId, setSnapshotId] = useState("");
     const [focusedInput, setFocusedInput] = useState<string | null>(null);
+    const [mergedYears, setMergedYears] = useState<string[]>([]);
+    const [selectedYears, setSelectedYears] = useState<string[]>([]);
 
     const [activeService, setActiveService] = useState<StreamingService | null>(null);
     const [totalEntries, setTotalEntries] = useState(0);
@@ -75,16 +80,10 @@ export default function HomePage() {
             },
             format: searchFormat || undefined,
             category: searchCategory || undefined,
+            years: selectedYears.length > 0 ? selectedYears : undefined,
         }),
-        [searchName, searchGroup, searchTvgId, searchFormat, searchCategory, inputModes]
+        [searchName, searchGroup, searchTvgId, searchFormat, searchCategory, inputModes, selectedYears]
     );
-
-    /*
-// for later if we want to know if we are debouncing
-const isDebouncing = searchNameInput !== searchName ||
-                     searchGroupInput !== searchGroup ||
-                     searchTvgIdInput !== searchTvgId;
-*/
 
     const pageSize = Number(appConfig.defaultPageSize);
 
@@ -115,6 +114,15 @@ const isDebouncing = searchNameInput !== searchName ||
         }));
     }
 
+    function handlePageChange(offset: number) {
+        if (offset > 0) {
+            setCurrentPage((p) => Math.min(totalPages, p + 1));
+        } else {
+            setCurrentPage((p) => Math.max(1, p - 1));
+        }
+    }
+
+    const buttonBaseClasses = "bg-gray-700 text-white px-4 py-2 rounded transition-colors duration-150 hover:bg-gray-600 disabled:opacity-50";
     const handleFetch = useCallback(
         async (service: StreamingService | null = activeService) => {
             if (!service) return;
@@ -130,7 +138,7 @@ const isDebouncing = searchNameInput !== searchName ||
                         offset: (currentPage - 1) * pageSize,
                         limit: pageSize,
                     },
-                    filters: debouncedFilters,
+                    filters: { ...debouncedFilters, years: selectedYears },
                 };
 
                 const res = await fetch("/api/fetch-m3u", {
@@ -150,6 +158,9 @@ const isDebouncing = searchNameInput !== searchName ||
 
                 setTotalEntries(json.data.totalItems);
                 setTotalPages(json.data.totalPages);
+                const fetchedYears = json.data.years || [];
+
+                setMergedYears(Array.from(new Set([...fetchedYears, ...selectedYears])).sort((a, b) => parseInt(b) - parseInt(a)));
             } catch (err) {
                 console.error("Fetch failed", err);
             } finally {
@@ -202,155 +213,217 @@ const isDebouncing = searchNameInput !== searchName ||
         URL.revokeObjectURL(url);
     }
 
+    function handleClearFilters() {
+        setSearchNameInput("");
+        setSearchGroupInput("");
+        setSearchTvgIdInput("");
+        setSearchFormat("");
+        setSearchCategory("");
+        setSelectedYears([]);
+        setMergedYears([]);
+    }
+
+    const EraserIcon = () => (
+        <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path d="M19 19H5m7-14l7 7-8 8-7-7 8-8z" />
+  </svg>
+    );
+
     return (
-        <main className="p-4">
+        <main className="p-4 max-w-full mx-auto">
             <h1 className="text-xl font-bold mb-4">{appConfig.appName}</h1>
-            <div className="flex items-center gap-3 mb-4">
-                <label htmlFor="serviceSelect" className="text-white">
-                    Select Service:
-                </label>
-                <select
-                    id="serviceSelect"
-                    value={activeService?.id ?? ""}
-                    onChange={(e) => {
-                        const selected = services.find((s) => s.id === e.target.value);
-                        if (selected) {
-                            setActiveService(selected);
-                            setCurrentPage(1); // resets to page 1
-                            handleFetch(selected);
-                        }
-                    }}
-                    disabled={loading}
-                    className="px-4 py-2 bg-gray-800 text-white border border-gray-600 rounded"
-                >
-                    <option value="" disabled>
-                        Select a service...
-                    </option>
-                    {services.map((service) => (
-                        <option key={service.id} value={service.id}>
-                            {service.name}
-                        </option>
-                    ))}
-                </select>
-
-                {(loading || filtering) && <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center my-4">
-                <FilterInput
-                    name="searchName"
-                    label={M3UEntryFieldLabel.name}
-                    value={searchNameInput}
-                    onChange={setSearchNameInput}
-                    mode={inputModes.searchName}
-                    onToggle={toggleInputMode}
-                    loading={loading}
-                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                    onBlur={() => setFocusedInput(null)}
-                />
-                <FilterInput
-                    name="searchGroup"
-                    label={M3UEntryFieldLabel.groupTitle}
-                    value={searchGroupInput}
-                    onChange={setSearchGroupInput}
-                    mode={inputModes.searchGroup}
-                    onToggle={toggleInputMode}
-                    loading={loading}
-                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                    onBlur={() => setFocusedInput(null)}
-                />
-
-                <FilterInput
-                    name="searchTvgId"
-                    label={M3UEntryFieldLabel.tvgId}
-                    value={searchTvgIdInput}
-                    onChange={setSearchTvgIdInput}
-                    mode={inputModes.searchTvgId}
-                    onToggle={toggleInputMode}
-                    loading={loading}
-                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                    onBlur={() => setFocusedInput(null)}
-                />
-                <select
-                    name="searchCategory"
-                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                    onBlur={() => setFocusedInput(null)}
-                    value={searchCategory}
-                    onChange={(e) => {
-                        setSearchCategory(e.target.value as ContentCategoryFieldLabel);
-                    }}
-                    className="flex-[0.3] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
-                    title="Content Category"
-                >
-                    <option value="">All Categories</option>
-                    {Object.values(ContentCategoryFieldLabel).map((cat) => (
-                        <option key={cat} value={cat}>
-                            {cat}
-                        </option>
-                    ))}
-                </select>
-                <select
-                    name="searchFormaty"
-                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                    onBlur={() => setFocusedInput(null)}
-                    value={searchFormat}
-                    onChange={(e) => {
-                        setSearchFormat(e.target.value as StreamFormat);
-                    }}
-                    className="flex-[0.2] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
-                    title="Stream Format"
-                >
-                    <option value="">All Formats</option>
-                    {Object.values(StreamFormat).map((format) => (
-                        <option key={format} value={format}>
-                            {format.toUpperCase()}
-                        </option>
-                    ))}
-                </select>
-            </div>
-            <div className="flex items-center gap-4 my-2">
-                <div>
-                    <label htmlFor="cardStyle" className="text-sm text-gray-300 mr-2">
-                        Card Style:
+            <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
+                {/* Left Group: Service select + Export */}
+                <div className="flex flex-wrap items-end gap-4">
+                    {/* Select Service */}
+                    <label htmlFor="serviceSelect" className="text-sm text-white flex flex-col">
+                        Select Service:
+                        <select
+                            id="serviceSelect"
+                            value={activeService?.id ?? ""}
+                            onChange={(e) => {
+                                const selected = services.find((s) => s.id === e.target.value);
+                                if (selected) {
+                                    setActiveService(selected);
+                                    setCurrentPage(1);
+                                    handleFetch(selected);
+                                }
+                            }}
+                            disabled={loading}
+                            className="bg-gray-800 text-white px-3 py-2 border border-gray-600 rounded mt-1 min-w-[200px]"
+                        >
+                            <option value="" disabled>
+                                Select a service...
+                            </option>
+                            {services.map((service) => (
+                                <option key={service.id} value={service.id}>
+                                    {service.name}
+                                </option>
+                            ))}
+                        </select>
                     </label>
-                    <select
-                        id="cardStyle"
-                        value={useInteractiveCard ? "interactive" : "default"}
-                        onChange={(e) => setUseInteractiveCard(e.target.value === "interactive")}
-                        className="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded"
-                    >
-                        <option value="default">StreamCard</option>
-                        <option value="interactive">StreamCardInteractive</option>
-                    </select>
+
+                    {/* Export Button */}
+                    {entries.length > 0 && entries.length <= appConfig.maxEntryExportCount && (
+                        <button
+                            onClick={handleExport}
+                            className={`${buttonBaseClasses} flex items-center gap-2`}
+                            title="Download filtered entries as .m3u playlist"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+                                />
+                            </svg>
+                            <span>Export</span>
+                        </button>
+                    )}
                 </div>
 
-                {!useInteractiveCard && (
-                    <div>
-                        <label htmlFor="playerMode" className="text-sm text-gray-300 mr-2">
-                            Player Mode:
-                        </label>
+                {/* Right Group: Card Style + Player Mode */}
+                <div className="flex flex-wrap items-end gap-4">
+                    {/* Card Style */}
+                    <label className="text-sm text-white flex flex-col">
+                        Card Style:
                         <select
-                            id="playerMode"
-                            value={playerMode}
-                            onChange={(e) => setPlayerMode(e.target.value as "inline" | "popup")}
-                            className="px-2 py-1 bg-gray-800 text-white border border-gray-700 rounded"
+                            id="cardStyle"
+                            value={useInteractiveCard ? "interactive" : "default"}
+                            onChange={(e) => setUseInteractiveCard(e.target.value === "interactive")}
+                            className="bg-gray-800 text-white px-3 py-2 border border-gray-600 rounded mt-1 min-w-[150px]"
                         >
-                            <option value="popup">Popup</option>
-                            <option value="inline">Inline</option>
+                            <option value="default">StreamCard</option>
+                            <option value="interactive">StreamCardInteractive</option>
                         </select>
-                    </div>
-                )}
-                {entries.length > 0 && entries.length <= appConfig.maxEntryExportCount && (
-                    <button
-                        onClick={handleExport}
-                        className="bg-blue-600 text-white px-4 py-2 rounded mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Download filtered entries as .m3u playlist"
-                    >
-                        Export M3U
-                    </button>
-                )}
+                    </label>
+
+                    {/* Player Mode (only if not interactive) */}
+                    {!useInteractiveCard && (
+                        <label className="text-sm text-white flex flex-col">
+                            Player Mode:
+                            <select
+                                id="playerMode"
+                                value={playerMode}
+                                onChange={(e) => setPlayerMode(e.target.value as "inline" | "popup")}
+                                className="bg-gray-800 text-white px-3 py-2 border border-gray-600 rounded mt-1 min-w-[120px]"
+                            >
+                                <option value="popup">Popup</option>
+                                <option value="inline">Inline</option>
+                            </select>
+                        </label>
+                    )}
+                </div>
             </div>
-            <div></div>
+
+            <div className="w-full mb-6">
+                <fieldset className="relative border border-gray-700 rounded p-4">
+                    <legend className="text-sm text-gray-400 px-2">Filters</legend>
+                    <button 
+                        className="absolute right-1 -top-7 z-10 bg-gray-800 hover:bg-red-600 text-white p-2 rounded-full shadow transition"
+                        onClick={handleClearFilters}
+                    >
+                        <EraserIcon />
+                    </button>
+                    <legend className="text-sm text-gray-400 px-2">Filters</legend>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                        <FilterInput
+                            name="searchName"
+                            label={M3UEntryFieldLabel.name}
+                            value={searchNameInput}
+                            onChange={setSearchNameInput}
+                            mode={inputModes.searchName}
+                            onToggle={toggleInputMode}
+                            loading={loading}
+                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                            onBlur={() => setFocusedInput(null)}
+                        />
+                        <FilterInput
+                            name="searchGroup"
+                            label={M3UEntryFieldLabel.groupTitle}
+                            value={searchGroupInput}
+                            onChange={setSearchGroupInput}
+                            mode={inputModes.searchGroup}
+                            onToggle={toggleInputMode}
+                            loading={loading}
+                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                            onBlur={() => setFocusedInput(null)}
+                        />
+
+                        <FilterInput
+                            name="searchTvgId"
+                            label={M3UEntryFieldLabel.tvgId}
+                            value={searchTvgIdInput}
+                            onChange={setSearchTvgIdInput}
+                            mode={inputModes.searchTvgId}
+                            onToggle={toggleInputMode}
+                            loading={loading}
+                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                            onBlur={() => setFocusedInput(null)}
+                        />
+                        <select
+                            name="searchCategory"
+                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                            onBlur={() => setFocusedInput(null)}
+                            value={searchCategory}
+                            onChange={(e) => {
+                                setSearchCategory(e.target.value as ContentCategoryFieldLabel);
+                            }}
+                            className="flex-[0.3] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
+                            title="Content Category"
+                        >
+                            <option value="">All Categories</option>
+                            {Object.values(ContentCategoryFieldLabel).map((cat) => (
+                                <option key={cat} value={cat}>
+                                    {cat}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            name="searchFormaty"
+                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                            onBlur={() => setFocusedInput(null)}
+                            value={searchFormat}
+                            onChange={(e) => {
+                                setSearchFormat(e.target.value as StreamFormat);
+                            }}
+                            className="flex-[0.2] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
+                            title="Stream Format"
+                        >
+                            <option value="">All Formats</option>
+                            {Object.values(StreamFormat).map((format) => (
+                                <option key={format} value={format}>
+                                    {format.toUpperCase()}
+                                </option>
+                            ))}
+                        </select>
+                        <YearFilterSelect
+                            years={mergedYears}
+                            selected={selectedYears}
+                            onToggle={(year) => {
+                                setSelectedYears((prev) => {
+                                    const safe = Array.isArray(prev) ? prev : [];
+                                    return safe.includes(year) ? safe.filter((y) => y !== year) : [...safe, year];
+                                });
+                            }}
+                        />
+                    </div>
+                </fieldset>
+            </div>
+
             {player.visible && player.mode === "inline" && (
                 <div className="mt-6">
                     <InlinePlayer
@@ -377,14 +450,16 @@ const isDebouncing = searchNameInput !== searchName ||
                 />
             )}
 
-            <p className="text-sm text-gray-500 mb-2 text-center">
-                Page <b>{currentPage}</b> of <b>{totalPages}</b> &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
-                <i>
-                    {totalEntries} result{totalEntries === 1 ? "" : "s"}
-                </i>
-            </p>
+            <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalEntries={totalEntries}
+                onPageChange={handlePageChange}
+                buttonClassName={buttonBaseClasses}
+                className={`mt-6`}
+            />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+            <div className="grid grid-cols-1 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-x-6 gap-y-8">
                 {entries.map((entry) =>
                     useInteractiveCard ? (
                         <StreamCardInteractive key={entry.url} entry={entry} />
@@ -394,26 +469,15 @@ const isDebouncing = searchNameInput !== searchName ||
                 )}
             </div>
 
-            {entries && entries.length > 0 && (
-                <div className="flex justify-center items-center mt-6 space-x-2">
-                    <button
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
-                    >
-                        ⬅ Prev
-                    </button>
-                    <span className="font-semibold">
-                        Page {currentPage} of {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="bg-gray-900 px-4 py-2 rounded disabled:opacity-50"
-                    >
-                        Next ➡
-                    </button>
-                </div>
+            {entries && entries.length > 6 && (
+                <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalEntries={totalEntries}
+                    onPageChange={(delta) => setCurrentPage((prev) => Math.max(1, Math.min(totalPages, prev + delta)))}
+                    buttonClassName={buttonBaseClasses}
+                    className="mt-6"
+                />
             )}
         </main>
     );

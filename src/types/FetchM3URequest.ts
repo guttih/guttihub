@@ -15,5 +15,7 @@ export interface FetchM3URequest {
         tvgId?: TextFilter;
         format?: StreamFormat;
         category?: ContentCategoryFieldLabel;
+        years?: string[];
     };
 }
+

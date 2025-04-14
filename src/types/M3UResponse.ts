@@ -9,9 +9,10 @@ export interface M3UResponse {
     snapshotId: string;
     timeStamp: string;
     entries: M3UEntry[];
+    servers?: ServerUrl[]; 
     formats?: string[];
     categories?: ContentCategoryFieldLabel[];
-    servers?: ServerUrl[]; 
+    years?: string[];
     pagination: {
         offset: number;
         limit: number;
@@ -30,9 +31,10 @@ export interface M3UResponse {
         snapshotId: m3uResponse.snapshotId,
         timeStamp: m3uResponse.timeStamp,
         entries: m3uResponse.entries && m3uResponse.entries.length > 0 ? [m3uResponse.entries[0], m3uResponse.entries[1]] : [],
+        servers: m3uResponse.servers,
         formats: m3uResponse.formats,
         categories: m3uResponse.categories,
-        servers: m3uResponse.servers,
+        years: m3uResponse.years,
         pagination: {
             offset: m3uResponse.pagination.offset,
             limit: m3uResponse.pagination.limit,

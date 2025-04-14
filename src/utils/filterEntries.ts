@@ -24,11 +24,15 @@ export function filterEntries(entries: M3UEntry[], filters: FetchM3URequest["fil
         const nameMatch = matchTextFilter(entry.name, filters.name);
         const groupMatch = matchTextFilter(entry.groupTitle, filters.groupTitle);
         const idMatch = matchTextFilter(entry.tvgId, filters.tvgId);
-
-        const formatMatch = filters.format ? entry.url.toLowerCase().endsWith(`.${filters.format}`) : true;
+        const formatMatch = !filters.format
+  ? true
+  : filters.format === "unknown"
+    ? !entry.url.split("/").pop()?.includes(".")
+    : entry.url.toLowerCase().endsWith(`.${filters.format}`);
 
         const categoryMatch = filters.category ? inferContentCategory(entry.url) === filters.category : true;
+        const yearsMatch = Array.isArray(filters.years) && filters.years.length > 0 ? filters.years.some((year) => entry.name.includes(year)) : true;
 
-        return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
+        return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch && yearsMatch;
     });
 }

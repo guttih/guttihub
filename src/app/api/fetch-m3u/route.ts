@@ -12,6 +12,7 @@ import crypto from "crypto";
 import { FetchM3URequest } from "@/types/FetchM3URequest";
 import { StreamFormat, getStreamFormat } from "@/types/StreamFormat";
 import { filterEntries } from "@/utils/filterEntries";
+import { extractYears } from "@/utils/ui/extractYears";
 
 const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -81,7 +82,10 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
                 totalPages: Math.ceil(filtered.length / (end - start)),
                 formats: extractFormats(filtered),
                 categories: extractCategories(filtered),
+                years: extractYears(filtered),
             };
+
+            // console.log("Response:", makePrintableM3UResponse(response));
 
             return makeSuccessResponse<M3UResponse>(response);
         } catch (err: unknown) {
@@ -167,17 +171,22 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
     function hasValidFilters(filters: FetchM3URequest["filters"] = {}): boolean {
         return Object.entries(filters).some(([, value]) => {
-            if (!value) return false;
-
+            if (value === undefined || value === null) return false;
+          
             if (typeof value === "string") {
-                return value.trim() !== "";
+              return value.trim() !== "";
             }
-
+          
+            if (Array.isArray(value)) {
+              return value.length > 0;
+            }
+          
             if (typeof value === "object" && "value" in value) {
-                return value.value.length > 0;
+              return value.value.trim() !== "";
             }
-
-            return true; // e.g. enums like format/category are always valid if present
-        });
+          
+            return true;
+          });
+          
     }
 }
