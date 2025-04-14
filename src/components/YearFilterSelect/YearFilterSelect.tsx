@@ -52,6 +52,7 @@ export function YearFilterSelect({
 >
   <SummaryLabel
     prefix="Years: "
+    defaultLabel="Select year(s)"
     items={selected}
     maxVisible={3}
   />

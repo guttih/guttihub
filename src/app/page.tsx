@@ -18,7 +18,6 @@ import { FetchM3URequest } from "@/types/FetchM3URequest";
 import { FilterInput } from "@/components/FilterInput/FilterInput";
 import { PaginationControls } from "@/components/PaginationControls/PaginationControls";
 import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect";
-import { set } from "lodash";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -411,6 +410,7 @@ export default function HomePage() {
                             ))}
                         </select>
                         <YearFilterSelect
+                            defautText="Selected Years"
                             years={mergedYears}
                             selected={selectedYears}
                             onToggle={(year) => {

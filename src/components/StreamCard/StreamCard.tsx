@@ -81,14 +81,38 @@ export function StreamCard({
       {/* Card content */}
       <div className="p-6 pt-4 space-y-2">
         {/* Title */}
-        <h2
-          className={`font-semibold truncate ${
-            entry.name.length > 30 ? "text-sm" : "text-lg"
-          }`}
-          title={`${M3UEntryFieldLabel.name}='${entry.name}'`}
-        >
-          {entry.name}
-        </h2>
+        <div className="flex items-center gap-2">
+  <h2
+    className={`font-semibold truncate ${
+      entry.name.length > 30 ? "text-sm" : "text-lg"
+    }`}
+    title={`${M3UEntryFieldLabel.name}='${entry.name}'`}
+  >
+    {entry.name}
+  </h2>
+
+  <button
+    onClick={() =>
+      window.open(
+        `https://www.imdb.com/find?q=${encodeURIComponent(entry.name)}`,
+        "_blank"
+      )
+    }
+    title="Search on IMDb"
+    className="text-yellow-400 hover:text-yellow-300 transition p-0.5"
+  >
+    {/* Search icon or IMDb logo */}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="w-4 h-4"
+    >
+      <path d="M10.5 3a7.5 7.5 0 0 1 6.32 11.495l4.092 4.091-1.414 1.415-4.091-4.092A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" />
+    </svg>
+  </button>
+</div>
+
 
         {/* Group */}
         <p
