@@ -10,8 +10,8 @@ import { ApiResponse, makeErrorResponse, makeSuccessResponse } from "@/types/Api
 import { CashedEntries } from "@/types/CashedEntries";
 import crypto from "crypto";
 import { FetchM3URequest } from "@/types/FetchM3URequest";
-import { M3UEntry } from "@/types/M3UEntry";
 import { StreamFormat, getStreamFormat } from "@/types/StreamFormat";
+import { filterEntries } from "@/utils/filterEntries";
 
 const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             //We do not need the m3u file, but we want the json file with the entries so let's move next 3 lines to a function
             const chasedData = await getCachedOrFreshData(url, service.username, service.name);
 
-            if ( pagination?.offset  && snapshotId && snapshotId !== chasedData.snapshotId) {
+            if (pagination?.offset && snapshotId && snapshotId !== chasedData.snapshotId) {
                 console.log("[CACHE] Snapshot ID mismatch. Fetching fresh data.");
                 return makeErrorResponse(`Your list is outdated, it was updated on ${chasedData.timeStamp}, refresh it to get new data`, 400);
             }
@@ -59,7 +59,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             // does offset not need to be sent back to the client?
             // const paginated = filtered.slice(offset || 0, limit ? (offset || 0) + limit : filtered.length);
 
-            console.log(`[Filtered] Entries count: ${paginated.length}, of filtered ${filtered.length} and total ${chasedData.entries.length}`);
+            console.log(
+                `[Filtered = ${hasValidFilters(filters)}] Entries count: ${paginated.length}, of filtered ${filtered.length} and total ${
+                    chasedData.entries.length
+                }`
+            );
 
             // Sanitize if needed
             const pageItems = appConfig.hideCredentialsInUrl ? sanitizeM3UUrls(paginated, service.username, service.password) : paginated;
@@ -161,19 +165,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         return Array.from(new Set(entries.map((e) => inferContentCategory(e.url)))).filter(Boolean);
     }
 
-    function filterEntries(entries: M3UEntry[], filters: FetchM3URequest["filters"] = {}) {
-        return entries.filter((entry) => {
-            const nameMatch = filters.name ? entry.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
-            const groupMatch = filters.groupTitle ? entry.groupTitle.toLowerCase().includes(filters.groupTitle.toLowerCase()) : true;
-            const idMatch = filters.tvgId ? entry.tvgId.toLowerCase().includes(filters.tvgId.toLowerCase()) : true;
-            const formatMatch = filters.format ? entry.url.toLowerCase().endsWith(`.${filters.format}`) : true;
-            const categoryMatch = filters.category ? inferContentCategory(entry.url) === filters.category : true;
-
-            return nameMatch && groupMatch && idMatch && formatMatch && categoryMatch;
-        });
-    }
-
     function hasValidFilters(filters: FetchM3URequest["filters"] = {}): boolean {
-        return Object.values(filters).some((value) => value && value.trim() !== "");
+        return Object.entries(filters).some(([, value]) => {
+            if (!value) return false;
+
+            if (typeof value === "string") {
+                return value.trim() !== "";
+            }
+
+            if (typeof value === "object" && "value" in value) {
+                return value.value.length > 0;
+            }
+
+            return true; // e.g. enums like format/category are always valid if present
+        });
     }
 }

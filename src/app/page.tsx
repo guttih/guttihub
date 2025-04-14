@@ -8,13 +8,14 @@ import { services } from "@/config";
 import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
- import { ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
+import { ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
 import { useDebouncedState } from "./hooks/useDebouncedState";
 import { ApiResponse } from "@/types/ApiResponse";
 import { M3UResponse } from "@/types/M3UResponse";
 import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCardInteractive";
 import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
 import { FetchM3URequest } from "@/types/FetchM3URequest";
+import { FilterInput } from "@/components/FilterInput/FilterInput";
 
 export default function HomePage() {
     const [entries, setEntries] = useState<M3UEntry[]>([]);
@@ -45,18 +46,38 @@ export default function HomePage() {
     const [snapshotId, setSnapshotId] = useState("");
     const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
-
     const [activeService, setActiveService] = useState<StreamingService | null>(null);
     const [totalEntries, setTotalEntries] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
-    const debouncedFilters = useMemo(() => ({
-        name: searchName,
-        groupTitle: searchGroup,
-        tvgId: searchTvgId,
-        format: searchFormat,
-        category: searchCategory,
-      }), [searchName, searchGroup, searchTvgId, searchFormat, searchCategory]);
-      
+
+    const [inputModes, setInputModes] = useState<Record<string, { isRegex: boolean; isCaseSensitive: boolean }>>({
+        searchName: { isRegex: false, isCaseSensitive: false },
+        searchGroup: { isRegex: false, isCaseSensitive: false },
+        searchTvgId: { isRegex: false, isCaseSensitive: false },
+    });
+
+    const debouncedFilters = useMemo(
+        () => ({
+            name: {
+                value: searchName,
+                isRegex: inputModes.searchName.isRegex,
+                isCaseSensitive: inputModes.searchName.isCaseSensitive,
+            },
+            groupTitle: {
+                value: searchGroup,
+                isRegex: inputModes.searchGroup.isRegex,
+                isCaseSensitive: inputModes.searchGroup.isCaseSensitive,
+            },
+            tvgId: {
+                value: searchTvgId,
+                isRegex: inputModes.searchTvgId.isRegex,
+                isCaseSensitive: inputModes.searchTvgId.isCaseSensitive,
+            },
+            format: searchFormat || undefined,
+            category: searchCategory || undefined,
+        }),
+        [searchName, searchGroup, searchTvgId, searchFormat, searchCategory, inputModes]
+    );
 
     /*
 // for later if we want to know if we are debouncing
@@ -87,82 +108,77 @@ const isDebouncing = searchNameInput !== searchName ||
         setPlayer((prev) => ({ ...prev, visible: false }));
     }
 
+    function toggleInputMode(name: string, key: "isRegex" | "isCaseSensitive") {
+        setInputModes((prev) => ({
+            ...prev,
+            [name]: { ...prev[name], [key]: !prev[name][key] },
+        }));
+    }
 
+    const handleFetch = useCallback(
+        async (service: StreamingService | null = activeService) => {
+            if (!service) return;
 
-    const handleFetch = useCallback(async (service: StreamingService | null = activeService) => {
-        if (!service) return;
-    
-        setActiveService(service);
-        setLoading(true);
-    
-        try {
-            const requestBody: FetchM3URequest = {
-                url: service.refreshUrl,
-                snapshotId,
-                pagination: {
-                    offset: (currentPage - 1) * pageSize,
-                    limit: pageSize,
-                },
-                filters: debouncedFilters,
-            };
-    
-            const res = await fetch("/api/fetch-m3u", {
-                method: "POST",
-                body: JSON.stringify(requestBody),
-            });
-    
-            const json: ApiResponse<M3UResponse> = await res.json();
-    
-            if (!json.success) {
-                alert(`Failed to load: ${json.error}`);
-                return;
+            setActiveService(service);
+            setLoading(true);
+
+            try {
+                const requestBody: FetchM3URequest = {
+                    url: service.refreshUrl,
+                    snapshotId,
+                    pagination: {
+                        offset: (currentPage - 1) * pageSize,
+                        limit: pageSize,
+                    },
+                    filters: debouncedFilters,
+                };
+
+                const res = await fetch("/api/fetch-m3u", {
+                    method: "POST",
+                    body: JSON.stringify(requestBody),
+                });
+
+                const json: ApiResponse<M3UResponse> = await res.json();
+
+                if (!json.success) {
+                    alert(`Failed to load: ${json.error}`);
+                    return;
+                }
+
+                setSnapshotId(json.data.snapshotId);
+                setEntries(json.data.entries);
+
+                setTotalEntries(json.data.totalItems);
+                setTotalPages(json.data.totalPages);
+            } catch (err) {
+                console.error("Fetch failed", err);
+            } finally {
+                setLoading(false);
             }
-    
-            setSnapshotId(json.data.snapshotId);
-            setEntries(json.data.entries);
+        },
+        [activeService, currentPage, debouncedFilters, pageSize, snapshotId]
+    );
 
-
-
-            setTotalEntries(json.data.totalItems);
-            setTotalPages(json.data.totalPages);
-        } catch (err) {
-            console.error("Fetch failed", err);
-        } finally {
-            setLoading(false);
-        }
-    }, [activeService, currentPage, debouncedFilters, pageSize, snapshotId]);
-    
     useEffect(() => {
         if (!loading && focusedInput) {
-          const el = document.querySelector<HTMLInputElement>(`input[name="${focusedInput}"]`);
-          if (el && !el.disabled) {
-            el.focus();
-            el.setSelectionRange(el.value.length, el.value.length);
-          }
+            const el = document.querySelector<HTMLInputElement>(`input[name="${focusedInput}"]`);
+            if (el && !el.disabled) {
+                el.focus();
+                el.setSelectionRange(el.value.length, el.value.length);
+            }
         }
-      }, [loading, focusedInput]);
-      
-        
-    
+    }, [loading, focusedInput]);
+
     useEffect(() => {
         if (activeService) {
             handleFetch(activeService);
         }
     }, [currentPage, activeService, debouncedFilters, handleFetch]);
-    
+
     useEffect(() => {
         if (!activeService) return;
         setCurrentPage((prev) => (prev === 1 ? prev : 1));
     }, [activeService, debouncedFilters]);
-    
-    
-    
-
-    function getInputClasses(loading: boolean) {
-        return `flex-1 min-w-[150px] px-3 py-2 border rounded ${
-            loading ? "bg-gray-800 text-gray-400 border-gray-600 cursor-not-allowed pointer-events-none" : ""
-        }`;
-    }
 
     function generateM3U(entries: M3UEntry[]): string {
         const lines = ["#EXTM3U"];
@@ -190,77 +206,78 @@ const isDebouncing = searchNameInput !== searchName ||
         <main className="p-4">
             <h1 className="text-xl font-bold mb-4">{appConfig.appName}</h1>
             <div className="flex items-center gap-3 mb-4">
-                {services.map((service) => (
-                    <button
-                        className="bg-blue-600 text-white px-4 py-2 rounded mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        key={service.id}
-                        disabled={loading}
-                        onClick={() => {
-                            setActiveService(service);
-                            setCurrentPage((prev) => (prev === 1 ? prev : 1)); // triggers fetch via useEffect
-                            handleFetch(service);
-                        }}
-                        
-                    >
-                        Load {service.name}
-                    </button>
-                ))}
+                <label htmlFor="serviceSelect" className="text-white">
+                    Select Service:
+                </label>
+                <select
+                    id="serviceSelect"
+                    value={activeService?.id ?? ""}
+                    onChange={(e) => {
+                        const selected = services.find((s) => s.id === e.target.value);
+                        if (selected) {
+                            setActiveService(selected);
+                            setCurrentPage(1); // resets to page 1
+                            handleFetch(selected);
+                        }
+                    }}
+                    disabled={loading}
+                    className="px-4 py-2 bg-gray-800 text-white border border-gray-600 rounded"
+                >
+                    <option value="" disabled>
+                        Select a service...
+                    </option>
+                    {services.map((service) => (
+                        <option key={service.id} value={service.id}>
+                            {service.name}
+                        </option>
+                    ))}
+                </select>
 
                 {(loading || filtering) && <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
             </div>
 
             <div className="flex flex-wrap gap-2 items-center my-4">
-                <input
-                name="searchName"
-                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                onBlur={() => setFocusedInput(null)}
-                    type="text"
-                    placeholder={`Search ${M3UEntryFieldLabel.name}`}
-                    title={M3UEntryFieldLabel.name}
+                <FilterInput
+                    name="searchName"
+                    label={M3UEntryFieldLabel.name}
                     value={searchNameInput}
-                    disabled={loading}
-                    onChange={(e) => {
-                        setSearchNameInput(e.target.value);
-                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
-                    }}
-                    className={getInputClasses(loading)}
+                    onChange={setSearchNameInput}
+                    mode={inputModes.searchName}
+                    onToggle={toggleInputMode}
+                    loading={loading}
+                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                    onBlur={() => setFocusedInput(null)}
                 />
-                <input
-                name="searchGroup"
-                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                onBlur={() => setFocusedInput(null)}
-                    type="text"
-                    placeholder={`Search ${M3UEntryFieldLabel.groupTitle}`}
-                    title={M3UEntryFieldLabel.groupTitle}
+                <FilterInput
+                    name="searchGroup"
+                    label={M3UEntryFieldLabel.groupTitle}
                     value={searchGroupInput}
-                    onChange={(e) => {
-                        setSearchGroupInput(e.target.value);
-                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
-                    }}
-                    className={getInputClasses(loading)}
+                    onChange={setSearchGroupInput}
+                    mode={inputModes.searchGroup}
+                    onToggle={toggleInputMode}
+                    loading={loading}
+                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                    onBlur={() => setFocusedInput(null)}
                 />
-                <input
-                name="searchTvgId"
-                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                onBlur={() => setFocusedInput(null)}
-                    type="text"
-                    placeholder={`Search ${M3UEntryFieldLabel.tvgId}`}
-                    title={M3UEntryFieldLabel.tvgId}
+
+                <FilterInput
+                    name="searchTvgId"
+                    label={M3UEntryFieldLabel.tvgId}
                     value={searchTvgIdInput}
-                    onChange={(e) => {
-                        setSearchTvgIdInput(e.target.value);
-                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
-                    }}
-                    className={getInputClasses(loading)}
+                    onChange={setSearchTvgIdInput}
+                    mode={inputModes.searchTvgId}
+                    onToggle={toggleInputMode}
+                    loading={loading}
+                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                    onBlur={() => setFocusedInput(null)}
                 />
                 <select
-                name="searchCategory"
-                onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                onBlur={() => setFocusedInput(null)}
+                    name="searchCategory"
+                    onFocus={(e) => setFocusedInput(e.currentTarget.name)}
+                    onBlur={() => setFocusedInput(null)}
                     value={searchCategory}
                     onChange={(e) => {
                         setSearchCategory(e.target.value as ContentCategoryFieldLabel);
-                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
                     }}
                     className="flex-[0.3] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
                     title="Content Category"
@@ -279,7 +296,6 @@ const isDebouncing = searchNameInput !== searchName ||
                     value={searchFormat}
                     onChange={(e) => {
                         setSearchFormat(e.target.value as StreamFormat);
-                        // setCurrentPage((prev) => (prev === 1 ? prev : 1));
                     }}
                     className="flex-[0.2] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
                     title="Stream Format"
