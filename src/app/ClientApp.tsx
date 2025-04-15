@@ -45,7 +45,9 @@ export default function ClientApp({ role }: { role: string }) {
     const stableSelectedYears = useMemo(() => [...selectedYears].sort(), [selectedYears]);
     const debouncedYears = useDebouncedState(stableSelectedYears, 1000);
     const [searchFormat, setSearchFormat] = useState<StreamFormat | "">("");
+    const [formatsFromServer, setFormatsFromServer] = useState<StreamFormat[]>([]);
     const [searchCategory, setSearchCategory] = useState<ContentCategoryFieldLabel | "">("");
+    const [categoriesFromServer, setCategoriesFromServer] = useState<ContentCategoryFieldLabel[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [useInteractiveCard, setUseInteractiveCard] = useState(false);
@@ -149,6 +151,9 @@ export default function ClientApp({ role }: { role: string }) {
             setTotalEntries(json.data.totalItems);
             setTotalPages(json.data.totalPages);
             setYearsFromServer(json.data.years || []);
+            setCategoriesFromServer(json.data.categories || []);
+            setFormatsFromServer((json.data.formats ?? []) as StreamFormat[]);
+
         } catch (err) {
             console.error("Fetch failed", err);
         } finally {
@@ -380,7 +385,7 @@ export default function ClientApp({ role }: { role: string }) {
                             title="Content Category"
                         >
                             <option value="">All Categories</option>
-                            {Object.values(ContentCategoryFieldLabel).map((cat) => (
+                            {categoriesFromServer.map((cat) => (
                                 <option key={cat} value={cat}>
                                     {cat}
                                 </option>
@@ -391,16 +396,14 @@ export default function ClientApp({ role }: { role: string }) {
                             onFocus={(e) => setFocusedInput(e.currentTarget.name)}
                             onBlur={() => setFocusedInput(null)}
                             value={searchFormat}
-                            onChange={(e) => {
-                                setSearchFormat(e.target.value as StreamFormat);
-                            }}
+                            onChange={(e) => setSearchFormat(e.target.value as StreamFormat)}
                             className="flex-[0.2] min-w-[100px] px-3 py-2 border rounded bg-gray-800 text-white border-gray-700"
                             title="Stream Format"
                         >
                             <option value="">All Formats</option>
-                            {Object.values(StreamFormat).map((format) => (
-                                <option key={format} value={format}>
-                                    {format.toUpperCase()}
+                            {formatsFromServer.map((format) => (
+    <option key={format} value={format}>
+      {format.toUpperCase()}
                                 </option>
                             ))}
                         </select>
