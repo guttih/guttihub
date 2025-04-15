@@ -1,6 +1,7 @@
 // src/config/index.ts
 import { StreamingService } from "@/types/StreamingService";
 import servicesJson from "./services.json";
+import { getUserRole } from "@/utils/getUserRole";
 
 const services: StreamingService[] = servicesJson;
 
@@ -10,6 +11,7 @@ interface AppConfigType {
     fallbackImage: string; // Path to the fallback image for missing images of M3U entries
     hideCredentialsInUrl: boolean; // Show or hide credentials in URL client-side
     maxEntryExportCount: number; // Maximum number of entries to export at once
+    role: string; // Role of the user (e.g., "admin", "viewer", etc.)
 }
 
 // Use the defined type for AppConfig
@@ -19,6 +21,7 @@ export const appConfig: AppConfigType = {
     fallbackImage: "/fallback.png",
     hideCredentialsInUrl: false,
     maxEntryExportCount: 59,
+    role: getUserRole() || "",
 };
 
 export { services };

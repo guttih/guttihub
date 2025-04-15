@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
             req.on("error", (err) => {
                 clearTimeout(timeout);
-                console.error("Proxy error:", err);
+                console.error("Proxy error:", err.message);
                 reject(new Response("Image fetch error", { status: 500 }));
             });
         });

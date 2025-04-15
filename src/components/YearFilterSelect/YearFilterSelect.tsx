@@ -5,16 +5,12 @@ export interface YearFilterSelectProps {
   years: string[];
   selected: string[];
   onToggle: (year: string) => void;
-  onClear?: () => void;
-  onSelectAll?: () => void;
 }
 
 export function YearFilterSelect({
   years,
   selected,
   onToggle,
-  onClear,
-  onSelectAll,
 }: YearFilterSelectProps) {
   const ref = useRef<HTMLDetailsElement>(null);
   const [open, setOpen] = useState(false);

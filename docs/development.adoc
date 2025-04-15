@@ -17,11 +17,44 @@ find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.lo
 .List and display specific files
 [source,sh]
 ----
-find . -type f \( -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "parseM3U.ts" -o -name "route.ts" -o -name "page.tsx" -o -name "PlayerClient.tsx" -o -name "PlayerButton.tsx" -o -name "StreamCard.tsx" \) -exec sh -c 'echo {}; cat {}' \; 
+find . -type f \( -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "parseM3U.ts" -o -name "route.ts" -o -name "page.tsx" -o -name "PlayerClient.tsx" -o -name "PlayerButton.tsx" -o -name "StreamCard.tsx" \) -exec sh -c 'echo {}; cat {}' \;
 ----
 
 [[npm-scripts]]
 include::scripts.adoc[]
+
+== Environment Variables
+
+This project uses a `.env.local` file during development. That same file is copied and renamed to `.env.production` during deployment to simplify config management.
+
+To create the required `NEXTAUTH_SECRET`, generate a strong secret with Node.js by running:
+
+[source,sh]
+----
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  # generates a 32-byte secret
+----
+
+You can obtain your Google credentials by creating an OAuth 2.0 Client ID from the Google Cloud Console:
+
+📎 https://console.cloud.google.com/apis/credentials
+
+Use the "Web application" type. You'll find these options under the "OAuth 2.0 Client IDs" section when creating credentials. Make sure to include the following redirect URIs:
+
+- Authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+- In production: `https://tv.guttih.com/api/auth/callback/google`
+
+.Required Keys
+[source,.env]
+----
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+NEXTAUTH_URL=https://tv.guttih.com
+NEXTAUTH_SECRET=...
+----
+
+If `.env.local` is missing or one of these values is not defined, the deploy script will abort and point to this documentation.
+
+Do not commit `.env.local` or `.env.production` to source control.
 
 == Naming Conventions
 
@@ -76,7 +109,6 @@ Coverage tools are helpful for identifying blind spots, but the focus is on test
 
 The tests are intended to catch unintended side effects and to help identify when a change in one part of the codebase breaks behavior elsewhere. Coverage is a tool, not a target.
 
-
 == Styling
 
 === Tailwind CSS Utility Classes
@@ -118,8 +150,47 @@ For the best development experience, make sure your editor has Tailwind CSS Inte
 
 This provides real-time autocomplete, previews, and hover tooltips for Tailwind classes.
 
-
 == Local Deployment Setup
+
+=== Using PM2 for Process Management
+
+This project recommends using https://pm2.keymetrics.io/[PM2] to run the production server reliably in the background.
+
+First, install PM2 globally on your server:
+
+[source,sh]
+----
+npm install -g pm2
+----
+
+Then, after deploying your files, start the server:
+
+[source,sh]
+----
+cd /var/www/guttihub
+npm install --omit=dev
+pm2 start npm --name guttihub -- run start --env production
+pm2 save
+----
+
+To ensure PM2 restarts the app after a server reboot:
+
+[source,sh]
+----
+pm2 startup systemd
+----
+
+You can now control your app with:
+
+[source,sh]
+----
+pm2 list           # see running apps
+pm2 logs           # view logs
+pm2 stop guttihub
+pm2 restart guttihub
+----
+
+For advanced options, see: https://pm2.keymetrics.io/docs/usage/quick-start/
 
 === Creating `services.json` for Deployment
 
@@ -145,4 +216,27 @@ This provides real-time autocomplete, previews, and hover tooltips for Tailwind 
 }
 ----
 
-This file is required in production builds and must exist at:
+
+=== Production Restart with PM2
+
+After deploying, the application is automatically restarted on the server using PM2.
+
+The deploy script will:
+
+- Copy and prepare `.env.production`
+- Upload files to the server
+- Install dependencies via `npm install --omit=dev`
+- Restart the app using:
+
+[source,sh]
+----
+PORT=6301 NODE_ENV=production pm2 reload guttihub || \
+PORT=6301 NODE_ENV=production pm2 start npm --name guttihub -- run start
+----
+
+You can also restart it manually with:
+
+[source,sh]
+----
+pm2 restart guttihub
+----
