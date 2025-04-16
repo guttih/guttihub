@@ -1,0 +1,11 @@
+[
+    {
+      "label": "Test Storage",
+      "path": "test/assets/tmp"
+    },
+    {
+      "label": "Backup Volume",
+      "path": "test/assets/tmp/backup"
+    }
+  ]
+  

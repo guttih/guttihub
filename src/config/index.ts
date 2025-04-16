@@ -1,27 +1,39 @@
 // src/config/index.ts
+
 import { StreamingService } from "@/types/StreamingService";
 import servicesJson from "./services.json";
-import { getUserRole } from "@/utils/getUserRole";
+import authorizedUsersJson from "./authorizedUsers.json";
 
+// --- Static config: always safe to export ---
 const services: StreamingService[] = servicesJson;
 
 interface AppConfigType {
-    appName: string; // Display Name of the application
-    defaultPageSize: number | string; // Allows both number and string
-    fallbackImage: string; // Path to the fallback image for missing images of M3U entries
-    hideCredentialsInUrl: boolean; // Show or hide credentials in URL client-side
-    maxEntryExportCount: number; // Maximum number of entries to export at once
-    role: string; // Role of the user (e.g., "admin", "viewer", etc.)
+  appName: string;
+  defaultPageSize: number | string;
+  fallbackImage: string;
+  hideCredentialsInUrl: boolean;
+  maxEntryExportCount: number;
 }
 
-// Use the defined type for AppConfig
 export const appConfig: AppConfigType = {
-    appName: "Guttihub Stream",
-    defaultPageSize: 60,
-    fallbackImage: "/fallback.png",
-    hideCredentialsInUrl: false,
-    maxEntryExportCount: 59,
-    role: getUserRole() || "",
+  appName: "Guttihub Stream",
+  defaultPageSize: 60,
+  fallbackImage: "/fallback.png",
+  hideCredentialsInUrl: false,
+  maxEntryExportCount: 59,
 };
+
+// --- Authorized users lookup ---
+const authorizedUsers: Record<string, string> = authorizedUsersJson;
+
+// --- Public runtime helpers ---
+export function getUserRole(email?: string | null | undefined): string | null {
+  if (!email) {
+    console.warn("⚠️ getUserRole called without an email");
+    return null;
+  }
+
+  return authorizedUsers[email] || null;
+}
 
 export { services };

@@ -7,6 +7,7 @@
         "build": "next build",
         "start": "next start",
         "deploy": "bash scripts/deploy.sh",
+        "postinstall": "chmod +x src/scripts/*.sh",
         "list": "bash scripts/list.sh",
         "lint:next": "next lint",
         "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
@@ -26,7 +27,8 @@
         "next": "15.2.4",
         "next-auth": "^4.24.11",
         "react": "^19.0.0",
-        "react-dom": "^19.0.0"
+        "react-dom": "^19.0.0",
+        "uuid": "^11.1.0"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3",

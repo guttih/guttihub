@@ -10,14 +10,16 @@ import { makeImageProxyUrl } from "@/utils/ui/makeImageProxyUrl";
 interface Props {
     entry: M3UEntry;
     showCopy?: boolean;
+    showRecord?: boolean;
     onPlay?: (url: string) => void;
     showUnsupported?: boolean;
     className?: string;
 }
 
-export function StreamCard({ entry, showCopy, onPlay, showUnsupported, className = "" }: Props) {
+export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupported, className = "" }: Props) {
     const extension = getExtension(entry.url);
     const supported = supportedFormats.map((format) => format.toLowerCase());
+    const isRecordable = !extension;
     const extensionIsSupported = extension ? supported.includes(extension.toLowerCase()) : false;
     const showPlay = onPlay && (showUnsupported || extensionIsSupported);
 
@@ -30,6 +32,27 @@ export function StreamCard({ entry, showCopy, onPlay, showUnsupported, className
             setTimeout(() => setCopied(false), 1500);
         } catch (err) {
             console.error("Failed to copy URL", err);
+        }
+    };
+
+    const handleRecord = async () => {
+        try {
+            const res = await fetch("/api/cache-entry", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(entry),
+            });
+
+            if (!res.ok) {
+                console.error("Failed to cache entry for recording");
+                return;
+            }
+
+            const { cacheKey } = await res.json();
+            window.open(`/record?cacheKey=${cacheKey}`, "_blank");
+
+        } catch (err) {
+            console.error("Error caching entry for recording:", err);
         }
     };
 
@@ -46,7 +69,18 @@ export function StreamCard({ entry, showCopy, onPlay, showUnsupported, className
                     title={`${M3UEntryFieldLabel.tvgLogo}='${entry.tvgLogo}'`}
                     onError={(e) => ((e.target as HTMLImageElement).src = "/fallback.png")}
                 />
-
+                {/* 🔴 RECORD BUTTON - only for recordable streams */}
+                {isRecordable && showRecord && (
+                    <button
+                        onClick={handleRecord}
+                        title="Schedule Recording"
+                        className="absolute top-0.5 left-0.5 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full shadow z-20"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="12" cy="12" r="8" />
+                        </svg>
+                    </button>
+                )}
                 {/* Play in new tab button */}
                 {showPlay && (
                     <a
@@ -68,16 +102,14 @@ export function StreamCard({ entry, showCopy, onPlay, showUnsupported, className
                 {/* Title */}
                 <div className="flex items-center gap-2">
                     <button
-  onClick={() =>
-    window.open(`https://www.imdb.com/find?q=${encodeURIComponent(entry.name)}`, "_blank")
-  }
-  title="Search on IMDb"
-  className="text-yellow-400 hover:text-yellow-300 hover:bg-gray-700 p-1 rounded-full transition duration-200 ease-in-out transform hover:scale-110"
->
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-    <path d="M10.5 3a7.5 7.5 0 0 1 6.32 11.495l4.092 4.091-1.414 1.415-4.091-4.092A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" />
-  </svg>
-</button>
+                        onClick={() => window.open(`https://www.imdb.com/find?q=${encodeURIComponent(entry.name)}`, "_blank")}
+                        title="Search on IMDb"
+                        className="text-yellow-400 hover:text-yellow-300 hover:bg-gray-700 p-1 rounded-full transition duration-200 ease-in-out transform hover:scale-110"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                            <path d="M10.5 3a7.5 7.5 0 0 1 6.32 11.495l4.092 4.091-1.414 1.415-4.091-4.092A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" />
+                        </svg>
+                    </button>
 
                     <h2
                         className={`font-semibold truncate ${entry.name.length > 30 ? "text-sm" : "text-lg"}`}

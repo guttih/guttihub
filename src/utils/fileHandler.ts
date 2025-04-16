@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const CACHE_DIR = path.resolve(process.cwd(), 'public/cache');
+const CACHE_DIR = path.resolve(process.cwd(), '.cache');
 
 export function  getCacheDir(): string {
   return CACHE_DIR;

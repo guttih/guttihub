@@ -2,8 +2,8 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { redirect } from "next/navigation";
+import { getUserRole } from "@/config";
 import ClientApp from "./ClientApp";
-import { getUserRole } from "@/utils/getUserRole";
 
 export default async function ProtectedPage() {
   const session = await getServerSession(authOptions);

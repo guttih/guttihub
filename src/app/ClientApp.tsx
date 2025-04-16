@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
-import { services } from "@/config";
+import { getUserRole, services } from "@/config";
 import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
@@ -461,7 +461,11 @@ export default function ClientApp({ role }: { role: string }) {
                     useInteractiveCard ? (
                         <StreamCardInteractive key={entry.url} entry={entry} />
                     ) : (
-                        <StreamCard key={entry.url} entry={entry} showCopy={!appConfig.hideCredentialsInUrl} onPlay={(url) => handlePlay(url)} />
+                        <StreamCard key={entry.url} 
+                                    entry={entry} 
+                                    showCopy={!appConfig.hideCredentialsInUrl} 
+                                    showRecord={getUserRole(session?.user?.email) === "admin"}
+                                    onPlay={(url) => handlePlay(url)} />
                     )
                 )}
             </div>
