@@ -23,6 +23,8 @@
 # testing
 /coverage
 /html
+test\assets\tmp
+!test\assets\tmp\README
 
 # next.js
 /.next/
