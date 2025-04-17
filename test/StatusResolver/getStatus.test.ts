@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import path from "path";
-import { StatusResolver } from "@/resolvers/StatusResolver";
+import { RecordingStatusResolver } from "@/resolvers/RecordingStatusResolver";
 import fs from "fs/promises";
 
 describe("StatusResolver", () => {
@@ -22,7 +22,7 @@ LOG_FILE=${tmpDir}/${id}.mp4.log
 
     await fs.writeFile(statusPath, content.trim());
 
-    const result = await StatusResolver.getStatus(id, tmpDir);
+    const result = await RecordingStatusResolver.getStatus(id, tmpDir);
 
     expect(result.status).toBe("done");
     expect(result.user).toBe("testuser");
@@ -31,7 +31,7 @@ LOG_FILE=${tmpDir}/${id}.mp4.log
   });
 
   it("returns unknown for missing file", async () => {
-    const result = await StatusResolver.getStatus("nonexistent-file", "test/assets/tmp");
+    const result = await RecordingStatusResolver.getStatus("nonexistent-file", "test/assets/tmp");
     expect(result.status).toBe("unknown");
   });
 });

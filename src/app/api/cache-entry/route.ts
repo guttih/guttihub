@@ -1,7 +1,7 @@
 // src/app/api/cache-entry/route.ts
 import { v4 as uuidv4 } from "uuid";
 import { NextResponse } from "next/server";
-import { writeJsonFile, ensureCacheDir, getCacheDir } from "@/utils/fileHandler";
+import { writeJsonFile, ensureRecordingJobsDir, getCacheDir } from "@/utils/fileHandler";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
 
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  await ensureCacheDir();
+  await ensureRecordingJobsDir();
 
   const cacheKey = `${session.user?.email?.split("@")[0] ?? "unknown"}-${Date.now()}-${uuidv4()}`;
   const fullPath = `${getCacheDir()}/${cacheKey}.json`;

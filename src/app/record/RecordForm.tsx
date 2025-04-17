@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
+import { useRouter } from "next/navigation";
 
 interface Props {
     entry: M3UEntry;
@@ -10,37 +11,37 @@ interface Props {
 }
 
 export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
+    const router = useRouter();
     const [startTime, setStartTime] = useState("");
-    const [duration, setDuration] = useState("30");
+    const [duration, setDuration] = useState("2"); // default 3 minutes
     const [location, setLocation] = useState("");
     const [folders, setFolders] = useState<{ label: string; path: string }[]>([]);
     const [recordNow, setRecordNow] = useState(true); // default true for dev
 
-
     useEffect(() => {
         const fetchFolders = async () => {
-            try {
-                const res = await fetch("/api/output-folders");
-                const data = await res.json();
-                setFolders(data);
-                if (data.length > 0) {
-                    setLocation(data[0].path);
-                }
-            } catch (err) {
-                console.error("Failed to fetch folders", err);
-            }
+          const res = await fetch("/api/output-folders");
+          const data = await res.json();
+          setFolders(data);
+          
+          // ✅ Only set if location is still empty
+          if (!location && data.length > 0) {
+            setLocation(data[0].path);
+          }
         };
-
+      
         fetchFolders();
-    }, []);
+      }, []);
+      
 
     const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async () => {
+        console.log("⏱ Scheduling recording...");
         setIsSubmitting(true);
         setStatus(null);
-
+    
         const form = new FormData();
         form.append("cacheKey", cacheKey);
         form.append("startTime", startTime);
@@ -48,21 +49,27 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
         form.append("location", location);
         form.append("email", userEmail);
         form.append("recordNow", "true");
-
-
+    
         try {
             const res = await fetch("/api/schedule-recording", {
                 method: "POST",
                 body: form,
             });
-
+    
             const json = await res.json();
+            console.log("📦 schedule-recording response:", res.status, json);
+    
             if (res.ok) {
-                setStatus({ type: "success", message: json.message });
+                console.log("✅ Redirecting to status page...");
+                // Try both — maybe fallback to full reload:
+                router.push(`/record/status?cacheKey=${cacheKey}`);
+                // window.location.href = `/record/status?cacheKey=${cacheKey}`;
             } else {
+                console.warn("❌ Schedule failed:", json.error);
                 setStatus({ type: "error", message: json.error || "Unknown error" });
             }
-        } catch {
+        } catch (err) {
+            console.error("❌ Network error:", err);
             setStatus({ type: "error", message: "Network error" });
         } finally {
             setIsSubmitting(false);
@@ -70,30 +77,30 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     };
 
     return (
-        
         <div className="space-y-4">
             <div className="flex items-center space-x-2">
-  <input
-    type="checkbox"
-    id="recordNow"
-    checked={recordNow}
-    onChange={(e) => setRecordNow(e.target.checked)}
-    className="form-checkbox"
-  />
-  <label htmlFor="recordNow" className="text-sm">Record Now (immediate)</label>
-</div>
-{!recordNow && (
-  <div>
-    <label className="block mb-1 text-sm">Start Time (local)</label>
-    <input
-      type="datetime-local"
-      value={startTime}
-      onChange={(e) => setStartTime(e.target.value)}
-      className="w-full bg-gray-800 p-2 rounded border border-gray-600"
-    />
-  </div>
-)}
-
+                <input
+                    type="checkbox"
+                    id="recordNow"
+                    checked={recordNow}
+                    onChange={(e) => setRecordNow(e.target.checked)}
+                    className="form-checkbox"
+                />
+                <label htmlFor="recordNow" className="text-sm">
+                    Record Now (immediate)
+                </label>
+            </div>
+            {!recordNow && (
+                <div>
+                    <label className="block mb-1 text-sm">Start Time (local)</label>
+                    <input
+                        type="datetime-local"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="w-full bg-gray-800 p-2 rounded border border-gray-600"
+                    />
+                </div>
+            )}
 
             <div>
                 <label className="block mb-1 text-sm">Duration (minutes)</label>

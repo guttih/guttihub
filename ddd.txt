@@ -1,0 +1,500 @@
+   36  npm run build
+   37  npm run build
+   38  npm run build
+   39  npm run build
+   40  npm run start
+   41  npm run generate:domains
+   42  npm run generate:domains
+   43  npm run generate:domains
+   44  npm run generate:domains
+   45  scripts/generate-image-domains.sh 
+   46  scripts/generate-image-domains.sh 
+   47  npm run generate:domains
+   48  scripts/deploy.sh 
+   49  scripts/deploy.sh 
+   50  scripts/deploy.sh 
+   51  scripts/deploy.sh 
+   52  ssh guttih@guttih.com
+   53  ls
+   54  find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" ! -path "./html/*" -print
+   55  touch src/app/api/image-proxy/route.ts
+   56  touch src/app/api/image-proxy/route.ts
+   57  mkdir src/app/api/image-proxy
+   58  touch src/app/api/image-proxy/route.ts
+   59  npm run lint
+   60  reset
+   61  npm run lint
+   62  npm run lint
+   63  npm run lint
+   64  npm run lint
+   65  reset
+   66  npm run lint
+   67  npm run lint
+   68  npm run start
+   69  npm run lint
+   70  npm run lint
+   71  npm run start
+   72  npm run build
+   73  exit
+   74   /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.15584-7e68c3b5-21.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-34db094975424c09"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+   75  scripts/deploy.sh 
+   76  ssh guttih@guttih.com
+   77  git status
+   78  git add .
+   79  git commit -m "able to deploy and created proxy servers for images and streams"
+   80  git push origin 
+   81  exit
+   82  git add .
+   83  git commit -m "guttihub"
+   84  exit
+   85  node guttih.
+   86  node guttih.j
+   87  node guttih.js
+   88  ls
+   89  cd app/
+   90  node guttih.js 
+   91  node guttih.js 
+   92  node guttih.js 
+   93  git add .
+   94  git commit -m "guttihub"
+   95  git push origin docker 
+   96  ssh guttih@guttih.com
+   97  exit
+   98  ssh guttih@guttih.com
+   99  exit
+  100  cd react/guttihub/public/cache/
+  101  ls
+  102  head 7d483beb4604_m3u.best-smarter.me.cashedEntries 
+  103  tail 7d483beb4604_m3u.best-smarter.me.cashedEntries 
+  104  tail 7d483beb4604_m3u.best-smarter.me.cashedEntries 
+  105  head -n30 7d483beb4604_m3u.best-smarter.me.cashedEntries 
+  106  exit
+  107  ssh guttih@guttih.com
+  108  git add .
+  109  git commit -m "1000 delay on inputs"
+  110  git push origin serverpagination 
+  111  exit
+  112   /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.20812-6700b75b-1.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-6b40396077f68fd9"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  113   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.20812-f7e650b2-6.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-52880792e8463d8c"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  114   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.20812-c78cf2c4-11.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-a20208a063d180d3"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  115   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.20812-11ef0769-17.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-8d5bd440f6252b42"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  116  git add .
+  117  git commit -m "getting onkey working"
+  118  git push origin serverpagination 
+  119   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.20812-9ac101e1-23.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-f540f0cc59c33ad4"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  120  git add .
+  121  git commit -m "pagenated on server"
+  122  git push  origin serverpagination 
+  123  npm run deploy
+  124  npm run lint
+  125  npm run lint
+  126  npm run deploy
+  127  npm run lint
+  128  npm run deploy
+  129  npm run lint
+  130  npm run deploy
+  131  npm run deploy
+  132  git checkout main
+  133  git status
+  134  git add .
+  135  git commit -m "setting timeout to 1000"
+  136  git push origin serverpagination 
+  137  git checkout main && pull
+  138  pull 
+  139  git pull
+  140  npm run lint
+  141  npm run start
+  142  exit
+  143  npm run test:file test/StreamFormat/getStreamFormat.ts 
+  144  npm run test:file test/StreamFormat/getStreamFormat.ts 
+  145  npm run test:file test/StreamFormat/getStreamFormat.test.ts 
+  146  npm run test:file test/StreamFormat/getStreamFormat.test.ts 
+  147  npm run test:file test/StreamFormat/getStreamFormat.test.ts 
+  148  npm run test:file test/StreamFormat/getStreamFormat.test.ts 
+  149  npm run test:file test/StreamFormat/getStreamFormat.test.ts 
+  150  cd public/cache/
+  151  ls
+  152  cd ../..
+  153  ls public/cache/*.c
+  154  ls public/cache/*.
+  155  ls public/cache/*
+  156  ls public/cache/*.cashedEntries
+  157  rm public/cache/*.cashedEntries
+  158  ls
+  159  head -n20 public/cache/.*c*
+  160  head -n20 public/cache/7d483beb4604_m3u.best-smarter.me.cashedEntries 
+  161  head -n20 public/cache/k5W1gNfZWQ0C_bigotvpro.cashedEntries 
+  162  tail -n20 public/cache/k5W1gNfZWQ0C_bigotvpro.cashedEntries 
+  163  rm public/cache/*.cashedEntries
+  164  rm public/cache/*.cashedEntries
+  165  rm public/cache/*.cashedEntries
+  166  exit
+  167  npm run list
+  168  exit
+  169   head -n20 public/cache/k5W1gNfZWQ0C_bigotvpro.cashedEntries
+  170   head -n20 public/cache/k5W1gNfZWQ0C_bigotvpro.cashedEntries
+  171   head -n20 public/cache/k5W1gNfZWQ0C_bigotvpro.cashedEntries
+  172   head -n20 public/cache/7d483beb4604_m3u.best-smarter.me.cashedEntries 
+  173   head -n29 public/cache/7d483beb4604_m3u.best-smarter.me.cashedEntries 
+  174  reset
+  175   head -n29 public/cache/7d483beb4604_m3u.best-smarter.me.cashedEntries 
+  176  reset; head -n29 public/cache/k5W1gNfZWQ0C_bigotvpro.cashedEntries
+  177  git checkout page
+  178  git checkout -b serverpagination
+  179  git status
+  180  git add .
+  181  git commit -m "moving pagenation from client to server"
+  182  git push origin serverpagination 
+  183  exit
+  184  ssh guttih@guttih.com
+  185  ssh guttih@guttih.com
+  186  exit
+  187  node guttih.js 
+  188  exit
+  189  ls
+  190  cd app/
+  191  node guttih.js 
+  192  git add .
+  193  git commit -m "guttihub"
+  194  git push origin docker 
+  195  I have been creating an nextjs app.  Can you help me what to do next? I have some sort of an plan of what to do which I show on my project page https://guttih.com/list/project-guttihub  and this is the project -> find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" ! -path "./html/*" -print
+  196  cd ..
+  197  reset
+  198  I have been creating an nextjs app.  Can you help me what to do next? I have some sort of an plan of what to do which I show on my project page https://guttih.com/list/project-guttihub  and this is the project -> find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" ! -path "./html/*" -print
+  199  I have been creating an nextjs app.  Can you help me what to do next? I have some sort of an plan of what to do which I show on my project page https://guttih.com/list/project-guttihub  and this is the project -> find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" ! -path "./html/*" -print
+  200  reset
+  201  node guttih.js 
+  202  cd app/
+  203  node guttih.js 
+  204  git add .
+  205  git commit -m "guttihub"
+  206  git push origin docker 
+  207  npm run guttih
+  208  node guttih.js 
+  209  git add .
+  210  git commit -m "guttihub"
+  211  git push origin docker 
+  212  node guttih.js 
+  213  node guttih.js 
+  214  git add .
+  215  git commit -m "guttihub"
+  216  git push origin docker
+  217  ssh guttih@guttih.com
+  218  exit
+  219  cat src\utils\filterEntries.ts
+  220  cat src/utils/filterEntries.ts
+  221  npm run lint
+  222  git add .
+  223  git commit  -m "adding regex and case sensitive support to filters"
+  224  git push 
+  225  npm run deploy
+  226  npm run deploy
+  227  npm run deploy
+  228  git status
+  229  git add .
+  230  git commit -m "removing unused fetchAndParseM3U"
+  231  git push origin main 
+  232  touch utils/ui/makeSummaryLabel.ts
+  233  touch src/utils/ui/makeSummaryLabel.ts
+  234  code  src/utils/ui/makeSummaryLabel.ts
+  235  git add .
+  236  git commit  -m "we have nice looking page"
+  237  git add .
+  238  git commit -m "we got filters, we got title-search"
+  239  git push origin
+  240  npm run lint
+  241  npm run lint
+  242  npm run lint
+  243  npm run lint
+  244  git add .
+  245  ssh guttih@guttih.com
+  246  exit
+  247   /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9384-0c7798e2-1.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-48d1c630e662af18"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  248   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9384-51691484-7.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-c31c387337ef58a4"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  249      const [selectedYears] = useState<string[]>([]);
+  250      const [selectedYears] = useState<string[]>([]);
+  251  reset
+  252   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9384-bd87c062-12.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-b1774effe58c5f17"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  253   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9384-d89da7d5-18.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-fdf50eab96bf3930"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  254   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9384-b0e83cac-24.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-b68dbd8813092cef"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  255   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9384-1fe2bb8a-29.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-01ae1ca51dc81c20"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  256   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9384-43bd81e7-34.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-eadb497c55123c7c"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  257  git status
+  258  git add .
+  259  npm run lint
+  260  npm run deploy
+  261  exit
+  262  ssh guttih@guttih.com
+  263  ssh guttih@guttih.com
+  264  ssh guttih@guttih.com
+  265  ssh guttih@guttih.com
+  266  exxit
+  267  exit
+  268  ssh guttih@guttih.com
+  269  ssh guttih@guttih.com "cd /var/www/guttihub && npm install --omit=dev && PORT=6301 npm run start"
+  270  ssh guttih@guttih.com -c bash "cd /var/www/guttihub && npm install --omit=dev && PORT=6301 npm run start"
+  271  ssh guttih@guttih.com -c "cd /var/www/guttihub && npm install --omit=dev && PORT=6301 npm run start"
+  272  ssh guttih@guttih.com -c "cd /var/www/guttihub && npm install --omit=dev && PORT=6301 npm run start"
+  273  ssh guttih@guttih.com -t "cd /var/www/guttihub && npm install --omit=dev && PORT=6301 nohup npm run start > out.log 2>&1 &"
+  274  ssh guttih@guttih.com "cd /var/www/guttihub && npm install --omit=dev && nohup env PORT=6301 npm run start > out.log 2>&1 < /dev/null &"
+  275  ssh guttih@guttih.com
+  276  ssh guttih@guttih.com "source ~/.nvm/nvm.sh && cd /var/www/guttihub && npm install --omit=dev && nohup env PORT=6301 npm run start > out.log 2>&1 < /dev/null &"
+  277  ssh guttih@guttih.com
+  278  ssh guttih@guttih.comreset
+  279  reset
+  280  exit
+  281  exit
+  282  touch src/api/cache-entry.ts
+  283  src/pages/api/cache-entry.tstouch src/pages/api/cache-entry.ts
+  284  mkdir -p src/pages/api
+  285  src/pages/api/cache-entry.ts
+  286  touch src/pages/api/cache-entry.ts
+  287  npm install uuid
+  288  npm install uuid --save
+  289  FILE=src/app/record/page.tsx; touch $FILE; code $FILE
+  290  code src/app/api/schedule-recording/route.ts
+  291  code src/resolvers/ScheduleResolver.ts
+  292  code src/resolvers/StatusResolver.ts
+  293  code src/resolvers/ListScheduledResolver.ts
+  294  code export class ListCompletedResolver {
+  295    static async list(): Promise<Array<{ id: string; completedAt: string; file: string }>> {
+  296      // TODO: list finished recordings
+  297      return [];
+  298    }
+  299  }
+  300  code src/resolvers/ListCompletedResolver.ts
+  301  code /api/schedule-recording/route.ts
+  302  code src/pages/api/cache-entry.ts
+  303  code src/app/record/page.tsx
+  304  code src/app/api/schedule-recording/route.ts
+  305  code src/resolvers/ScheduleResolver.ts
+  306  code // src/app/api/cache-entry/route.ts
+  307  import { NextResponse } from "next/server";
+  308  import { getServerSession } from "next-auth";
+  309  import { authOptions } from "@/app/api/auth/authOptions";
+  310  import { getCacheDir, writeJsonFile, ensureCacheDir } from "@/utils/fileHandler";
+  311  import { v4 as uuidv4 } from "uuid";
+  312  export async function POST(req: Request) {
+  313    const session = await getServerSession(authOptions);
+  314    const entry = await req.json();
+  315    const user = session.user?.email?.split("@")[0] ?? "anonymous";
+  316    const cacheKey = `${user}-${Date.now()}-${uuidv4()}`;
+  317    await ensureCacheDir();
+  318    await writeJsonFile(`${getCacheDir()}/${cacheKey}.json`, entry);
+  319    return NextResponse.json({ cacheKey });
+  320  }
+  321  code src/app/api/cache-entry/route.ts
+  322  reset
+  323  cat src/pages/api/cache-entry.ts 
+  324  code src/app/record/page.tsx
+  325  code src/app/record/RecordForm.tsx
+  326  mkdir src/scripts/
+  327  code src/scripts/schedule-recording.sh
+  328  code src/scripts/schedule-recording.sh
+  329  code src/scripts/record.sh
+  330  cat src/scripts/dd.sh | tr -d '\r'
+  331  cat src/scripts/dd.sh | tr -d '\r' >  src/scripts/schedule-recording.sh
+  332  code src/resolvers/StatusResolver.ts
+  333  code src/app/api/recording-status/route.ts
+  334  cd src/scripts/
+  335  ls
+  336  bash record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176091"   --duration 20   --user guttih   --output .
+  337  bash record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176091"   --duration 20   --user guttih   --outputFile ./recording-test-$(date +%s)-176091.mp4
+  338  ls
+  339  ll
+  340  ls
+  341  ls  -ls
+  342  mkdir  test
+  343  cat record-.log
+  344  cat recording-.log
+  345  rm record-.log
+  346  ls
+  347  rm recording-.status
+  348  rm recording-.log
+  349  rm recording-test-1744824647-176091.mp4.status
+  350  ls
+  351  rm recording-test-1744824647-176091.mp4.log
+  352  ls
+  353  ./record.sh  --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176091"
+  354  ./record.sh  --outputFile ./test/recording-test-$(date +%s)-176091.mp4 --user guttih --duration 20 --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176091"
+  355  ls -lst test
+  356  cat test/*.status
+  357  cat test/*.log
+  358  code test/StatusResolver/getStatus.test.ts
+  359  npm run test: file test/StatusResolver/getStatus.test.ts 
+  360  npm run test: file test/StatusResolver/getStatus.test.ts 
+  361  ./record.sh  --outputFile ./test/recording-test-$(date +%s)-176091.mp4 --user guttih --duration 20 --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176091"
+  362  ./record.sh  --outputFile ./test/recording-test-$(date +%s)-176091.mp4 --user guttih --duration 20 --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176091"
+  363  npm run test: file test/StatusResolver/getStatus.test.ts 
+  364  cd ../..
+  365  npm run test: file test/StatusResolver/getStatus.test.ts 
+  366  npm run test: file test/StatusResolver/getStatus.test.ts 
+  367  npm run test:file test/StatusResolver/getStatus.test.ts 
+  368  npm run test:file test/StatusResolver/getStatus.test.ts 
+  369  npm run test:file test/StatusResolver/getStatus.test.ts 
+  370  ls "C:\Users\gutti\source\src\scripts\test\"
+  371  ls "C:\Users\gutti\source\src\scripts\test"
+  372  ls "C:\\Users\\gutti\\source\\src\\scripts\\test"
+  373  npm run test:file test/StatusResolver/getStatus.test.ts 
+  374  npm run test:file test/StatusResolver/getStatus.test.ts 
+  375  npm run test:file test/StatusResolver/getStatus.test.ts 
+  376  npm run test:file test/StatusResolver/getStatus.test.ts 
+  377  npm run test:file test/StatusResolver/getStatus.test.ts 
+  378  ls ls src/scripts/test
+  379  ls src/scripts/test
+  380  reset
+  381  ls src/scripts/test
+  382  cat test/StatusResolver/getStatus.test.ts 
+  383  npm run test:file test/StatusResolver/getStatus.test.ts 
+  384  npm run test:file test/StatusResolver/getStatus.test.ts 
+  385  reset
+  386  npm run test:file test/StatusResolver/getStatus.test.ts 
+  387  cat src/resolvers/StatusResolver.ts 
+  388  npm run test:file test/StatusResolver/getStatus.test.ts 
+  389  reset
+  390  npm run test:file test/StatusResolver/getStatus.test.ts 
+  391  code  test/RecordScript/recordFormat.test.ts
+  392  npm run test::file test/RecordScript/recordFormat.test.ts
+  393  npm run test:file test/RecordScript/recordFormat.test.ts
+  394  cat test/assets/tmp/README 
+  395  git status
+  396  code test/ScheduleResolver/fullPipeline.test.ts
+  397  code test/ScheduleResolver/fullPipeline.test.ts
+  398  npm  run test:file test/ScheduleResolver/fullPipeline.test.ts
+  399  npm  run test:file test/ScheduleResolver/fullPipeline.test.ts
+  400  reset
+  401  npm  run test:file test/ScheduleResolver/fullPipeline.test.ts
+  402  npm  run test:file test/ScheduleResolver/fullPipeline.test.ts
+  403  resset
+  404  reset
+  405  npm  run test:file test/ScheduleResolver/fullPipeline.test.ts
+  406  npm  run test:file test/RecordScript/recordFormat.test.ts 
+  407  reset
+  408  npm  run test:file test/RecordScript/recordFormat.test.ts 
+  409  ls
+  410  reset
+  411  FILE = import { describe, it, expect } from "vitest";
+  412  import path from "path";
+  413  import fs from "fs/promises";
+  414  import { execFile } from "child_process";
+  415  import { promisify } from "util";
+  416  const execAsync = promisify(execFile);
+  417  const scriptPath = path.resolve("src/scripts/record.sh");
+  418  const testDir = path.resolve("src/scripts/test");
+  419  function createOutputFileName(id: string) {
+  420    return path.join(testDir, `recording-test-${id}.mp4`);
+  421  }
+  422  describe("record.sh format handling", () => {
+  423    it("accepts format=mp4 and writes a .status file", async () => {
+  424      const id = Date.now().toString();
+  425      const outputFile = createOutputFileName(id);
+  426      const outputDir = path.dirname(outputFile);
+  427      const args = [
+  428        "--url", "http://example.com/fake-stream",
+  429        "--duration", "1",
+  430        "--user", "guttih",
+  431        "--outputFile", outputFile,
+  432        "--format", "mp4",
+  433      ];
+  434      await execAsync("bash", [scriptPath, ...args]);
+  435      const files = 
+  436  #FILE="test/ScheduleResolver/fullPipeline.test.ts"
+  437  reset
+  438  FILE="test/RecordScript/recordFormat.test.ts"
+  439  cat $FILE && npm run test::$FILE
+  440  reset
+  441  FILE="test/RecordScript/recordFormat.test.ts"
+  442  cat $FILE && npm run test::$FILE
+  443  reset
+  444  FILE="test/RecordScript/recordFormat.test.ts"
+  445  cat $FILE && npm run test::file $FILE
+  446  reset
+  447  FILE="test/RecordScript/recordFormat.test.ts"
+  448  cat $FILE && npm run test:file $FILE
+  449  npm run test:file $FILE
+  450  npm run test:file $FILE
+  451  git add .gitignore 
+  452  git commit -m "adding test/assets/tmp/README and gitignoring thest in the tmp"
+  453  npm run test:file test/RecordScript/recordFormat.test.ts 
+  454  npm run test:file test/StatusResolver/getStatus.test.ts 
+  455  scoop install ffmpeg
+  456  exit
+  457   /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9904-aebc1c11-1.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-6c00eaef11317fd7"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  458  git add .
+  459  reset
+  460   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9904-a363af0c-7.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-6f713921b03861a1"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  461  git add .
+  462  git commit -m "Categories and formats updated in client like sent from server"
+  463  git push origin 
+  464  npm run deploy
+  465  reset
+  466  find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" ! -path "./html/*" -print > project_file_structure.txt
+  467   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9904-41bee60d-11.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-9b1a6c71afe58434"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  468  reset
+  469   cd c:\\Users\\gutti\\source\\repos\\react\\guttihub ; /usr/bin/env 'NODE_OPTIONS= --require "c:/Users/gutti/AppData/Local/Programs/Microsoft VS Code/resources/app/extensions/ms-vscode.js-debug/src/bootloader.js"  --inspect-publish-uid=http' 'VSCODE_INSPECTOR_OPTIONS=:::{"inspectorIpc":"\\\\.\\pipe\\node-cdp.9904-fbdd0e48-17.sock","deferredMode":false,"waitForDebugger":"","execPath":"C:\\nvm4w\\nodejs\\node.exe","onlyEntrypoint":false,"autoAttachMode":"always","fileCallback":"C:\\Users\\gutti\\AppData\\Local\\Temp\\node-debug-callback-c0205d03a6fb009a"}' C:\\nvm4w\\nodejs\\node.exe ./node_modules/next/dist/bin/next dev 
+  470  exit
+  471  cat .env.production 
+  472  scripts/deploy.sh 
+  473  scripts/deploy.sh 
+  474  scripts/deploy.sh 
+  475  scripts/deploy.sh 
+  476  scripts/deploy.sh 
+  477  scripts/deploy.sh 
+  478  scripts/deploy.sh 
+  479  scripts/deploy.sh 
+  480  npm run deploy
+  481  npm  run deploy
+  482  git add .
+  483  git commmit "added years, google auth2, spinner... and more"
+  484  git commit -m "added years, google auth2, spinner... and more"
+  485  git push
+  486  cat src/types/ContentCategoryFieldLabel.ts 
+  487  find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" ! -path "./html/*" -print
+  488  find / -type f -name "ffmpeg*" 2>/dev/null
+  489  exit
+  490  ffmpeg -v
+  491  ffmpeg -v
+  492  exit
+  493  ffmpeg -v
+  494  vi ~/.bashrc 
+  495  echo $PATH
+  496  echo $PATH |grep ffm
+  497  vim ~/.bashrc 
+  498  code ~/.bashrc 
+  499  ffmpeg -v
+  500  exit
+  501  bash src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "C:/Users/gutti/source/repos/react/guttihub/test/assets/tmp/recording-250417T135627-176090.mp4" \
+  502  reset
+  503  date && src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "C:/Users/gutti/source/repos/react/guttihub/test/assets/tmp/recording-250417T135627-176090.mp4"   --format "mp4" && date
+  504  cd ..
+  505  cd ..
+  506  cd ..
+  507  date && src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "test/assets/tmp/recording-250417T135627-176090.mp4"   --format "mp4" && date
+  508  date && src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "test/assets/tmp/recording-250417T135627-176090.mp4"   --format "mp4" && date
+  509  #date && echo " ---- starting ----" && src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "test/assets/tmp/recording-250417T135627-176090.mp4"   --format "mp4" && echo "stopped &&  date
+  510  ls test/assets/tmp/
+  511  rm test/assets/tmp/*mp*
+  512  date &&  rm test/assets/tmp/*mp* && echo "---" && ls && echo " ---- starting ----" && src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "test/assets/tmp/recording-250417T135627-176090.mp4"   --format "mp4" && echo "stopped &&  date && ls test/assets/tmp/
+  513  date &&  rm test/assets/tmp/*mp* && echo "---" && ls && echo " ---- starting ----" && src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "test/assets/tmp/recording-250417T135627-176090.mp4"   --format "mp4" && echo "stopped &&  date && ls test/assets/tmp
+  514  date &&  rm test/assets/tmp/*mp* ; echo " --- " && ls test/assets/tmp && echo " ---- starting ----" && src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "test/assets/tmp/recording-250417T135627-176090.mp4"   --format "mp4" && echo "stopped &&  date && ls test/assets/tmp
+  515  date &&  rm test/assets/tmp/*mp* ; echo " --- " && ls test/assets/tmp && echo " ---- starting ----" && src/scripts/record.sh   --url "http://bigotvpro.com:8080/k5W1gNfZWQ0C/naz4Zgthg3dn/176090"   --duration 20   --user "gudjonholm@gmail.com"   --outputFile "test/assets/tmp/recording-250417T135627-176090.mp4"   --format "mp4" && echo " -- stopped --" &&  date && ls test/assets/tmp
+  516  DIR=test/assets/tmp
+  517  cat $DIR/*mp3.*
+  518  cat "$DIR/"*mp3.*
+  519  ls test/assets/tmp/*.mp4.*
+  520  cat test/assets/tmp/*.mp4.*
+  521  cat test/assets/tmp/*.mp4.log
+  522  cat test/assets/tmp/*.mp4.log test/assets/tmp/*.mp4.status
+  523  echo "log" && cat test/assets/tmp/*.mp4.log && echo "status" && cat test/assets/tmp/*.mp4.status
+  524  echo "--- log ---" && cat test/assets/tmp/*.mp4.log && echo "--- status ---" && cat test/assets/tmp/*.mp4.status
+  525  echo "--- log ---" && cat test/assets/tmp/*.mp4.log ; echo "--- status ---" && cat test/assets/tmp/*.mp4.status
+  526  echo "--- log ---" && cat test/assets/tmp/*.mp4.log ; echo "--- status ---" ; cat test/assets/tmp/*.mp4.status
+  527  echo "--- log ---" ; cat test/assets/tmp/*.mp4.log ; echo "--- status ---" ; cat test/assets/tmp/*.mp4.status
+  528* cat "test/assets/tmp/"*.mp4.log ; echo "--- status ---" ; cat "test/assets/tmp/"*.mp4.status
+  529  echo "--- log ---" && cat test/assets/tmp/*.mp4.log ; echo "--- status ---" ; cat test/assets/tmp/*.mp4.status
+  530  DIR=5~test/assets/tmp echo "--- log ---" && cat test/assets/tmp/*.mp4.log ; echo "--- status ---" ; cat test/assets/tmp/*.mp4.status
+  531  reset
+  532  echo "--- log ---" && cat test/assets/tmp/*.mp4.log ; echo "--- status ---" ; cat test/assets/tmp/*.mp4.status
+  533  DIR="test/assets/tmp"; 
+  534  echo "--- log ---" && cat $DIR/tmp/*.mp4.log ; echo "--- status ---" ; cat $DIR/*.mp4.status
+  535  history > ddd.txt

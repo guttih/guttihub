@@ -1,7 +1,8 @@
+// src/app/api/recording-status/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
-import { StatusResolver } from "@/resolvers/StatusResolver";
+import { RecordingStatusResolver } from "@/resolvers/RecordingStatusResolver";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -11,18 +12,11 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const recordingId = searchParams.get("recordingId");
-  const outputDir = searchParams.get("outputDir");
 
-  // Validate inputs
-  if (!recordingId || !outputDir) {
-    return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
+  if (!recordingId) {
+    return NextResponse.json({ error: "Missing recordingId" }, { status: 400 });
   }
 
-  // Optional: add simple directory whitelisting or pattern checks
-  if (!outputDir.startsWith("/mnt/")) {
-    return NextResponse.json({ error: "Invalid output directory" }, { status: 403 });
-  }
-
-  const status = await StatusResolver.getStatus(recordingId, outputDir);
+  const status = await RecordingStatusResolver.getStatusByRecordingId(recordingId);
   return NextResponse.json(status);
 }
