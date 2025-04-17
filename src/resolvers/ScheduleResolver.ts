@@ -17,7 +17,7 @@ export class ScheduleResolver {
     user,
     outputFile,
     recordNow,
-  }: ScheduleRecordingParams): Promise<{ success: boolean; message?: string; error?: string }> {
+  }: ScheduleRecordingParams): Promise<{ success: boolean; message?: string; error?: string; recordingId?: string }> {
     const args = [
       "--url", entry.url,
       "--duration", durationSec.toString(),
@@ -58,6 +58,7 @@ export class ScheduleResolver {
       return {
         success: true,
         message: `Recording ${recordingId} launched in background.`,
+        recordingId: job.recordingId,
       };
     }
 

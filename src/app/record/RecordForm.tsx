@@ -11,28 +11,28 @@ interface Props {
 }
 
 export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
+    console.log("📍 Current page at load:", window.location.href);
     const router = useRouter();
     const [startTime, setStartTime] = useState("");
-    const [duration, setDuration] = useState("2"); // default 3 minutes
+    const [duration, setDuration] = useState("10"); // default 3 minutes
     const [location, setLocation] = useState("");
     const [folders, setFolders] = useState<{ label: string; path: string }[]>([]);
     const [recordNow, setRecordNow] = useState(true); // default true for dev
 
     useEffect(() => {
         const fetchFolders = async () => {
-          const res = await fetch("/api/output-folders");
-          const data = await res.json();
-          setFolders(data);
-          
-          // ✅ Only set if location is still empty
-          if (!location && data.length > 0) {
-            setLocation(data[0].path);
-          }
+            const res = await fetch("/api/output-folders");
+            const data = await res.json();
+            setFolders(data);
+
+            // ✅ Only set if location is still empty
+            if (!location && data.length > 0) {
+                setLocation(data[0].path);
+            }
         };
-      
+
         fetchFolders();
-      }, []);
-      
+    }, []);
 
     const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,7 +41,7 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
         console.log("⏱ Scheduling recording...");
         setIsSubmitting(true);
         setStatus(null);
-    
+
         const form = new FormData();
         form.append("cacheKey", cacheKey);
         form.append("startTime", startTime);
@@ -49,21 +49,27 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
         form.append("location", location);
         form.append("email", userEmail);
         form.append("recordNow", "true");
-    
+
         try {
             const res = await fetch("/api/schedule-recording", {
                 method: "POST",
                 body: form,
             });
-    
+
             const json = await res.json();
             console.log("📦 schedule-recording response:", res.status, json);
-    
+
             if (res.ok) {
-                console.log("✅ Redirecting to status page...");
-                // Try both — maybe fallback to full reload:
-                router.push(`/record/status?cacheKey=${cacheKey}`);
-                // window.location.href = `/record/status?cacheKey=${cacheKey}`;
+                const target = `/record/status?recordingId=${json.recordingId}`;
+                console.log("✅ Redirecting to:", target);
+              
+                // Try this first:
+                window.location.href = target;
+                
+                // console.log("✅ Redirecting to status page with ID:", json.recordingId);
+                // console.log("🔗 Full URL:", `/record/status?recordingId=${json.recordingId}`);
+                // router.push(`/record/status?recordingId=${json.recordingId}`);
+                // // window.location.href = `/record/status?cacheKey=${cacheKey}`;
             } else {
                 console.warn("❌ Schedule failed:", json.error);
                 setStatus({ type: "error", message: json.error || "Unknown error" });
@@ -103,10 +109,10 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
             )}
 
             <div>
-                <label className="block mb-1 text-sm">Duration (minutes)</label>
+                <label className="block mb-1 text-sm">Duration (seconds)</label>
                 <input
                     type="number"
-                    min="1"
+                    min="10"
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
                     className="w-full bg-gray-800 p-2 rounded border border-gray-600"

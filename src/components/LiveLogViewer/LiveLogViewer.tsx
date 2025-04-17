@@ -8,11 +8,11 @@ interface Props {
   autoScroll?: boolean;
 }
 
-export function LiveLogViewer({ recordingId, intervalMs = 3000, autoScroll = true }: Props) {
+export function LiveLogViewer({ recordingId, intervalMs = 1000, autoScroll = true }: Props) {
   const [log, setLog] = useState("(fetching log...)");
   const ref = useRef<HTMLPreElement>(null);
   const userScrolledUpRef = useRef(false);
-
+  console.log("LiveLogViewer: working with recordingId:", recordingId);
   useEffect(() => {
     let mounted = true;
 

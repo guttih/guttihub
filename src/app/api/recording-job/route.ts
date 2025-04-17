@@ -1,6 +1,4 @@
 // src/app/api/recording-job/route.ts
-
-// src/app/api/recording-job/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { promises as fs } from "fs";
@@ -9,8 +7,10 @@ import { RecordingJob } from "@/types/RecordingJob";
 
 export async function GET(req: NextRequest) {
   const cacheKey = req.nextUrl.searchParams.get("cacheKey");
-  if (!cacheKey) {
-    return NextResponse.json({ error: "Missing cacheKey" }, { status: 400 });
+  const recordingId = req.nextUrl.searchParams.get("recordingId");
+
+  if (!cacheKey && !recordingId) {
+    return NextResponse.json({ error: "Missing cacheKey or recordingId" }, { status: 400 });
   }
 
   const dir = getRecordingJobsDir();
@@ -21,9 +21,15 @@ export async function GET(req: NextRequest) {
     const fullPath = path.join(dir, file);
     try {
       const job = await readJsonFile<RecordingJob>(fullPath);
-      if (job.cacheKey === cacheKey) {
+
+      if (cacheKey && job.cacheKey === cacheKey) {
         return NextResponse.json(job);
       }
+
+      if (recordingId && job.recordingId === recordingId) {
+        return NextResponse.json(job);
+      }
+
     } catch (err) {
       console.warn("❌ Failed to read recording job:", fullPath, err);
     }

@@ -1,40 +1,40 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import StatusClient from "./StatusClient";
 import { RecordingJob } from "@/types/RecordingJob";
+import StatusClient from "./StatusClient";
 
-export default function StatusLoader() {
-  const searchParams = useSearchParams();
-  const cacheKey = searchParams.get("cacheKey");
+export default function StatusLoader({ recordingId }: { recordingId: string | null }) {
   const [job, setJob] = useState<RecordingJob | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!cacheKey) {
-      setError("Missing cache key.");
+    if (!recordingId) {
+      setError("Missing recording ID");
       return;
     }
 
-    const fetchJob = async () => {
+    const fetchStatus = async () => {
       try {
-        const res = await fetch(`/api/recording-job?cacheKey=${cacheKey}`);
-        if (!res.ok) {
-          throw new Error("Could not load job");
-        }
+        const res = await fetch(`/api/recording-status?recordingId=${recordingId}`);
+        if (!res.ok) throw new Error("Status fetch failed");
         const json = await res.json();
         setJob(json);
-      } catch (err) {
-        setError("Failed to load job");
+      } catch  {
+        setError("Could not load recording status");
       }
     };
 
-    fetchJob();
-  }, [cacheKey]);
+    // Initial fetch
+    fetchStatus();
+
+    // Poll every 5s
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, [recordingId]);
 
   if (error) return <div className="text-red-400 p-4">{error}</div>;
-  if (!job) return <div className="text-gray-400 p-4">Loading job metadata...</div>;
+  if (!job) return <div className="text-gray-400 p-4">Waiting for recording to start...</div>;
 
   return <StatusClient job={job} />;
 }

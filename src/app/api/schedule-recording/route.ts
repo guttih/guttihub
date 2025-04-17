@@ -43,11 +43,13 @@ export async function POST(req: Request) {
         cacheKey,
         entry,
         // startTime, //todo: add when we implement scheduled recording
-        durationSec: parseInt(duration, 10) * 60,
+        durationSec: parseInt(duration, 10),
         user: session.user?.email ?? "unknown",
         outputFile,
         recordNow: form.get("recordNow") === "true",
     });
     console.log("📦 schedule-recording response:", result.success, result.message);
-    return result.success ? NextResponse.json({ message: result.message }) : NextResponse.json({ error: result.error }, { status: 500 });
+    return result.success 
+        ? NextResponse.json({ message: result.message, recordingId: result.recordingId }) 
+        : NextResponse.json({ error: result.error }, { status: 500 });
 }

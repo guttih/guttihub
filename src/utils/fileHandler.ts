@@ -1,3 +1,4 @@
+import { RecordingJob } from "@/types/RecordingJob";
 import fs from "fs/promises";
 import path from "path";
 
@@ -58,6 +59,12 @@ export function getRecordingJobsDir(): string {
     await fs.mkdir(dir, { recursive: true });
     const filePath = path.join(dir, `${job.recordingId}.json`);
     await writeJsonFile(filePath, job);
+  }
+
+  export async function readRecordingJobFile(recordingId: string): Promise<RecordingJob> {
+    const dir = getRecordingJobsDir();
+    const filePath = path.join(dir, `${recordingId}.json`);
+    return await readJsonFile<RecordingJob>(filePath);
   }
 
 export async function readFile(filePath: string): Promise<string> {

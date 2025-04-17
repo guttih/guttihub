@@ -53,7 +53,7 @@ TIMEOUT=$(( DURATION + BUFFER ))
 
 # --- Launch ffmpeg with timeout and track PID ---
 (
-  timeout "${TIMEOUT}"s ffmpeg -loglevel error \
+  timeout "${TIMEOUT}"s ffmpeg -loglevel info \
     -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
     -i "$STREAM_URL" \
     -t "$DURATION" \
