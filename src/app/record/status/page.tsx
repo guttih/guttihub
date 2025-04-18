@@ -1,58 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import StatusClient from "./StatusClient";
+import { useEffect, useState } from "react";
 import { RecordingJob } from "@/types/RecordingJob";
 
-export default function StatusPage() {
-  const searchParams = useSearchParams();
-  const recordingId = searchParams.get("recordingId");
+function StatusPageContent() {
+    const searchParams = useSearchParams();
+    const recordingId = searchParams.get("recordingId");
 
-  const [job, setJob] = useState<RecordingJob | null>(null);
-  const [error, setError] = useState<string | null>(null);
+    const [job, setJob] = useState<RecordingJob | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!recordingId) {
-      setError("Missing recordingId in URL");
-      return;
-    }
-
-    const fetchJob = async () => {
-      try {
-        console.log("🛰 Fetching job using recordingId:", recordingId);
-        const res = await fetch(`/api/recording-job?recordingId=${recordingId}`)
-
-        const json = await res.json();
-
-        if (!res.ok || !json || !json.recordingId) {
-          throw new Error("Invalid job data");
+    useEffect(() => {
+        if (!recordingId) {
+            setError("Missing recording ID in URL");
+            return;
         }
 
-        setJob(json);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-            console.error("❌ Failed to load job:", err.message);
-            setError(err.message);
+        const fetchJob = async () => {
+            try {
+                const res = await fetch(`/api/recording-job?recordingId=${recordingId}`);
+                const json = await res.json();
+                if (!res.ok || !json || !json.recordingId) throw new Error("Invalid job data");
+                setJob(json);
+            } catch (err: unknown) {
+                if (err instanceof Error) {
+                    console.error("❌ Failed to load job:", err.message);
+                    setError(err.message);
+                } else {
+                    console.error("❌ Failed to load job:", err);
+                    setError("Failed to load recording metadata.");
+                }
             }
-        else {
-            console.error("❌ Failed to load job:", err);
-            setError("Failed to load recording metadata.");
-        }
-      }
-    };
+        };
 
-    fetchJob();
-  }, [recordingId]);
+        fetchJob();
+    }, [recordingId]);
 
-  if (error) return <div className="p-6 text-red-400">{error}</div>;
-  if (!job) return <div className="p-6 text-gray-400">Loading recording job info...</div>;
+    if (error) return <div className="p-6 text-red-400">{error}</div>;
+    if (!job) return <div className="p-6 text-gray-400">Loading recording job info...</div>;
 
-  return <StatusClient job={job} />;
+    return <StatusClient job={job} />;
 }
 
+export default function StatusPage() {
+    return (
+        <Suspense fallback={<div className="p-6 text-gray-400">Loading page...</div>}>
+            <StatusPageContent />
+        </Suspense>
+    );
+}
 
-  
 // "use client";
 
 // import { useSearchParams } from "next/navigation";

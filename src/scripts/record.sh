@@ -1,19 +1,25 @@
 #!/bin/bash
 
+# --- Default values ---
+LOGLEVEL="error"
+FORMAT="mp4"
+
+
 # --- Parse named arguments ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --url) STREAM_URL="$2"; shift 2 ;;
-    --duration) DURATION="$2"; shift 2 ;;
-    --user) USER="$2"; shift 2 ;;
-    --outputFile) OUTPUT_FILE="$2"; shift 2 ;;
-    --format) FORMAT="$2"; shift 2 ;;
+    --url) STREAM_URL="$2"; shift 2 ;;          # stream URL
+    --duration) DURATION="$2"; shift 2 ;;       # duration in seconds
+    --user) USER="$2"; shift 2 ;;               # user name
+    --outputFile) OUTPUT_FILE="$2"; shift 2 ;;  # output file name
+    --format) FORMAT="$2"; shift 2 ;;           # output format (mp4)
+    --loglevel) LOGLEVEL="$2"; shift 2 ;;       # log level (error, info, verbose)
     *) echo "ERROR: Unknown parameter $1" >&2; exit 1 ;;
   esac
 done
 
 # --- Validate ---
-if [[ -z "$STREAM_URL" || -z "$DURATION" || -z "$USER" || -z "$OUTPUT_FILE" || -z "$FORMAT" ]]; then
+if [[ -z "$STREAM_URL" || -z "$DURATION" || -z "$USER" || -z "$OUTPUT_FILE" || -z "$FORMAT" || "$LOGLEVEL" ]]; then
   echo "ERROR: Missing one or more required parameters." >&2
   exit 1
 fi
@@ -53,7 +59,7 @@ TIMEOUT=$(( DURATION + BUFFER ))
 
 # --- Launch ffmpeg with timeout and track PID ---
 (
-  timeout "${TIMEOUT}"s ffmpeg -loglevel info \
+  timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" \
     -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
     -i "$STREAM_URL" \
     -t "$DURATION" \

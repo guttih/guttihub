@@ -12,29 +12,70 @@ export function LiveLogViewer({ recordingId, intervalMs = 1000, autoScroll = tru
   const [log, setLog] = useState("(fetching log...)");
   const ref = useRef<HTMLPreElement>(null);
   const userScrolledUpRef = useRef(false);
-  console.log("LiveLogViewer: working with recordingId:", recordingId);
+
+
   useEffect(() => {
     let mounted = true;
-
-    const fetchLog = async () => {
+    const donePollCount = { current: 0 };
+  
+    const fetchLogAndStatus = async () => {
       try {
-        const res = await fetch(`/api/recording-log?recordingId=${recordingId}`);
-        const json = await res.json();
-        if (mounted && json.log) {
-          setLog(json.log);
+        console.log("📡 Polling log + status...");
+        const [logRes, statusRes] = await Promise.all([
+          fetch(`/api/recording-log?recordingId=${recordingId}`),
+          fetch(`/api/recording-status?recordingId=${recordingId}`)
+        ]);
+  
+        const logJson = await logRes.json();
+        const statusJson = await statusRes.json();
+  
+        if (mounted && logJson?.log) {
+          setLog(logJson.log);
         }
-      } catch {
-        if (mounted) setLog("(log unavailable)");
+  
+        const status = statusJson?.STATUS;
+        if (status === "done" || status === "error") {
+          donePollCount.current++;
+          if (donePollCount.current >= 5) {
+            console.log("🛑 Stopping log polling after 5 post-done fetches");
+            return true; // tell polling loop to stop
+          }
+        } else {
+          donePollCount.current = 0;
+        }
+      } catch (err) {
+        console.warn("⚠️ Log fetch failed", err);
       }
+  
+      return false; // continue polling
     };
+  
+    let interval: NodeJS.Timeout;
+    let stopped = false;
+  
+    const startPolling = () => {
+        console.log("🛑 Stopping log polling after 5 post-done fetches");
 
-    fetchLog(); // initial
-    const interval = setInterval(fetchLog, intervalMs);
+      interval = setInterval(async () => {
+        if (stopped) return;
+        const shouldStop = await fetchLogAndStatus();
+        if (shouldStop) {
+          stopped = true;
+          clearInterval(interval);
+        }
+      }, intervalMs);
+    };
+  
+    fetchLogAndStatus(); // initial fetch
+    startPolling();      // begin interval polling
+  
     return () => {
       mounted = false;
+      stopped = true;
       clearInterval(interval);
     };
   }, [recordingId, intervalMs]);
+  
 
   useEffect(() => {
     if (autoScroll && ref.current && !userScrolledUpRef.current) {

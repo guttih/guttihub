@@ -7,8 +7,6 @@
 /scripts/deployAssets/
 /src/config/services.json
 
-# todo: remove this line
-/src/config/services.ts
 
 # dependencies
 /node_modules
@@ -57,4 +55,4 @@ next-env.d.ts
 #project spesific
 /public/cache/*
 .cache/
-
+tmp/

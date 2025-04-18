@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { RecordingJob } from "@/types/RecordingJob";
 import { LiveStatusViewer } from "@/components/LiveStatusViewer/LiveStatusViewer";
 import { LiveLogViewer } from "@/components/LiveLogViewer/LiveLogViewer";
@@ -14,23 +14,6 @@ export default function StatusClient({ job }: Props) {
   const [autoScroll, setAutoScroll] = useState(true);
   const [status, setStatus] = useState<string>("loading");
 
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const res = await fetch(`/api/recording-status?recordingId=${job.recordingId}`);
-        const json = await res.json();
-        if (json.STATUS) {
-          setStatus(json.STATUS);
-        }
-      } catch {
-        setStatus("error");
-      }
-    };
-
-    poll();
-    const interval = setInterval(poll, 5000);
-    return () => clearInterval(interval);
-  }, [job.recordingId]);
 
   return (
     <div className="p-6 text-sm text-gray-300 max-w-2xl mx-auto space-y-6">
@@ -60,7 +43,11 @@ export default function StatusClient({ job }: Props) {
         )}
       </div>
 
-      <LiveStatusViewer recordingId={job.recordingId} intervalMs={3000} />
+      <LiveStatusViewer
+  recordingId={job.recordingId}
+  intervalMs={3000}
+  onStatusChange={setStatus}
+/>
 
       <div className="flex items-center justify-between mt-6 mb-2">
         <h2 className="font-semibold">Live Log</h2>

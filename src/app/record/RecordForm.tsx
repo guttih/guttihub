@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
-import { useRouter } from "next/navigation";
 
 interface Props {
     entry: M3UEntry;
@@ -12,7 +11,6 @@ interface Props {
 
 export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     console.log("📍 Current page at load:", window.location.href);
-    const router = useRouter();
     const [startTime, setStartTime] = useState("");
     const [duration, setDuration] = useState("10"); // default 3 minutes
     const [location, setLocation] = useState("");
