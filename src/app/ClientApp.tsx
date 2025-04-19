@@ -20,6 +20,7 @@ import { PaginationControls } from "@/components/PaginationControls/PaginationCo
 import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect";
 import { Spinner } from "@/components/Spinner/Spinner";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 export default function ClientApp({ role }: { role: string }) {
     const { data: session, status } = useSession();
@@ -229,11 +230,26 @@ export default function ClientApp({ role }: { role: string }) {
     return (
         <main className="p-4 max-w-full mx-auto">
             <div className="flex items-center justify-between mb-4">
-                <h1 className="text-xl font-bold truncate max-w-[60%]">{appConfig.appName}</h1>
-                <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
-                    {session?.user?.name} {role}
-                </h3>
-            </div>
+  {/* ←‑ existing heading */}
+  <h1 className="text-xl font-bold truncate max-w-[60%]">
+    {appConfig.appName}
+  </h1>
+
+  {/* NEW link ‑‑ displays only once session resolved */}
+  <Link
+    href="/record/schedule"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 whitespace-nowrap"
+  >
+    Scheduler
+  </Link>
+
+  {/* existing user name */}
+  <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
+    {session?.user?.name} {role}
+  </h3>
+</div>
 
             <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
                 {loading && <Spinner />}
