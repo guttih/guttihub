@@ -19,24 +19,27 @@ function StatusPageContent() {
             return;
         }
 
-        const fetchJob = async () => {
+        const fetchData = async () => {
             try {
-                const res = await fetch(`/api/recording-job?recordingId=${recordingId}`);
-                const json = await res.json();
-                if (!res.ok || !json || !json.recordingId) throw new Error("Invalid job data");
-                setJob(json);
+                const jobRes = await fetch(`/api/record/job?recordingId=${recordingId}`);
+
+                const jobJson = await jobRes.json();
+
+                if (!jobRes.ok || !jobJson?.recordingId) throw new Error("Invalid job data");
+
+                setJob(jobJson);
             } catch (err: unknown) {
                 if (err instanceof Error) {
-                    console.error("❌ Failed to load job:", err.message);
+                    console.error("❌ Failed to load:", err.message);
                     setError(err.message);
                 } else {
-                    console.error("❌ Failed to load job:", err);
-                    setError("Failed to load recording metadata.");
+                    console.error("❌ Failed to load job or time:", err);
+                    setError("Failed to load recording metadata or time.");
                 }
             }
         };
 
-        fetchJob();
+        fetchData();
     }, [recordingId]);
 
     if (error) return <div className="p-6 text-red-400">{error}</div>;
@@ -52,30 +55,3 @@ export default function StatusPage() {
         </Suspense>
     );
 }
-
-// "use client";
-
-// import { useSearchParams } from "next/navigation";
-// import { LiveStatusViewer } from "@/components/LiveStatusViewer/LiveStatusViewer";
-// import { LiveLogViewer } from "@/components/LiveLogViewer/LiveLogViewer";
-
-// export default function StatusPage() {
-//     const searchParams = useSearchParams();
-//     const recordingId = searchParams.get("recordingId");
-
-//     console.log("📡 StatusPage loaded with recordingId:", recordingId);
-
-//     if (!recordingId) {
-//         return <div className="p-6 text-red-400">❌ Missing recording ID in URL</div>;
-//     }
-
-//     return (
-//         <div className="p-6 space-y-6">
-//             <LiveStatusViewer recordingId={recordingId} />
-//             <div>
-//                 <h3 className="text-sm text-gray-300 font-semibold mb-2">Live Recording Log</h3>
-//                 <LiveLogViewer recordingId={recordingId} />
-//             </div>
-//         </div>
-//     );
-// }

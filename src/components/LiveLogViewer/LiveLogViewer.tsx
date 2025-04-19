@@ -8,7 +8,7 @@ interface Props {
   autoScroll?: boolean;
 }
 
-export function LiveLogViewer({ recordingId, intervalMs = 1000, autoScroll = true }: Props) {
+export function LiveLogViewer({ recordingId, intervalMs = 1000, autoScroll = true}: Props) {
   const [log, setLog] = useState("(fetching log...)");
   const ref = useRef<HTMLPreElement>(null);
   const userScrolledUpRef = useRef(false);
@@ -20,10 +20,10 @@ export function LiveLogViewer({ recordingId, intervalMs = 1000, autoScroll = tru
   
     const fetchLogAndStatus = async () => {
       try {
-        console.log("📡 Polling log + status...");
+        console.log("📡 Polling log + status... " + donePollCount.current);  //remove
         const [logRes, statusRes] = await Promise.all([
-          fetch(`/api/recording-log?recordingId=${recordingId}`),
-          fetch(`/api/recording-status?recordingId=${recordingId}`)
+          fetch(`/api/record/log?recordingId=${recordingId}`),
+          fetch(`/api/record/status?recordingId=${recordingId}`)
         ]);
   
         const logJson = await logRes.json();
@@ -34,10 +34,10 @@ export function LiveLogViewer({ recordingId, intervalMs = 1000, autoScroll = tru
         }
   
         const status = statusJson?.STATUS;
-        if (status === "done" || status === "error") {
+        if (status === "done" || status === "stopped" || status === "error") {
           donePollCount.current++;
           if (donePollCount.current >= 5) {
-            console.log("🛑 Stopping log polling after 5 post-done fetches");
+            console.log("🛑 Stopping log polling after 5 post-done fetches"); //remove
             return true; // tell polling loop to stop
           }
         } else {

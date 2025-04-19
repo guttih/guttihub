@@ -49,7 +49,7 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
         form.append("recordNow", "true");
 
         try {
-            const res = await fetch("/api/schedule-recording", {
+            const res = await fetch("/api/record/schedule", {
                 method: "POST",
                 body: form,
             });

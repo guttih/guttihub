@@ -1,4 +1,4 @@
-// src/app/api/schedule-recording/route.ts
+// src/app/api/record/schedule/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";

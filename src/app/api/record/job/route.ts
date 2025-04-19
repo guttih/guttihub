@@ -1,4 +1,4 @@
-// src/app/api/recording-job/route.ts
+// src/app/api/record/job/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { promises as fs } from "fs";
