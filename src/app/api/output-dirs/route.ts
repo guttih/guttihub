@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
 
-const configPath = path.resolve("src/config/output-folders.json");
+const configPath = path.resolve("src/config/output-dirs.json");
 
 export async function GET() {
   try {

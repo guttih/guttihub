@@ -14,7 +14,6 @@ import { StreamFormat, getStreamFormat } from "@/types/StreamFormat";
 import { filterEntries } from "@/utils/filterEntries";
 import { extractYears } from "@/utils/ui/extractYears";
 
-const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
     {
@@ -98,7 +97,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
     async function getCachedOrFreshData(url: string, username: string, serviceName: string): Promise<CashedEntries> {
         const filePathCashed = getCacheFilePath(username, serviceName, "cashedEntries");
 
-        if (await isFileFresh(filePathCashed, CACHE_DURATION_MS)) {
+        if (await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs)) {
             console.log("[CACHE] Using cached file:", filePathCashed);
             return await readJsonFile<CashedEntries>(filePathCashed);
         }
@@ -137,7 +136,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
     }
 
     async function getCachedOrFreshM3U(url: string, filePath: string): Promise<string> {
-        if (await isFileFresh(filePath, CACHE_DURATION_MS)) {
+        if (await isFileFresh(filePath, appConfig.playlistCacheTTLInMs)) {
             console.log("[CACHE] Using cached file:", filePath);
             return await readFile(filePath);
         }

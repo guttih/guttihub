@@ -11,6 +11,8 @@ interface Props {
 }
 
 export default function StatusClient({ job }: Props) {
+  
+
     const [autoScroll, setAutoScroll] = useState(true);
     const [status, setStatus] = useState<string>("loading");
     const [isStopping, setIsStopping] = useState(false);
@@ -53,17 +55,27 @@ export default function StatusClient({ job }: Props) {
                 <div>
                     <strong>createdAt:</strong> {new Date(job.createdAt).toLocaleString()}
                 </div>
-                {job.outputFile && (
+                {job.recordingId && (
                     <div className="mt-2">
                         <strong>Output:</strong>{" "}
-                        <a href={`file://${job.outputFile}`} className="text-blue-400 underline break-all" target="_blank" rel="noopener noreferrer">
+                       {/* { <a href={`file://${job.outputFile}`} className="text-blue-400 underline break-all" target="_blank" rel="noopener noreferrer">
                             {job.outputFile}
+                        </a>} */}
+                        
+                        <a href={`/api/ts-stream/${encodeURIComponent(job.recordingId)}`} className="text-blue-400 underline break-all" 
+                           target="_blank" rel="noopener noreferrer" >
+                            Live Stream (.ts)
                         </a>
+
+                        
+                        
+
+
                     </div>
                 )}
             </div>
 
-            <LiveStatusViewer recordingId={job.recordingId} intervalMs={3000} onStatusChange={setStatus} />
+            <LiveStatusViewer recordingId={job.recordingId} intervalMs={2500} onStatusChange={setStatus} />
 
             <div className="flex items-center justify-between mt-6 mb-2">
                 <h2 className="font-semibold">Live Log</h2>
@@ -73,7 +85,7 @@ export default function StatusClient({ job }: Props) {
                 </label>
             </div>
 
-            <LiveLogViewer recordingId={job.recordingId} intervalMs={2000} autoScroll={autoScroll} />
+            <LiveLogViewer recordingId={job.recordingId} intervalMs={2500} autoScroll={autoScroll} />
             {status === "recording" && (
                 <button
                     onClick={handleStopRecording}

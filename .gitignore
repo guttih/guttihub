@@ -56,3 +56,6 @@ next-env.d.ts
 /public/cache/*
 .cache/
 tmp/
+public/videos/*
+!public/videos/recordings/README.md
+

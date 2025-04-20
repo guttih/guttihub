@@ -23,7 +23,9 @@ export default function SchedulePage() {
     const nextRefresh = useRef<NodeJS.Timeout | null>(null);
 
     // live clock (updates every 1 s)
-    const [now, setNow] = useState<Date>(new Date());
+    const [now, setNow] = useState<Date | null>(null);
+const [hasMounted, setHasMounted] = useState(false);
+
 
     function scheduleNextAutoReload(jobs: Job[]) {
         // clear any previous timeout
@@ -42,8 +44,10 @@ export default function SchedulePage() {
 
     useEffect(() => {
         const id = setInterval(() => setNow(new Date()), 1_000);
-        return () => clearInterval(id); // tidy up on unmount
+        setHasMounted(true);
+        return () => clearInterval(id);
     }, []);
+    
 
     const reload = useCallback(async () => {
         setLoading(true);
@@ -111,7 +115,8 @@ export default function SchedulePage() {
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l2 2m8-2a10 10 0 11-20 0 10 10 0 0120 0z" />
                     </svg>
-                    {now.toLocaleString()}
+                    {hasMounted && now ? now.toLocaleString() : "Loading time…"}
+
                 </span>
             </div>
 
@@ -170,7 +175,8 @@ export default function SchedulePage() {
                                 <td className="p-2">{j.id}</td>
                                 <td className="p-2 whitespace-nowrap">{j.datetime}</td>
                                 <td className="p-2">{j.description}</td>
-                                <td className="p-2 font-mono truncate max-w-xs">{j.command}</td>
+                                <td className="p-2 font-mono truncate max-w-xs" title={j.command}
+                                >{j.command}</td>
                                 <td className="p-2">
                                     <button onClick={() => del(j.id)} className="text-red-600 hover:underline">
                                         ✕

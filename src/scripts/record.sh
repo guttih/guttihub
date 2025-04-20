@@ -68,6 +68,8 @@ cleanup_and_exit() {
 
   ACTUAL_STOP=$(date -Iseconds)
   echo "ACTUAL_STOP=$ACTUAL_STOP" >> "$STATUS_FILE"
+  echo "INTERRUPTED=1" >> "$STATUS_FILE"
+  INTERRUPTED=1
 
   if [[ -f "$TS_FILE" ]]; then
     echo "🔄 Attempting transmux after signal..." >> "$LOG_FILE"
@@ -104,6 +106,8 @@ cleanup_and_exit() {
 trap cleanup_and_exit SIGINT SIGTERM
 
 # --- Record raw .ts stream (copy mode) ---
+echo "📼 Starting ffmpeg for raw TS recording..." >> "$LOG_FILE"
+echo "CMD: timeout ${TIMEOUT}s ffmpeg -loglevel $LOGLEVEL -i $STREAM_URL -t $DURATION -c copy -f mpegts $TS_FILE" >> "$LOG_FILE"
 (
   timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" \
     -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
@@ -113,12 +117,19 @@ trap cleanup_and_exit SIGINT SIGTERM
 ) &
 PID=$!
 echo "PID=$PID" >> "$STATUS_FILE"
+echo "🕓 Waiting for raw FFmpeg process (PID=$PID) to complete..." >> "$LOG_FILE"
 
-wait $PID || true
+wait $PID
 EXIT_CODE=$?
 ACTUAL_STOP=$(date -Iseconds)
 echo "ACTUAL_STOP=$ACTUAL_STOP" >> "$STATUS_FILE"
 echo "FFMPEG_EXIT=$EXIT_CODE" >> "$STATUS_FILE"
+echo "🛑 Raw FFmpeg exited with code $EXIT_CODE" >> "$LOG_FILE"
+
+if [[ $EXIT_CODE -eq 124 || $EXIT_CODE -eq 130 || $EXIT_CODE -eq 255 ]]; then
+  echo "INTERRUPTED=1" >> "$STATUS_FILE"
+  INTERRUPTED=1
+fi
 
 # --- Skip final remux if already handled in trap ---
 if grep -q '^STATUS=stopped' "$STATUS_FILE"; then
@@ -127,7 +138,7 @@ if grep -q '^STATUS=stopped' "$STATUS_FILE"; then
 fi
 
 # --- Try to remux .ts to .mp4 without re-encoding ---
-if [[ -f "$TS_FILE" && $EXIT_CODE -eq 0 ]]; then
+if [[ -f "$TS_FILE" ]]; then
   echo "🔄 Starting transmux to mp4..." >> "$LOG_FILE"
   echo "STATUS=packaging" >> "$STATUS_FILE"
   (
@@ -140,7 +151,11 @@ if [[ -f "$TS_FILE" && $EXIT_CODE -eq 0 ]]; then
   echo "TRANSMUX_PID=$TRANSMUX_PID" >> "$STATUS_FILE"
   wait $TRANSMUX_PID
   if [[ $? -eq 0 ]]; then
-    echo "STATUS=done" >> "$STATUS_FILE"
+    if [[ "$INTERRUPTED" -eq 1 ]]; then
+      echo "STATUS=stopped" >> "$STATUS_FILE"
+    else
+      echo "STATUS=done" >> "$STATUS_FILE"
+    fi
     echo "🧽 Wiping TS file: $TS_FILE" >> "$LOG_FILE"
     rm "$TS_FILE"
   else
@@ -149,4 +164,6 @@ if [[ -f "$TS_FILE" && $EXIT_CODE -eq 0 ]]; then
   fi
 else
   echo "STATUS=error" >> "$STATUS_FILE"
+  echo "ERROR=TS file not found after recording" >> "$STATUS_FILE"
+  echo "🧨 Skipping transmux: TS file not found." >> "$LOG_FILE"
 fi
