@@ -5,6 +5,7 @@ import path from "path";
 import { ScheduleRecordingParams } from "@/types/ScheduleRecordingParams";
 import { RecordingJob } from "@/types/RecordingJob";
 import { readJsonFile, writeJsonFile } from "@/utils/fileHandler";
+import { runJobctl } from "@/utils/jobctl";
 
 export class ScheduleResolver {
     static recordScript = path.resolve("src/scripts/record.sh");
@@ -12,7 +13,6 @@ export class ScheduleResolver {
     static recordingJobsDir = path.resolve(".cache/recording-jobs");
 
     static async stopRecording(recordingId: string): Promise<{ success: boolean; message?: string; error?: string }> {
-        
         const jobPath = path.join(ScheduleResolver.recordingJobsDir, `${recordingId}.json`);
         const job = await readJsonFile<RecordingJob>(jobPath);
         const args = ["--outputFile", job.outputFile];
@@ -27,39 +27,36 @@ export class ScheduleResolver {
         };
     }
 
-    static async scheduleRecording({
-        cacheKey,
-        entry,
-        durationSec,
-        user,
-        outputFile,
-        recordNow,
-    }: ScheduleRecordingParams): Promise<{ success: boolean; message?: string; error?: string; recordingId?: string }> {
+    static async scheduleRecording({ cacheKey, entry, durationSec, user, outputFile, recordNow, startTime }: ScheduleRecordingParams): Promise<{
+        success: boolean;
+        message?: string;
+        error?: string;
+        recordingId?: string;
+    }> {
         const args = ["--url", entry.url, "--duration", durationSec.toString(), "--user", user, "--outputFile", outputFile, "--format", "mp4"];
 
+        const timestamp = getHumanReadableTimestamp();
+        const lastSegment = entry.url.split("/").pop() ?? "unknown";
+        const recordingId = `recording-${timestamp}-${lastSegment}`;
+        const logFile = `${outputFile}.log`;
+        const statusFile = `${outputFile}.status`;
+
+        const job: RecordingJob = {
+            recordingId,
+            cacheKey,
+            user,
+            outputFile,
+            logFile,
+            statusFile,
+            duration: durationSec,
+            format: "mp4",
+            createdAt: new Date().toISOString(),
+            startTime: recordNow ? new Date().toISOString() : startTime ?? new Date().toISOString(),
+        };
+
+        console.log("📝 Writing recording job metadata:", job);
+        await writeRecordingJobFile(job);
         if (recordNow) {
-            const timestamp = getHumanReadableTimestamp();
-            const lastSegment = entry.url.split("/").pop() ?? "unknown";
-            const recordingId = `recording-${timestamp}-${lastSegment}`;
-            const logFile = `${outputFile}.log`;
-            const statusFile = `${outputFile}.status`;
-
-            const job: RecordingJob = {
-                recordingId,
-                cacheKey,
-                user,
-                outputFile,
-                logFile,
-                statusFile,
-                duration: durationSec,
-                format: "mp4",
-                startTime: new Date().toISOString(),
-                createdAt: new Date().toISOString(),
-            };
-
-            console.log("📝 Writing recording job metadata:", job);
-            await writeRecordingJobFile(job);
-
             // 🚀 Spawn the bash script in background (non-blocking)
             spawn("bash", [ScheduleResolver.recordScript, ...args], {
                 detached: true,
@@ -73,11 +70,27 @@ export class ScheduleResolver {
             };
         }
 
-        return { success: false, error: "Only recordNow is implemented in this test" };
+        // 🕓 Schedule the job via /api/schedule POST
+        const cmd = `bash ${ScheduleResolver.recordScript} ${args.map((a) => `"${a}"`).join(" ")}`;
+        const desc = `Recording ${entry.name} for ${durationSec}s`;
+
+        try {
+ 
+            const result = await runJobctl("add", startTime, desc, cmd);
+            if (!result.ok) {
+                return { success: false, error: result.error };
+            }
+
+            return {
+                success: true,
+                message: `Recording ${recordingId} scheduled at ${startTime}.`,
+                recordingId: job.recordingId,
+            };
+        } catch (err) {
+            return { success: false, error: (err as Error).message };
+        }
     }
 }
-
-//   return { success: false, error: "Only recordNow is implemented in this test" };
 
 // 🧠 Helper to write the job metadata file
 async function writeRecordingJobFile(job: RecordingJob): Promise<void> {

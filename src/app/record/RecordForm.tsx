@@ -11,7 +11,10 @@ interface Props {
 
 export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     console.log("📍 Current page at load:", window.location.href);
-    const [startTime, setStartTime] = useState("");
+    // Let's default the start time to 1 hour into the future
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    const [startTime, setStartTime] = useState(now.toISOString().slice(0, 16)); // Format: YYYY-MM-DDTHH:MM
     const [duration, setDuration] = useState("10"); // default 3 minutes
     const [location, setLocation] = useState("");
     const [folders, setFolders] = useState<{ label: string; path: string }[]>([]);
@@ -46,7 +49,7 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
         form.append("duration", duration);
         form.append("location", location);
         form.append("email", userEmail);
-        form.append("recordNow", "true");
+        form.append("recordNow", recordNow ? "true" : "false");
 
         try {
             const res = await fetch("/api/record/schedule-org", {
@@ -56,9 +59,10 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
 
             const json = await res.json();
             console.log("📦 schedule-recording response:", res.status, json);
-
+            
             if (res.ok) {
-                const target = `/record/status?recordingId=${json.recordingId}`;
+                
+                const target = recordNow ? `/record/status?recordingId=${json.recordingId}` : `/schedule`;
                 console.log("✅ Redirecting to:", target);
               
                 // Try this first:

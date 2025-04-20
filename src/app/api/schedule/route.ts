@@ -1,23 +1,12 @@
-/*  /api/record/schedule
+// src/app/api/schedule/route.ts
+/*  
     GET      → list
     POST     → add
     DELETE   → delete
 */
 import { NextRequest, NextResponse } from "next/server";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runJobctl } from "@/utils/jobctl";
 
-const exec = promisify(execFile);
-const JOBCTL = process.env.JOBCTL_PATH ?? "src/scripts/jobctl.sh"; // adjust if needed
-
-async function runJobctl(...args: string[]) {
-    try {
-        const { stdout } = await exec(JOBCTL, args, { timeout: 60_000 });
-        return JSON.parse(stdout.toString());
-    } catch (err) {
-        return { ok: false, error: (err as Error).message };
-    }
-}
 
 /* ---------- list -------------------------------------------------- */
 export async function GET() {

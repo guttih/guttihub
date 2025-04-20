@@ -237,7 +237,7 @@ export default function ClientApp({ role }: { role: string }) {
 
   {/* NEW link ‑‑ displays only once session resolved */}
   <Link
-    href="/record/schedule"
+    href="/schedule"
     target="_blank"
     rel="noopener noreferrer"
     className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 whitespace-nowrap"

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import StatusBadge from "@/components/StatusBadge/StatusBadge";
 import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
+import { LiveStatusPackagingBar } from "../LiveStatusPackagingBar/LiveStatusPackagingBar";
 
 interface Props {
     recordingId: string;
@@ -81,9 +82,11 @@ export function LiveStatusViewer({ recordingId, intervalMs = 3000, onStatusChang
 
             {!statusMap && loading && <div className="text-gray-400">Loading status...</div>}
 
-            {statusMap?.STATUS === "recording" && statusMap?.STARTED_AT && statusMap?.EXPECTED_STOP && statusMap?.SERVER_TIME && (
+            {statusMap?.STATUS === "recording" && statusMap?.PACKAGING === "1" ? (
+                <LiveStatusPackagingBar />
+            ) : statusMap?.STATUS === "recording" && statusMap?.STARTED_AT && statusMap?.EXPECTED_STOP && statusMap?.SERVER_TIME ? (
                 <ProgressBarTime start={statusMap.STARTED_AT} end={statusMap.EXPECTED_STOP} now={statusMap.SERVER_TIME} />
-            )}
+            ) : null}
 
             {statusMap &&
                 statusMap.STATUS !== "preparing" &&

@@ -36,61 +36,117 @@ fi
 # --- Derived paths ---
 LOG_FILE="${OUTPUT_FILE}.log"
 STATUS_FILE="${OUTPUT_FILE}.status"
+TS_FILE="${OUTPUT_FILE%.mp4}.ts"
+
 STARTED_AT=$(date -Iseconds)
 ESTIMATED_STOP=$(date -d "$STARTED_AT + $DURATION seconds" -Iseconds 2>/dev/null || date -v+${DURATION}S -Iseconds)
 
-# --- Calculate timeout with buffer ---
 SCALED_BUFFER=$(( DURATION / 20 ))
 [[ $SCALED_BUFFER -gt 600 ]] && SCALED_BUFFER=600
 BUFFER=$(( 300 + SCALED_BUFFER ))
 TIMEOUT=$(( DURATION + BUFFER ))
 
-# --- Initialize status ---
+# --- Log initial status ---
 {
-    echo "STATUS=recording"
-    echo "STARTED_AT=$STARTED_AT"
-    echo "EXPECTED_STOP=$ESTIMATED_STOP"
-    echo "STREAM=$STREAM_URL"
-    echo "USER=$USER"
-    echo "DURATION=$DURATION"
-    echo "TIMEOUT=$TIMEOUT"
-    echo "OUTPUT_FILE=$OUTPUT_FILE"
-    echo "LOG_FILE=$LOG_FILE"
+  echo "STATUS=recording"
+  echo "STARTED_AT=$STARTED_AT"
+  echo "EXPECTED_STOP=$ESTIMATED_STOP"
+  echo "STREAM=$STREAM_URL"
+  echo "USER=$USER"
+  echo "DURATION=$DURATION"
+  echo "TIMEOUT=$TIMEOUT"
+  echo "OUTPUT_FILE=$OUTPUT_FILE"
+  echo "TS_FILE=$TS_FILE"
+  echo "LOG_FILE=$LOG_FILE"
 } > "$STATUS_FILE"
 
-# --- Trap for graceful SIGINT handling ---
-trap 'echo "Caught SIGINT, forwarding to FFmpeg..."; kill -INT "$FFMPEG_PID"; wait "$FFMPEG_PID"; echo "SIGINT handled."; exit 0' INT
+# --- Handle SIGINT / SIGTERM ---
+cleanup_and_exit() {
+  echo "🚨 Entered cleanup_and_exit trap at $(date -Iseconds)" >> "$LOG_FILE"
+  echo "🧪 Checking for TS file: $TS_FILE" >> "$LOG_FILE"
+  ls -lh "$TS_FILE" >> "$LOG_FILE" 2>/dev/null || echo "🧪 TS file does not exist" >> "$LOG_FILE"
 
-# --- Launch FFmpeg in background ---
-ffmpeg -loglevel "$LOGLEVEL" \
+  ACTUAL_STOP=$(date -Iseconds)
+  echo "ACTUAL_STOP=$ACTUAL_STOP" >> "$STATUS_FILE"
+
+  if [[ -f "$TS_FILE" ]]; then
+    echo "🔄 Attempting transmux after signal..." >> "$LOG_FILE"
+    echo "STATUS=packaging" >> "$STATUS_FILE"
+    (
+      ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
+        -i "$TS_FILE" \
+        -c copy \
+        "$OUTPUT_FILE" >> "$LOG_FILE" 2>&1
+    ) &
+    TRANSMUX_PID=$!
+    echo "TRANSMUX_PID=$TRANSMUX_PID" >> "$STATUS_FILE"
+    wait $TRANSMUX_PID
+
+    if [[ $? -eq 0 ]]; then
+      echo "STATUS=stopped" >> "$STATUS_FILE"
+      echo "✅ Graceful exit after packaging interrupted recording." >> "$LOG_FILE"
+      echo "🧽 Wiping TS file: $TS_FILE" >> "$LOG_FILE"
+      rm "$TS_FILE"
+      exit 0
+    else
+      echo "STATUS=error" >> "$STATUS_FILE"
+      echo "ERROR=Transmuxing failed after interrupt" >> "$STATUS_FILE"
+      echo "🧨 Trap exiting with failure, transmux failed." >> "$LOG_FILE"
+      exit 1
+    fi
+  else
+    echo "STATUS=error" >> "$STATUS_FILE"
+    echo "ERROR=No TS file found after interrupt." >> "$STATUS_FILE"
+    echo "🧨 Trap exiting with failure, TS file not found." >> "$LOG_FILE"
+    exit 1
+  fi
+}
+trap cleanup_and_exit SIGINT SIGTERM
+
+# --- Record raw .ts stream (copy mode) ---
+(
+  timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" \
     -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
     -i "$STREAM_URL" \
     -t "$DURATION" \
-    -c:v libx264 -crf 20 -preset slow \
-    -c:a aac -b:a 192k \
-    "$OUTPUT_FILE" >> "$LOG_FILE" 2>&1 &
+    -c copy -f mpegts "$TS_FILE" >> "$LOG_FILE" 2>&1
+) &
+PID=$!
+echo "PID=$PID" >> "$STATUS_FILE"
 
-FFMPEG_PID=$!
-echo "PID=$FFMPEG_PID" >> "$STATUS_FILE"
-
-# --- Wait for FFmpeg to finish ---
-wait "$FFMPEG_PID"
+wait $PID || true
 EXIT_CODE=$?
 ACTUAL_STOP=$(date -Iseconds)
+echo "ACTUAL_STOP=$ACTUAL_STOP" >> "$STATUS_FILE"
+echo "FFMPEG_EXIT=$EXIT_CODE" >> "$STATUS_FILE"
 
-# --- Finalize status ---
-{
-    echo "ACTUAL_STOP=$ACTUAL_STOP"
-    if [[ ! -f "$OUTPUT_FILE" ]]; then
-        echo "STATUS=error"
-    elif [[ $EXIT_CODE -eq 0 ]]; then
-        echo "STATUS=done"
-    elif [[ $EXIT_CODE -eq 130 || $EXIT_CODE -eq 255 ]]; then
-        echo "STATUS=stopped"
-    elif [[ $EXIT_CODE -eq 124 ]]; then
-        echo "STATUS=timeout"
-    else
-        echo "STATUS=error"
-    fi
+# --- Skip final remux if already handled in trap ---
+if grep -q '^STATUS=stopped' "$STATUS_FILE"; then
+  echo "🟡 Skipping final remux - already handled by trap." >> "$LOG_FILE"
+  exit 0
+fi
 
-} >> "$STATUS_FILE"
+# --- Try to remux .ts to .mp4 without re-encoding ---
+if [[ -f "$TS_FILE" && $EXIT_CODE -eq 0 ]]; then
+  echo "🔄 Starting transmux to mp4..." >> "$LOG_FILE"
+  echo "STATUS=packaging" >> "$STATUS_FILE"
+  (
+    ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
+      -i "$TS_FILE" \
+      -c copy \
+      "$OUTPUT_FILE" >> "$LOG_FILE" 2>&1
+  ) &
+  TRANSMUX_PID=$!
+  echo "TRANSMUX_PID=$TRANSMUX_PID" >> "$STATUS_FILE"
+  wait $TRANSMUX_PID
+  if [[ $? -eq 0 ]]; then
+    echo "STATUS=done" >> "$STATUS_FILE"
+    echo "🧽 Wiping TS file: $TS_FILE" >> "$LOG_FILE"
+    rm "$TS_FILE"
+  else
+    echo "STATUS=error" >> "$STATUS_FILE"
+    echo "ERROR=Transmuxing failed" >> "$STATUS_FILE"
+  fi
+else
+  echo "STATUS=error" >> "$STATUS_FILE"
+fi
