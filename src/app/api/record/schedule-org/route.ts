@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const duration = form.get("duration") as string;
     const location = form.get("location") as string;
     const recordNow = form.get("recordNow") as string === "true";
-    const baseUrl = form.get("baseUrl") as string;
+    // const baseUrl = form.get("baseUrl") as string;
 
     if (!cacheKey || !duration || !location || (!recordNow && !startTime)) {
         return NextResponse.json({ error: "Missing form values" }, { status: 400 });

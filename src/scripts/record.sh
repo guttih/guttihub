@@ -106,7 +106,7 @@ if [[ "$RECORDING_TYPE" == "hls" ]]; then
             -i "$STREAM_URL" \
             -t "$DURATION" \
             -c:v libx264 -preset ultrafast -g 25 -sc_threshold 0 \
-            -c:a aac \
+            -c:a aac -b:a 128k -ac 2 -ar 44100 \
             -f hls \
             -hls_time 4 \
             -hls_list_size 0 \

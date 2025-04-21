@@ -3,23 +3,24 @@ import { createReadStream, existsSync, statSync } from "fs";
 import path from "path";
 import { outDirectories } from "@/config";
 import { Readable } from "stream";
+import { trackViewer } from "@/utils/liveViewers";
 
 export async function GET(
-    req: NextRequest,
-    context: { params: { recordingId: string; filename: string } }
-  ) {
-    const { recordingId, filename } = await context.params;
+  req: NextRequest,
+  context: unknown
+) {
+  const { params } = context as { params: { recordingId: string; filename: string } };
+  const { recordingId, filename } = await params;
+
+  trackViewer(recordingId, req.headers.get("x-forwarded-for") || "unknown");
+
   const recordDir = outDirectories.find((d) => d.label === "Recordings");
 
-  if (!recordDir || !recordDir.path) {
+  if (!recordDir?.path) {
     return new Response("Recordings directory not found", { status: 404 });
   }
 
-  const segmentPath = path.resolve(
-    recordDir.path,
-    `${recordingId}_hls`,
-    filename
-  );
+  const segmentPath = path.resolve(recordDir.path, `${recordingId}_hls`, filename);
 
   if (!existsSync(segmentPath)) {
     return new Response("Segment not found", { status: 404 });

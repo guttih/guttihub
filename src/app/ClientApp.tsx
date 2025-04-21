@@ -24,7 +24,6 @@ import Link from "next/link";
 
 export default function ClientApp({ role }: { role: string }) {
     const { data: session, status } = useSession();
-
     const [entries, setEntries] = useState<M3UEntry[]>([]);
     const [searchNameInput, setSearchNameInput] = useState("");
     const [searchGroupInput, setSearchGroupInput] = useState("");
@@ -154,7 +153,6 @@ export default function ClientApp({ role }: { role: string }) {
             setYearsFromServer(json.data.years || []);
             setCategoriesFromServer(json.data.categories || []);
             setFormatsFromServer((json.data.formats ?? []) as StreamFormat[]);
-
         } catch (err) {
             console.error("Fetch failed", err);
         } finally {
@@ -230,26 +228,24 @@ export default function ClientApp({ role }: { role: string }) {
     return (
         <main className="p-4 max-w-full mx-auto">
             <div className="flex items-center justify-between mb-4">
-  {/* ←‑ existing heading */}
-  <h1 className="text-xl font-bold truncate max-w-[60%]">
-    {appConfig.appName}
-  </h1>
+                {/* ←‑ existing heading */}
+                <h1 className="text-xl font-bold truncate max-w-[60%]">{appConfig.appName}</h1>
 
-  {/* NEW link ‑‑ displays only once session resolved */}
-  <Link
-    href="/schedule"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 whitespace-nowrap"
-  >
-    Scheduler
-  </Link>
+                {/* NEW link ‑‑ displays only once session resolved */}
+                <Link
+                    href="/schedule"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 whitespace-nowrap"
+                >
+                    Scheduler
+                </Link>
 
-  {/* existing user name */}
-  <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
-    {session?.user?.name} {role}
-  </h3>
-</div>
+                {/* existing user name */}
+                <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
+                    {session?.user?.name} {role}
+                </h3>
+            </div>
 
             <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
                 {loading && <Spinner />}
@@ -418,8 +414,8 @@ export default function ClientApp({ role }: { role: string }) {
                         >
                             <option value="">All Formats</option>
                             {formatsFromServer.map((format) => (
-    <option key={format} value={format}>
-      {format.toUpperCase()}
+                                <option key={format} value={format}>
+                                    {format.toUpperCase()}
                                 </option>
                             ))}
                         </select>
@@ -477,11 +473,13 @@ export default function ClientApp({ role }: { role: string }) {
                     useInteractiveCard ? (
                         <StreamCardInteractive key={entry.url} entry={entry} />
                     ) : (
-                        <StreamCard key={entry.url} 
-                                    entry={entry} 
-                                    showCopy={!appConfig.hideCredentialsInUrl} 
-                                    showRecord={getUserRole(session?.user?.email) === "admin"}
-                                    onPlay={(url) => handlePlay(url)} />
+                        <StreamCard
+                            key={entry.url}
+                            entry={entry}
+                            showCopy={!appConfig.hideCredentialsInUrl}
+                            showRecord={getUserRole(session?.user?.email) === "admin"}
+                            onPlay={(url) => handlePlay(url)}
+                        />
                     )
                 )}
             </div>
