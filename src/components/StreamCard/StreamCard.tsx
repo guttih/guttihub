@@ -82,7 +82,7 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
                     </button>
                 )}
                 {/* Play in new tab button */}
-                {showPlay && (
+                {showPlay || true && (
                     <a
                         href={`/player?streamUrl=${entry.url}`}
                         target="_blank"

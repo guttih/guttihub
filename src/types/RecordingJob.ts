@@ -11,5 +11,6 @@ export interface RecordingJob {
     format: string;              // currently always "mp4"
     startTime: string;           // actual start time (ISO)
     createdAt: string;           // when the job metadata was written
+    recordingType: string;       // Type of recording can be ts or hls that results in .ts or .m3u8 recordings
   }
   

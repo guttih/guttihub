@@ -75,6 +75,7 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     form.append("location", location);
     form.append("email", userEmail);
     form.append("recordNow", recordNow ? "true" : "false");
+    form.append("baseUrl", window.location.origin);
 
     try {
       const res = await fetch("/api/record/schedule-org", {

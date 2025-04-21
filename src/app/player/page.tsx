@@ -10,8 +10,6 @@ export default async function PlayerPage({ searchParams }: { searchParams: Promi
         return <div className="text-red-500 p-4">Missing the &apos;streamUrl&apos; parameter from the URL.</div>;
     }
     
-    console.log("got streamUrl:", url); // Debug line
-
     return (
         <main className="p-4 max-w-4xl mx-auto">
             <h1 className="text-xl font-bold mb-4">Stream Player</h1>

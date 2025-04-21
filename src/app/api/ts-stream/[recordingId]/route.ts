@@ -3,18 +3,13 @@ import { createReadStream, statSync, existsSync } from "fs";
 import path, { join } from "path";
 import { Readable } from "stream";
 import { outDirectories } from "@/config";
-
-type RecordingIdRouteContext = {
-    params: {
-      recordingId: string;
-    };
-  };
+import { RecordingIdRouteContext } from "@/types/RecordingIdRouteContext";
 
 export async function GET(
    req: NextRequest,
-  { params }: RecordingIdRouteContext
+   context: RecordingIdRouteContext
 ) {
-  const { recordingId } = params;
+  const { recordingId } = context.params;
   const recordDir = outDirectories.find((dir) => dir.label === "Recordings");
 
   if (!recordDir || !recordDir.path) {

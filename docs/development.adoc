@@ -56,6 +56,18 @@ If `.env.local` is missing or one of these values is not defined, the deploy scr
 
 Do not commit `.env.local` or `.env.production` to source control.
 
+=== BASE_URL (required in production)
+
+The app needs to know its public URL to generate valid stream links in HLS playlists.
+
+[source,.env]
+----
+BASE_URL=https://tv.guttih.com
+----
+
+If not set in production, scheduled recordings will fail.
+
+
 == Naming Conventions
 
 Consistent naming improves readability and maintainability.

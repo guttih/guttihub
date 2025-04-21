@@ -17,7 +17,7 @@ export default function StatusClient({ job }: Props) {
     const [status, setStatus] = useState<string>("loading");
     const [isStopping, setIsStopping] = useState(false);
     const [isStopped, setIsStopped] = useState(false);
-
+    
     async function handleStopRecording(): Promise<void> {
         // calling src/app/api/record/stop/route.ts
         if (isStopping || isStopped) return;
@@ -30,6 +30,18 @@ export default function StatusClient({ job }: Props) {
             setIsStopped(false);
             setStatus("Error stopping recording");
         }
+    }
+
+    function extractDirAndFileName(outputFile: string) {
+        // Extract the directory and filename whice come after /videos/
+        const i = outputFile.indexOf("/videos/");
+        return i !== -1 ? outputFile.substring(i + 8) : outputFile;
+    }
+
+    function extractFileName(outputFile: string): import("react").ReactNode {
+        // Extract the filename from the outputFile path
+        const parts = outputFile.split("/");
+        return parts[parts.length - 1];
     }
 
     return (
@@ -55,24 +67,24 @@ export default function StatusClient({ job }: Props) {
                 <div>
                     <strong>createdAt:</strong> {new Date(job.createdAt).toLocaleString()}
                 </div>
-                {job.recordingId && (
+                {job.recordingId && status !== 'done' && (
                     <div className="mt-2">
                         <strong>Output:</strong>{" "}
-                       {/* { <a href={`file://${job.outputFile}`} className="text-blue-400 underline break-all" target="_blank" rel="noopener noreferrer">
-                            {job.outputFile}
-                        </a>} */}
-                        
-                        <a href={`/api/ts-stream/${encodeURIComponent(job.recordingId)}`} className="text-blue-400 underline break-all" 
+                        <a href={`/player?streamUrl=/api/${job.recordingType}-stream/${encodeURIComponent(job.recordingId)}${job.recordingType ==='hls'? '/playlist' : ''}`} className="text-blue-400 underline break-all" 
                            target="_blank" rel="noopener noreferrer" >
-                            Live Stream (.ts)
+                            ${`Live Stream ${job.recordingType === 'hls'? 'playlist' : '(.ts)'}`}
                         </a>
-
-                        
-                        
-
-
                     </div>
                 )}
+                {job.recordingId && status === 'done' && (
+                    <div className="mt-2">
+                        <strong>Recording:</strong>
+                        <a href={`/player?streamUrl=/api/video/${extractDirAndFileName(job.outputFile)}`} className="text-blue-400 underline break-all"
+                            target="_blank" rel="noopener noreferrer" >
+                             {extractFileName(job.outputFile)}
+                        </a>
+                    </div>  
+                )}      
             </div>
 
             <LiveStatusViewer recordingId={job.recordingId} intervalMs={2500} onStatusChange={setStatus} />

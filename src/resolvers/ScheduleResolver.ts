@@ -16,6 +16,7 @@ export class ScheduleResolver {
         const jobPath = path.join(ScheduleResolver.recordingJobsDir, `${recordingId}.json`);
         const job = await readJsonFile<RecordingJob>(jobPath);
         const args = ["--outputFile", job.outputFile];
+
         spawn("bash", [ScheduleResolver.stopRecordScript, ...args], {
             detached: true,
             stdio: "ignore", // Don't wait on stdout/stderr
@@ -33,13 +34,20 @@ export class ScheduleResolver {
         error?: string;
         recordingId?: string;
     }> {
-        const args = ["--url", entry.url, "--duration", durationSec.toString(), "--user", user, "--outputFile", outputFile, "--format", "mp4"];
+    
 
         const timestamp = getHumanReadableTimestamp();
         const lastSegment = entry.url.split("/").pop() ?? "unknown";
         const recordingId = `recording-${timestamp}-${lastSegment}`;
         const logFile = `${outputFile}.log`;
         const statusFile = `${outputFile}.status`;
+
+        const args = [  "--url", entry.url, 
+            "--duration",   durationSec.toString(), 
+            "--user", user,
+            "--outputFile", outputFile, 
+            "--recordingType", "hls",
+            "--format", "mp4"];
 
         const job: RecordingJob = {
             recordingId,
@@ -50,13 +58,17 @@ export class ScheduleResolver {
             statusFile,
             duration: durationSec,
             format: "mp4",
+            recordingType: "hls",
             createdAt: new Date().toISOString(),
             startTime: recordNow ? new Date().toISOString() : startTime ?? new Date().toISOString(),
+
         };
 
         console.log("📝 Writing recording job metadata:", job);
         await writeRecordingJobFile(job);
+
         if (recordNow) {
+            console.log("Entire command:", ScheduleResolver.recordScript, ...args); 
             // 🚀 Spawn the bash script in background (non-blocking)
             spawn("bash", [ScheduleResolver.recordScript, ...args], {
                 detached: true,
