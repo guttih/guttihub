@@ -11,19 +11,23 @@ interface Props {
 }
 
 export default function StatusClient({ job }: Props) {
-  
-
     const [autoScroll, setAutoScroll] = useState(true);
     const [status, setStatus] = useState<string>("loading");
     const [isStopping, setIsStopping] = useState(false);
     const [isStopped, setIsStopped] = useState(false);
-    
+
     async function handleStopRecording(): Promise<void> {
         // calling src/app/api/record/stop/route.ts
         if (isStopping || isStopped) return;
         setIsStopping(true);
-        const ret = await fetch(`/api/record/stop?recordingId=${job.recordingId}`);
-        if (ret.status === 200) {
+        // const ret = await fetch(`/api/record/stop?recordingId=${job.recordingId}`);
+        const res = await fetch("/api/live/stop", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recordingId: job.recordingId }),
+        });
+
+        if (res.status === 200) {
             setIsStopped(true);
             setStatus("Stop initiated");
         } else {
@@ -67,24 +71,34 @@ export default function StatusClient({ job }: Props) {
                 <div>
                     <strong>createdAt:</strong> {new Date(job.createdAt).toLocaleString()}
                 </div>
-                {job.recordingId && status !== 'done' && (
+                {job.recordingId && status !== "done" && (
                     <div className="mt-2">
                         <strong>Output:</strong>{" "}
-                        <a href={`/player?streamUrl=/api/${job.recordingType}-stream/${encodeURIComponent(job.recordingId)}${job.recordingType ==='hls'? '/playlist' : ''}`} className="text-blue-400 underline break-all" 
-                           target="_blank" rel="noopener noreferrer" >
-                            ${`Live Stream ${job.recordingType === 'hls'? 'playlist' : '(.ts)'}`}
+                        <a
+                            href={`/player?streamUrl=/api/${job.recordingType}-stream/${encodeURIComponent(job.recordingId)}${
+                                job.recordingType === "hls" ? "/playlist" : ""
+                            }`}
+                            className="text-blue-400 underline break-all"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            ${`Live Stream ${job.recordingType === "hls" ? "playlist" : "(.ts)"}`}
                         </a>
                     </div>
                 )}
-                {job.recordingId && status === 'done' && (
+                {job.recordingId && status === "done" && (
                     <div className="mt-2">
                         <strong>Recording:</strong>
-                        <a href={`/player?streamUrl=/api/video/${extractDirAndFileName(job.outputFile)}`} className="text-blue-400 underline break-all"
-                            target="_blank" rel="noopener noreferrer" >
-                             {extractFileName(job.outputFile)}
+                        <a
+                            href={`/player?streamUrl=/api/video/${extractDirAndFileName(job.outputFile)}`}
+                            className="text-blue-400 underline break-all"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            {extractFileName(job.outputFile)}
                         </a>
-                    </div>  
-                )}      
+                    </div>
+                )}
             </div>
 
             <LiveStatusViewer recordingId={job.recordingId} intervalMs={2500} onStatusChange={setStatus} />

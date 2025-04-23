@@ -15,6 +15,7 @@ export default [
           '.next/**/*',
           'node_modules/**/*',
           'dist/**/*',
+          'public/**',
           'coverage/**/*',
           'html/**/*',
         ],

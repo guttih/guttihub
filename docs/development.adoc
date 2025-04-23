@@ -12,7 +12,7 @@ include::next.adoc[]
 
 .List all relevant project files (excluding build and cache directories)
 [source,sh]
-find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/cache/*" ! -path "./html/*" -print
+find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/*" ! -path "./html/*" -print
 
 .List and display specific files
 [source,sh]

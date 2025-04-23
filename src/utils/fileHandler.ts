@@ -1,14 +1,12 @@
-import { RecordingJob } from "@/types/RecordingJob";
 import fs from "fs/promises";
 import path from "path";
+import { existsSync } from "fs";
+import { RecordingJob } from "@/types/RecordingJob";
+import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 
 const CACHE_DIR = path.resolve(process.cwd(), ".cache");
 
 export function getCacheDir(): string {
-    return CACHE_DIR;
-}
-
-export function getProjectCacheDir(): string {
     return CACHE_DIR;
 }
 
@@ -52,6 +50,28 @@ export async function ensureRecordingJobsDir(): Promise<void> {
 
 export function getRecordingJobsDir(): string {
     return path.join(getCacheDir(), "recording-jobs");
+}
+
+// Build the path to the bundle
+export function getInfoJsonPath(id: string): string {
+    return path.join(getRecordingJobsDir(), `${id}-info.json`);
+}
+
+// Read the finished-job bundle
+export async function readRecordingJobInfo(id: string): Promise<RecordingJobInfo> {
+    const p = getInfoJsonPath(id);
+    const txt = await fs.readFile(p, "utf-8");
+    return JSON.parse(txt) as RecordingJobInfo;
+}
+
+// Probe whether the bundle exists
+export function infoJsonExists(id: string): boolean {
+    return existsSync(getInfoJsonPath(id));
+}
+
+// Read a .status or .log by raw path
+export async function readFileRaw(p: string): Promise<string> {
+    return fs.readFile(p, "utf-8");
 }
 
 export async function writeRecordingJobFile(job: RecordingJob): Promise<void> {

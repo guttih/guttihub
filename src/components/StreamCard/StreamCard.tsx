@@ -1,8 +1,8 @@
-// src/components/StreamCard/StreamCard.tsx 
+// src/components/StreamCard/StreamCard.tsx
 import { useState } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
-import { supportedFormats, getStreamFormat, StreamFormat } from "@/types/StreamFormat";
+import { supportedFormats, getStreamFormatByExt, StreamFormat } from "@/types/StreamFormat";
 import { getExtension } from "@/utils/ui/getExtension";
 import { makeImageProxyUrl } from "@/utils/ui/makeImageProxyUrl";
 
@@ -20,7 +20,9 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
     const supported = supportedFormats.map((format) => format.toLowerCase());
     const isRecordable = !extension;
     const extensionIsSupported = extension ? supported.includes(extension.toLowerCase()) : false;
-    const showPlay = !!onPlay && (showUnsupported || extensionIsSupported);
+    const format = getStreamFormatByExt(entry.url);
+    const canLiveStream = format === StreamFormat.M3U8 || format === StreamFormat.UNKNOWN;
+    const showPlay = !!onPlay && (showUnsupported || extensionIsSupported || canLiveStream);
 
     const [copied, setCopied] = useState(false);
 
@@ -56,10 +58,11 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
 
     const handlePlay = async () => {
         if (!onPlay) return;
-        const format = getStreamFormat(entry.url);
-        const isLive = format === StreamFormat.M3U8 || format === StreamFormat.UNKNOWN;
 
-        if (isLive) {
+        const format = getStreamFormatByExt(entry.url);
+        const canLiveStream = format === StreamFormat.M3U8 || format === StreamFormat.UNKNOWN;
+
+        if (canLiveStream) {
             try {
                 const res = await fetch("/api/cache-entry", {
                     method: "POST",
@@ -68,6 +71,7 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
                 });
 
                 if (!res.ok) throw new Error("Failed to cache entry");
+
                 const { cacheKey } = await res.json();
 
                 const startRes = await fetch("/api/live/start", {
@@ -77,6 +81,7 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
                 });
 
                 if (!startRes.ok) throw new Error("Failed to start live stream");
+
                 const { recordingId } = await startRes.json();
                 const playlistUrl = `/api/hls-stream/${recordingId}/playlist`;
 
@@ -140,12 +145,18 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
                 {showPlay && (
                     <button
                         onClick={handlePlay}
-                        title="Play stream"
-                        className="absolute bottom-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-gray-800 text-white hover:bg-gray-500 shadow-lg transition duration-300"
+                        title={canLiveStream ? "Go Live" : "Play Stream"}
+                        className={`absolute bottom-5 right-5 w-10 h-10 flex items-center justify-center rounded-full
+                      ${canLiveStream ? "bg-red-600 animate-pulse ring-2 ring-red-400" : "bg-gray-800"}
+                      text-white hover:bg-gray-500 shadow-lg transition duration-300`}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
+                        {canLiveStream ? (
+                            <span className="text-xl">🔴</span>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                        )}
                     </button>
                 )}
 

@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# live.sh - simplified HLS stream for live usage
-# No packaging, no format switch, just raw HLS with auto-cleanup
-
 # --- Parse named arguments ---
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -37,28 +34,40 @@ echo "OUTPUT_FILE=$OUTPUT_FILE" >> "$STATUS_FILE"
 echo "HLS_PLAYLIST=$HLS_PLAYLIST" >> "$STATUS_FILE"
 echo "LOG_FILE=$LOG_FILE" >> "$STATUS_FILE"
 
-cleanup_and_exit() {
-    echo "Stopping live stream at $(date -Iseconds)" >> "$LOG_FILE"
+# --- Cleanup logic ---
+cleanup() {
+    ACTUAL_STOP=$(date -Iseconds)
+    echo "Stopping live stream at $ACTUAL_STOP" >> "$LOG_FILE"
+    echo "ACTUAL_STOP=$ACTUAL_STOP" >> "$STATUS_FILE"
     echo "STATUS=stopped" >> "$STATUS_FILE"
-    rm -rf "$HLS_PLAYLIST" "$HLS_DIR"
-    exit 0
-}
-trap cleanup_and_exit SIGINT SIGTERM
 
-ffmpeg -loglevel "$LOGLEVEL" \
+    [[ -f "$HLS_PLAYLIST" ]] && rm "$HLS_PLAYLIST"
+    [[ -d "$HLS_DIR" ]] && rm -rf "$HLS_DIR"
+}
+
+trap cleanup SIGINT SIGTERM
+
+# --- Start FFmpeg ---
+ffmpeg -loglevel info \
     -i "$STREAM_URL" \
-    -c:v libx264 -preset ultrafast -g 25 -sc_threshold 0 \
+    -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 \
+    -user_agent "Mozilla/5.0" \
+    -c:v libx264 -preset veryfast -g 25 -sc_threshold 0 -tune zerolatency \
     -c:a aac -b:a 128k -ac 2 -ar 44100 \
     -f hls \
     -hls_time 4 \
-    -hls_list_size 6 \
-    -hls_flags delete_segments+append_list \
+    -hls_list_size 5 \
+    -hls_flags delete_segments+append_list+omit_endlist+program_date_time \
+    -method PUT \
     -hls_segment_filename "${HLS_DIR}/segment_%03d.ts" \
-    -hls_base_url "$(basename "$HLS_DIR")/" \
-    "$HLS_PLAYLIST" >> "$LOG_FILE" 2>&1 &
+    "$HLS_PLAYLIST" 2>&1 &
 PID=$!
 
 echo "PID=$PID" >> "$STATUS_FILE"
-echo "Live HLS stream started, PID=$PID" >> "$LOG_FILE"
+echo "FFmpeg PID $PID started at $STARTED_AT" >> "$LOG_FILE"
 
 wait $PID
+EXIT_CODE=$?
+
+cleanup
+exit $EXIT_CODE

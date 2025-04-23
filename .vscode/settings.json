@@ -1,4 +1,4 @@
 {
-    "todo-tree.tree.scanMode": "workspace",
+    "todo-tree.tree.scanMode": "open files",
     "typescript.tsdk": "node_modules\\typescript\\lib"
 }

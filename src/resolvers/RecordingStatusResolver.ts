@@ -1,66 +1,85 @@
+// src/resolvers/RecordingStatusResolver.ts
 import path from "path";
-import { getRecordingJobsDir, readFile, readJsonFile } from "@/utils/fileHandler";
+import { existsSync } from "fs";
+import {
+  getRecordingJobsDir,
+  readFile,
+  readJsonFile,
+} from "@/utils/fileHandler";
 import { RecordingJob } from "@/types/RecordingJob";
-
-export interface RecordingStatus {
-    status: "recording" | "done" | "error" | "unknown";
-    startedAt?: string;
-    expectedStop?: string;
-    stream?: string;
-    user?: string;
-    duration?: string;
-    outputFile?: string;
-    logFile?: string;
-    serverTime?: string;
-}
+import { RecordingJobInfo } from "@/types/RecordingJobInfo";
+import { RecordingStatus } from "@/types/RecordingStatus";
+import {
+  parseLatestStatus,
+  normalizeStatus,
+} from "@/utils/resolverUtils";
 
 export class RecordingStatusResolver {
-    static async getStatusByRecordingId(recordingId: string): Promise<Record<string, string>> {
-        try {
-            const jobsDir = getRecordingJobsDir();
-            const jobPath = path.join(jobsDir, `${recordingId}.json`);
-            const job = await readJsonFile<RecordingJob>(jobPath);
+  /**
+   * Load the single-source bundle if it exists, otherwise parse the live .status.
+   * Returns a fully flattened RecordingStatus.
+   */
+  static async getStatusByRecordingId(
+    recordingId: string
+  ): Promise<RecordingStatus> {
+    const dir      = getRecordingJobsDir();
+    const infoPath = path.join(dir, `${recordingId}-info.json`);
 
-            const statusContent = await readFile(job.statusFile);
-            const map: Record<string, string> = {};
-            let lastStatusLine: string | undefined = undefined;
+    let flatMap: Record<string, string>;
 
-            for (const line of statusContent.split("\n")) {
-                const [key, ...rest] = line.split("=");
-                if (key && rest.length > 0) {
-                    const k = key.trim();
-                    const v = rest.join("=").trim();
-
-                    if (k === "STATUS") {
-                        lastStatusLine = v;
-                    } else {
-                        map[k] = v;
-                    }
-                }
-            }
-
-            if (lastStatusLine) {
-                map["STATUS"] = lastStatusLine;
-            }
-            map["SERVER_TIME"] = new Date().toISOString();
-            return map;
-        } catch (err) {
-            console.warn("❌ Failed to load status by recordingId:", recordingId, err);
-            return { STATUS: "unknown", ERROR: "Could not read .status file" };
+    if (existsSync(infoPath)) {
+      // Finished-job bundle
+      const info = await readJsonFile<RecordingJobInfo>(infoPath);
+      flatMap = {};
+      for (const [k, v] of Object.entries(info.status)) {
+        flatMap[k] = Array.isArray(v) ? v[v.length - 1] : v;
+      }
+    } else {
+      // In-flight or not-yet-bundled
+      const jobFile = path.join(dir, `${recordingId}.json`);
+      let job: RecordingJob;
+      try {
+        job = await readJsonFile<RecordingJob>(jobFile);
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          (err as NodeJS.ErrnoException).code === "ENOENT"
+        ) {
+          return { status: "unknown" };
         }
+        throw err;
+      }
+
+      let rawStatus: string;
+      try {
+        rawStatus = await readFile(job.statusFile);
+      } catch (err) {
+        console.warn(
+          "❌ Failed to read .status file for",
+          recordingId,
+          err
+        );
+        return { status: "unknown" };
+      }
+      flatMap = parseLatestStatus(rawStatus);
     }
-    static stringMapToRecordingStatus(statusMap: Record<string, string>): RecordingStatus {
-        const status: RecordingStatus = {
-            status: statusMap["STATUS"] as "recording" | "done" | "error" | "unknown",
-            startedAt: statusMap["STARTED_AT"],
-            expectedStop: statusMap["EXPECTED_STOP"],
-            stream: statusMap["STREAM"],
-            user: statusMap["USER"],
-            duration: statusMap["DURATION"],
-            outputFile: statusMap["OUTPUT_FILE"],
-            logFile: statusMap["LOG_FILE"],
-            serverTime: statusMap["SERVER_TIME"],
-        };
-        return status;
-    }
+
+    // Normalize and build DTO
+    const raw = flatMap["STATUS"] ?? "unknown";
+    const final = normalizeStatus(raw);
+
+    const dto: RecordingStatus = {
+      status:       final,
+      startedAt:    flatMap["STARTED_AT"],
+      expectedStop: flatMap["EXPECTED_STOP"],
+      stream:       flatMap["STREAM"],
+      user:         flatMap["USER"],
+      duration:     flatMap["DURATION"],
+      outputFile:   flatMap["OUTPUT_FILE"],
+      logFile:      flatMap["LOG_FILE"],
+      serverTime:   new Date().toISOString(),
+    };
+
+    return dto;
+  }
 }

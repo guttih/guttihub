@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 
     try {
         
-        let entry: M3UEntry;
+        let entry: M3UEntry|null = null;
         if (await fileExists(recordingPath)) {
             console.log("🔍 Found recording file:", recordingPath);
             entry = await readJsonFile<M3UEntry>(recordingPath);

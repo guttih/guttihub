@@ -1,12 +1,10 @@
 // src/app/api/live/start/route.ts
 
 import { NextRequest } from "next/server";
-import path from "path";
-import { getCacheDir, readJsonFile, writeRecordingJobFile } from "@/utils/fileHandler";
-import { M3UEntry } from "@/types/M3UEntry";
-import { spawn } from "child_process";
-import { v4 as uuidv4 } from "uuid";
 import { outDirectories } from "@/config";
+import { getRecordingIdByCacheKey, buildOutputFileName } from "@/utils/resolverUtils";
+import { getEntryByCacheKey } from "@/utils/record/recordingJobUtils";
+import { LiveResolver } from "@/resolvers/LiveResolver";
 
 export async function POST(req: NextRequest) {
     const { cacheKey } = await req.json();
@@ -14,40 +12,39 @@ export async function POST(req: NextRequest) {
     if (!cacheKey) {
         return new Response(JSON.stringify({ error: "Missing cacheKey" }), { status: 400 });
     }
+    // Before spawning live.sh
+    const recordingId = await getRecordingIdByCacheKey(cacheKey);
+    if (recordingId) {
+        return new Response(
+            JSON.stringify({
+                error: "Stream already exists",
+                recordingId: recordingId,
+            }),
+            { status: 409 }
+        );
+    }
 
     try {
-        const entryPath = `${getCacheDir()}/${cacheKey}.json`;
-        const entry = await readJsonFile<M3UEntry>(entryPath);
+        const entry = await getEntryByCacheKey(cacheKey);
+        if (!entry) {
+            return new Response(JSON.stringify({ error: "Invalid or expired cache key" }), { status: 404 });
+        }
 
-        const recordingId = `recording-${new Date().toISOString().replace(/[-:.]/g, "").slice(2, 15)}-${uuidv4().slice(0, 6)}`;
         const location = outDirectories.find((d) => d.label === "Recordings");
         if (!location) throw new Error("Recording output directory not found");
 
-        const outputFile = path.resolve(location.path, `${recordingId}.mp4`);
-        const logFile = `${outputFile}.log`;
-        const statusFile = `${outputFile}.status`;
-        const scriptPath = path.resolve(process.cwd(), "src/scripts/live.sh");
+        const outputFile = buildOutputFileName("live-", entry, location.path);
 
-        const proc = spawn(scriptPath, ["--url", entry.url, "--user", "live-session", "--outputFile", outputFile], {
-            detached: true,
-            stdio: "ignore",
-        });
-        proc.unref();
-
-        await writeRecordingJobFile({
-            recordingId,
+        console.log("📦 Spaning live stream at ", outputFile);
+        const result = await LiveResolver.startStream({
             cacheKey,
+            entry,
             user: "live-session",
             outputFile,
-            logFile,
-            statusFile,
-            duration: 0,
-            format: "hls-live",
             startTime: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            recordingType: "hls",
         });
-
+        console.log("📦 Start stream response:", result.success, result.message);
+        const recordingId = result.recordingId;
         return new Response(JSON.stringify({ recordingId, entry }), {
             status: 200,
             headers: { "Content-Type": "application/json" },

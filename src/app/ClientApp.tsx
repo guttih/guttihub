@@ -21,6 +21,7 @@ import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect
 import { Spinner } from "@/components/Spinner/Spinner";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { LiveDebugPanel } from "@/components/Live/LiveDebugPanel";
 
 export default function ClientApp({ role }: { role: string }) {
     const { data: session, status } = useSession();
@@ -33,6 +34,7 @@ export default function ClientApp({ role }: { role: string }) {
         url: string;
         mode: "popup" | "inline";
         visible: boolean;
+        waitForPlaylist?: boolean;
     }>({
         url: "",
         mode: "popup",
@@ -92,8 +94,27 @@ export default function ClientApp({ role }: { role: string }) {
 
     const pageSize = Number(appConfig.defaultPageSize);
 
+    function normalizeStreamUrl(playUrl: string): string {
+        const parsed = new URL(playUrl, window.location.origin);
+        const isMixedContent = window.location.protocol === "https:" && parsed.protocol === "http:";
+        const isCrossOrigin = parsed.origin !== window.location.origin;
+        const proxyNeeded = isMixedContent || isCrossOrigin;
+
+        return proxyNeeded ? `/api/stream-proxy?url=${encodeURIComponent(playUrl)}` : playUrl;
+    }
+
     function handlePlay(url: string) {
-        setPlayer({ url, mode: playerMode, visible: true });
+        console.log("handlePlay called, input URL:", url);
+
+        const isOwnLiveStream = url.startsWith("/api/hls-stream/") && url.endsWith("/playlist");
+        const absoluteUrl = new URL(url, window.location.origin).toString();
+        console.log("ClientApp::handlePlay using URL:", isOwnLiveStream ? absoluteUrl : url);
+        setPlayer({
+            url: isOwnLiveStream ? absoluteUrl : url,
+            mode: playerMode,
+            visible: true,
+            waitForPlaylist: isOwnLiveStream, // We'll pass this down to InlinePlayer
+        });
     }
 
     function handleClosePlayer() {
@@ -339,6 +360,7 @@ export default function ClientApp({ role }: { role: string }) {
                 </div>
             </div>
 
+            {/* Filters */}
             <div className="w-full mb-6">
                 <fieldset className="relative border border-gray-700 rounded p-4">
                     <legend className="text-sm text-gray-400 px-2">Filters</legend>
@@ -432,20 +454,23 @@ export default function ClientApp({ role }: { role: string }) {
                     </div>
                 </fieldset>
             </div>
-
+            <div className="flex flex-wrap items-end gap-4 mb-6">
+                <LiveDebugPanel />
+            </div>
             {player.visible && player.mode === "inline" && (
-                <div className="mt-6">
-                    <InlinePlayer
-                        url={player.url}
-                        onClose={handleClosePlayer}
-                        className="rounded shadow w-full max-w-3xl mx-auto"
-                        showCloseButton={true}
-                    />
-                </div>
+                <InlinePlayer
+                    url={player.url}
+                    waitForPlaylist={player.waitForPlaylist}
+                    onClose={handleClosePlayer}
+                    className="rounded shadow w-full max-w-3xl mx-auto"
+                    showCloseButton={true}
+                />
             )}
+
             {player.visible && player.mode === "popup" && (
                 <InlinePlayer
                     url={player.url}
+                    waitForPlaylist={player.waitForPlaylist}
                     onClose={handleClosePlayer}
                     showCloseButton={true}
                     draggable

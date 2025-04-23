@@ -10,7 +10,7 @@ import { ApiResponse, makeErrorResponse, makeSuccessResponse } from "@/types/Api
 import { CashedEntries } from "@/types/CashedEntries";
 import crypto from "crypto";
 import { FetchM3URequest } from "@/types/FetchM3URequest";
-import { StreamFormat, getStreamFormat } from "@/types/StreamFormat";
+import { StreamFormat, getStreamFormatByExt } from "@/types/StreamFormat";
 import { filterEntries } from "@/utils/filterEntries";
 import { extractYears } from "@/utils/ui/extractYears";
 
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             new Set(
                 entries.map((e) => {
                     try {
-                        return getStreamFormat(e.url);
+                        return getStreamFormatByExt(e.url);
                     } catch {
                         return StreamFormat.UNKNOWN;
                     }

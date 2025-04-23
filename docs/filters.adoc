@@ -1,0 +1,29 @@
+= Filters 
+
+Just some filters that are nice to have when listing content of streaming services.
+
+== Exclude spesific language using TV Groupe Title
+
+[source,]
+^(?!.*\bspanish\b)(?!.*\bArabic\b)(?!.*\bFrançais\b)(?!.*\bPortugal\b)(?!.*\bGerman\b)(?!.*\bSwedish\b).*$
+
+=== Exclude everything, now you can delete from the excluded list to show only what you want
+[source,]
+^(?!.*\bPolskie\b)(?!.*\bBollywood\b)(?!.*\bTurkish\b)(?!.*\bMarvel and DC\b)(?!.*\bFantasy\b)(?!.*\bWestern\b)(?!.*\bDanish\b)(?!.*\bTR\b)(?!.*\bNetflix\b)(?!.*\bKids\b)(?!.*\bEx-Yu\b)(?!.*\bMusic\b)(?!.*\bNL\b)(?!.*\bFamily\b)(?!.*\bCrime\b)(?!.*\bWar\b)(?!.*\bHorror\b)(?!.*\bThriller\b)(?!.*\bAdventure\b)(?!.*\bDrama\b)(?!.*\bScience-Fiction\b)(?!.*\bBoxing\b)(?!.*\bDocumentary\b)(?!.*\bComedy\b)(?!.*\bAction\b)(?!.*\bspanish\b)(?!.*\bArabic\b)(?!.*\bFrançais\b)(?!.*\bPortugal\b)(?!.*\bGerman\b)(?!.*\bSwedish\b)(?=\S).*$
+
+=== Example of Exclude everything i want to see
+
+[source,]
+^(?!.*\bPolskie\b)(?!.*\bBollywood\b)(?!.*\bTurkish\b)(?!.*\bDanish\b)(?!.*\bTR\b)(?!.*\bEx-Yu\b)(?!.*\bNL\b)(?!.*\bspanish\b)(?!.*\bArabic\b)(?!.*\bFrançais\b)(?!.*\bPortugal\b)(?!.*\bGerman\b)(?!.*\bSwedish\b)(?=\S).*$
+
+I want see these then
+```
+Marvel and DC, Fantasy, Western, Netflix, Music, Kids, Family, Crime, War, Horror, Thriller, Adventure, Drama, Science-Fiction, Boxing, Documentary, Comedy, Action, 
+```
+
+
+
+
+
+
+

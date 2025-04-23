@@ -1,3 +1,4 @@
+// src/components/LiveStatusViewer/LiveStatusViewer.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -7,7 +8,7 @@ import { LiveStatusPackagingBar } from "../LiveStatusPackagingBar/LiveStatusPack
 
 interface Props {
     recordingId: string;
-    intervalMs?: number;
+    intervalMs?: number; // Set to 0 to disable polling
     onStatusChange?: (status: string) => void;
 }
 
@@ -24,33 +25,24 @@ export function LiveStatusViewer({ recordingId, intervalMs = 3000, onStatusChang
         const fetchStatus = async () => {
             try {
                 const res = await fetch(`/api/record/status?recordingId=${recordingId}`);
-                const json = await res.json();
-
+                const json: Record<string, string> = await res.json();
                 if (!mounted) return;
 
-                setStatusMap((prev) => {
-                    if (JSON.stringify(prev) !== JSON.stringify(json)) return json;
-                    return prev;
-                });
+                setStatusMap((prev) => (!prev || JSON.stringify(prev) !== JSON.stringify(json) ? json : prev));
 
-                // ✅ Emit status upward
-                if (json.STATUS && onStatusChange) {
-                    console.log("🟢 onStatusChange fired with:", json.STATUS);
-                    onStatusChange(json.STATUS);
+                const current = json.STATUS;
+                if (current && onStatusChange) {
+                    onStatusChange(current);
                 }
 
-                // 🛑 Stop polling after 5 "done"/"error" confirmations
-                if (json.STATUS === "done" || json.STATUS === "stopped" || json.STATUS === "error") {
+                if (["done", "stopped", "error"].includes(current)) {
                     donePollCount.current += 1;
-                    if (donePollCount.current >= 5) {
-                        console.log("🛑 Stopping polling after 5 post-done fetches");
-                        if (intervalRef.current) {
-                            clearInterval(intervalRef.current);
-                            intervalRef.current = null;
-                        }
+                    if (donePollCount.current >= 5 && intervalRef.current) {
+                        clearInterval(intervalRef.current);
+                        intervalRef.current = null;
                     }
                 } else {
-                    donePollCount.current = 0; // reset
+                    donePollCount.current = 0;
                 }
             } catch {
                 if (mounted) {
@@ -63,33 +55,42 @@ export function LiveStatusViewer({ recordingId, intervalMs = 3000, onStatusChang
         };
 
         fetchStatus(); // initial
-        intervalRef.current = setInterval(fetchStatus, intervalMs);
+        if (intervalMs > 0) {
+            intervalRef.current = setInterval(fetchStatus, intervalMs);
+        }
 
         return () => {
             mounted = false;
-            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
         };
     }, [recordingId, intervalMs, onStatusChange]);
+
+    const status = statusMap?.STATUS ?? "unknown";
+    const message = statusMap?.MESSAGE;
 
     return (
         <div className="bg-gray-800 p-4 rounded text-sm space-y-1 border border-gray-700">
             <div className="flex items-center gap-2 mb-2">
                 <span className="font-semibold">Recording Status:</span>
-                <StatusBadge status={statusMap?.STATUS || "unknown"} />
+                <StatusBadge status={status} />
             </div>
 
-            {statusMap?.STATUS === "preparing" && <div className="text-gray-400">Waiting for recording to start...</div>}
+            {message && <div className="text-gray-100 font-medium">{message}</div>}
+
+            {status === "preparing" && <div className="text-gray-400">Waiting for recording to start...</div>}
 
             {!statusMap && loading && <div className="text-gray-400">Loading status...</div>}
 
-            {statusMap?.STATUS === "recording" && statusMap?.PACKAGING === "1" ? (
+            {status === "recording" && statusMap?.PACKAGING === "1" ? (
                 <LiveStatusPackagingBar />
-            ) : statusMap?.STATUS === "recording" && statusMap?.STARTED_AT && statusMap?.EXPECTED_STOP && statusMap?.SERVER_TIME ? (
+            ) : status === "recording" && statusMap?.STARTED_AT && statusMap?.EXPECTED_STOP && statusMap?.SERVER_TIME ? (
                 <ProgressBarTime start={statusMap.STARTED_AT} end={statusMap.EXPECTED_STOP} now={statusMap.SERVER_TIME} />
             ) : null}
 
             {statusMap &&
-                statusMap.STATUS !== "preparing" &&
+                status !== "preparing" &&
                 Object.entries(statusMap).map(([key, value]) => (
                     <div key={key} className="flex justify-between">
                         <span className="font-medium text-gray-400">{key}</span>

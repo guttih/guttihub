@@ -5,7 +5,7 @@ import { authOptions } from "@/app/api/auth/authOptions";
 import { readJsonFile, getCacheDir } from "@/utils/fileHandler";
 import { ScheduleResolver } from "@/resolvers/ScheduleResolver";
 import { M3UEntry } from "@/types/M3UEntry";
-import { buildOutputFileName } from "@/utils/recording/buildOutputFileName";
+import { buildOutputFileName } from "@/utils/resolverUtils";
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     // const baseUrl = form.get("baseUrl") as string;
 
     if (!cacheKey || !duration || !location || (!recordNow && !startTime)) {
+        console.warn("❌ Missing form values:", { cacheKey, duration, location, recordNow, startTime });
         return NextResponse.json({ error: "Missing form values" }, { status: 400 });
     }
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
 
 
-    const outputFile = buildOutputFileName(entry, location);
+    const outputFile = buildOutputFileName("recording-", entry, location, ".mp4");
     // 🧠 Delegate to resolver
     console.log("Before scheduling recording with file...", outputFile);
     const result = await ScheduleResolver.scheduleRecording({

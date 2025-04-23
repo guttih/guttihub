@@ -3,6 +3,9 @@
 import React, { useRef, useEffect, useState } from "react";
 import { appConfig } from "@/config";
 import { StreamingServiceResolver } from "@/utils/StreamingServiceResolver";
+import { detectStreamFormat, StreamFormat } from "@/types/StreamFormat";
+
+import Hls, { ErrorData } from "hls.js";
 
 export interface InlinePlayerProps {
     url: string;
@@ -18,6 +21,7 @@ export interface InlinePlayerProps {
     height?: number;
     onMove?: (pos: { x: number; y: number }) => void;
     onResize?: (size: { width: number; height: number }) => void;
+    waitForPlaylist?: boolean;
 }
 
 export const InlinePlayer: React.FC<InlinePlayerProps> = ({
@@ -34,23 +38,79 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     height,
     onMove,
     onResize,
+    waitForPlaylist = false,
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [canPlay, setCanPlay] = useState(false);
+    const [finalUrl, setFinalUrl] = useState<string | null>(null);
     const isDragging = useRef(false);
     const offset = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
+        if (!url) return;
 
-        const handleCanPlay = () => setCanPlay(true);
-        video.addEventListener("canplay", handleCanPlay);
+        const normalized = normalizeUrl(url);
 
-        return () => {
-            video.removeEventListener("canplay", handleCanPlay);
+        const tryLoadPlaylist = async () => {
+            if (!waitForPlaylist) {
+                setFinalUrl(normalized);
+                return;
+            }
+
+            const maxTries = 16; // 8 seconds total
+            const delayMs = 500;
+
+            for (let i = 0; i < maxTries; i++) {
+                try {
+                    const res = await fetch(normalized, { method: "HEAD" });
+                    if (res.ok) {
+                        console.log(`[waitForPlaylist] Ready on attempt ${i + 1}`);
+                        setFinalUrl(normalized);
+                        return;
+                    }
+                } catch {
+                    console.warn(`[waitForPlaylist] Attempt ${i + 1} failed`);
+                }
+                await new Promise((r) => setTimeout(r, delayMs));
+            }
+
+            console.error("[InlinePlayer] Timed out waiting for playlist");
         };
-    }, [url]);
+
+        setCanPlay(false);
+        setFinalUrl(null);
+        tryLoadPlaylist();
+    }, [url, waitForPlaylist]);
+
+    useEffect(() => {
+        if (!finalUrl || !videoRef.current) return;
+
+        const video = videoRef.current;
+        const format = detectStreamFormat(finalUrl);
+
+        if (format === StreamFormat.M3U8) {
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.attachMedia(video);
+                hls.loadSource(finalUrl);
+
+                hls.on(Hls.Events.ERROR, (_e, data: ErrorData) => {
+                    console.error("HLS.js error:", data);
+                    if (data.fatal) {
+                        hls.destroy();
+                    }
+                });
+
+                return () => hls.destroy();
+            } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                video.src = finalUrl;
+            } else {
+                console.warn("No HLS support.");
+            }
+        } else {
+            video.src = finalUrl;
+        }
+    }, [finalUrl]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!onMove) return;
@@ -59,7 +119,6 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
             x: e.clientX - (left ?? 0),
             y: e.clientY - (top ?? 0),
         };
-
         window.addEventListener("mousemove", handleMouseMove);
         window.addEventListener("mouseup", handleMouseUp);
     };
@@ -87,9 +146,10 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
         const startHeight = height ?? 180;
 
         const onMouseMove = (ev: MouseEvent) => {
-            const newWidth = startWidth + (ev.clientX - startX);
-            const newHeight = startHeight + (ev.clientY - startY);
-            onResize({ width: newWidth, height: newHeight });
+            onResize({
+                width: startWidth + (ev.clientX - startX),
+                height: startHeight + (ev.clientY - startY),
+            });
         };
 
         const onMouseUp = () => {
@@ -137,14 +197,16 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
                 </button>
             )}
 
-            <video
-                ref={videoRef}
-                src={normalizeUrl(url)}
-                controls={controls}
-                autoPlay={autoPlay}
-                className="w-full h-full object-contain"
-                playsInline
-            />
+            {finalUrl && (
+                <video
+                    ref={videoRef}
+                    controls={controls}
+                    autoPlay={autoPlay}
+                    className="w-full h-full object-contain"
+                    playsInline
+                    onCanPlay={() => setCanPlay(true)}
+                />
+            )}
 
             {draggable && onResize && (
                 <div
@@ -170,11 +232,11 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     );
 };
 
-
 function makeStreamProxyUrl(imageUrl: string): string {
-    const proxiedUrl = `/api/stream-proxy?url=${encodeURIComponent(imageUrl )}`;
-
-    return proxiedUrl;
+    if (imageUrl.indexOf("/hls-stream") > -1 && imageUrl.endsWith("/playlist")) {
+        return imageUrl;
+    }
+    return `/api/stream-proxy?url=${encodeURIComponent(imageUrl)}`;
 }
 
 function normalizeUrl(playUrl: string): string {

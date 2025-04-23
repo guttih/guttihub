@@ -1,32 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { StreamFormat } from "@/types/StreamFormat";
 import { StreamingServiceResolver } from "@/utils/StreamingServiceResolver";
 import { appConfig } from "@/config";
+import { detectStreamFormat } from "@/types/StreamFormat";
+import Hls from "hls.js";
 
 interface PlayerProps {
     url: string;
     autoPlay?: boolean;
 }
-
-function getFormat(url: string): StreamFormat | undefined {
-    try {
-        const parsed = new URL(url, window.location.origin);
-        //This is my own streaming service that serves m3u8 playlist while recording
-        if (parsed.pathname.indexOf("/hls-stream") > -1 && parsed.pathname.endsWith("/playlist")) {
-            return StreamFormat.M3U8;
-        }
-
-        const ext = parsed.pathname.split(".").pop()?.toLowerCase();
-        return ext as StreamFormat | undefined;
-    } catch (err) {
-        console.warn("getFormat() failed:", err);
-        return undefined;
-    }
-}
-
-import Hls from "hls.js";
 
 export function PlayerClient({ url, autoPlay = true }: PlayerProps) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -44,12 +27,11 @@ export function PlayerClient({ url, autoPlay = true }: PlayerProps) {
             setUnsupported(true);
         }
     }, [url]);
-    
 
     useEffect(() => {
         if (!url || !videoRef.current) return;
 
-        const format = getFormat(url);
+        const format = detectStreamFormat(url);
         const video = videoRef.current;
 
         console.log("🧪 Format:", format, "URL:", url);
