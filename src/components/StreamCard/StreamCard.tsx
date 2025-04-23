@@ -5,27 +5,44 @@ import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { supportedFormats, getStreamFormatByExt, StreamFormat } from "@/types/StreamFormat";
 import { getExtension } from "@/utils/ui/getExtension";
 import { makeImageProxyUrl } from "@/utils/ui/makeImageProxyUrl";
+import { hasRole, UserRole } from "@/types/UserRole";
 
 interface Props {
     entry: M3UEntry;
+    serviceId: string;
+    userRole: UserRole;
     showCopy?: boolean;
-    showRecord?: boolean;
-    onPlay?: (url: string) => void;
-    showUnsupported?: boolean;
+    showPlayButton?: boolean;
+    showRecordButton?: boolean;
+    showStreamButton?: boolean;
     className?: string;
+    onPlay?: (url: string) => void;
 }
 
-export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupported, className = "" }: Props) {
+export function StreamCard({
+    entry,
+    serviceId,
+    userRole,
+    showCopy,
+    showRecordButton = false,
+    showStreamButton = false,
+    showPlayButton = false,
+    className = "",
+    onPlay,
+}: Props) {
     const extension = getExtension(entry.url);
-    const supported = supportedFormats.map((format) => format.toLowerCase());
     const isRecordable = !extension;
+    const supported = supportedFormats.map((format) => format.toLowerCase());
     const extensionIsSupported = extension ? supported.includes(extension.toLowerCase()) : false;
+    const allowedToPlayMovies = showPlayButton && hasRole(userRole, "viewer");
+    const allowedToStreamLive = showStreamButton && hasRole(userRole, "streamer");
+    const allowedToRecordStream = showRecordButton && hasRole(userRole, "moderator");
     const format = getStreamFormatByExt(entry.url);
     const canLiveStream = format === StreamFormat.M3U8 || format === StreamFormat.UNKNOWN;
-    const showPlay = !!onPlay && (showUnsupported || extensionIsSupported || canLiveStream);
+    // const isMovie = format === StreamFormat.MP4 || format === StreamFormat.MKV;
+    const showPlay = !!onPlay && (extensionIsSupported || canLiveStream) && allowedToPlayMovies;
 
     const [copied, setCopied] = useState(false);
-
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(entry.url);
@@ -106,7 +123,7 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
                     title={`${M3UEntryFieldLabel.tvgLogo}='${entry.tvgLogo}'`}
                     onError={(e) => ((e.target as HTMLImageElement).src = "/fallback.png")}
                 />
-                {isRecordable && showRecord && (
+                {isRecordable && allowedToRecordStream && (
                     <button
                         onClick={handleRecord}
                         title="Schedule Recording"
@@ -116,6 +133,19 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
                             <circle cx="12" cy="12" r="8" />
                         </svg>
                     </button>
+                )}
+                {showPlay && (
+                    <a
+                        href={`/player?streamUrl=${entry.url}&serviceId=${serviceId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute top-0.5 right-0.5 p-0.5 bg-gray-800 bg-opacity-40 rounded-sm hover:bg-gray-500 z-20"
+                        title="Play in new tab"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 pointer-events-none">
+                            <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3ZM5 5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7H5V5Z" />
+                        </svg>
+                    </a>
                 )}
             </div>
 
@@ -142,7 +172,16 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
                     {entry.groupTitle}
                 </p>
 
-                {showPlay && (
+                {showPlay ? ( // todo: We whould not show red stream button if stream is already running the we should only show play
+                    <button
+                        onClick={handlePlay}
+                        title={canLiveStream ? "Go Live" : "Play Stream"}
+                        className={`absolute bottom-5 right-5 w-10 h-10 flex items-center justify-center rounded-full
+                      ${canLiveStream ? "bg-red-600 animate-pulse ring-2 ring-red-400" : "bg-gray-800"}
+                      text-white hover:bg-gray-500 shadow-lg transition duration-300`}
+                    ></button>
+                ) : null}
+                {allowedToStreamLive && showStreamButton ? ( // todo: We whould not show red stream button if stream is already running the we should only show play
                     <button
                         onClick={handlePlay}
                         title={canLiveStream ? "Go Live" : "Play Stream"}
@@ -158,7 +197,7 @@ export function StreamCard({ entry, showCopy, showRecord, onPlay, showUnsupporte
                             </svg>
                         )}
                     </button>
-                )}
+                ) : null}
 
                 <div className="flex items-center justify-between mt-2">
                     {extension && (

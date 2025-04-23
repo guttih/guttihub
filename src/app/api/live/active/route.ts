@@ -17,6 +17,7 @@ export async function GET() {
         return {
           recordingId: job.recordingId,
           cacheKey: job.cacheKey,
+          format: job.format,
           name: entry?.name ?? "Unknown",
           groupTitle: entry?.groupTitle ?? null,
           startedAt: job.startTime,

@@ -19,5 +19,5 @@ export default async function ProtectedPage() {
     redirect("/api/auth/signin");
   }
 
-  return <ClientApp role={role} />;
+  return <ClientApp userRole={role} />;
 }

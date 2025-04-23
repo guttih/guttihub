@@ -4,6 +4,7 @@ import { StreamingService } from "@/types/StreamingService";
 import { OutputDirectory } from "@/types/OutputDirectory";
 import servicesJson from "./services.json";
 import outputDirs from "./output-dirs.json";
+import { UserRole } from "@/types/UserRole";
 import authorizedUsersJson from "./authorizedUsers.json";
 
 // --- Static config: always safe to export ---
@@ -34,14 +35,11 @@ export const appConfig: AppConfigType = {
 const authorizedUsers: Record<string, string> = authorizedUsersJson;
 
 // --- Public runtime helpers ---
-export function getUserRole(email?: string | null | undefined): string | null {
-  if (!email) {
-    console.warn("⚠️ getUserRole called without an email");
-    return null;
+export function getUserRole(email?: string|null): UserRole | null {
+    if (!email) return null;
+    const role = authorizedUsers[email];
+    return role as UserRole || null;
   }
-
-  return authorizedUsers[email] || null;
-}
 
 export { services };
 export { outDirectories };

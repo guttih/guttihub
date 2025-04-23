@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
-import { getUserRole, services } from "@/config";
+import { services } from "@/config";
 import { StreamCard } from "@/components/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
@@ -23,9 +23,12 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { LiveDebugPanel } from "@/components/Live/LiveDebugPanel";
 
-export default function ClientApp({ role }: { role: string }) {
+import { UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
+
+export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
     const [entries, setEntries] = useState<M3UEntry[]>([]);
+    const [liveCount, setLiveCount] = useState(0);
     const [searchNameInput, setSearchNameInput] = useState("");
     const [searchGroupInput, setSearchGroupInput] = useState("");
     const [searchTvgIdInput, setSearchTvgIdInput] = useState("");
@@ -40,7 +43,6 @@ export default function ClientApp({ role }: { role: string }) {
         mode: "popup",
         visible: false,
     });
-
     const searchName = useDebouncedState(searchNameInput, 1000);
     const searchTvgId = useDebouncedState(searchTvgIdInput, 1000);
     const searchGroup = useDebouncedState(searchGroupInput, 1000);
@@ -185,6 +187,27 @@ export default function ClientApp({ role }: { role: string }) {
     }, [yearsFromServer, selectedYears]);
 
     useEffect(() => {
+        if (!activeService) return;
+    
+        const fetchCount = () => {
+            fetch(`/api/live/active/count?serviceId=${activeService.id}`)
+                .then((r) => r.json())
+                .then((json: { count: number }) => {
+                    setLiveCount(json.count ?? 0);
+                })
+                .catch(() => {
+                    console.warn("Failed to poll liveCount");
+                    setLiveCount(0);
+                });
+        };
+    
+        fetchCount();
+        const intervalId = setInterval(fetchCount, 5000);
+        return () => clearInterval(intervalId);
+    }, [activeService]);
+    
+
+    useEffect(() => {
         if (!loading && focusedInput) {
             const el = document.querySelector<HTMLInputElement>(`input[name="${focusedInput}"]`);
             if (el && !el.disabled) {
@@ -264,7 +287,7 @@ export default function ClientApp({ role }: { role: string }) {
 
                 {/* existing user name */}
                 <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
-                    {session?.user?.name} {role}
+                    {session?.user?.name} {userRole}
                 </h3>
             </div>
 
@@ -455,11 +478,12 @@ export default function ClientApp({ role }: { role: string }) {
                 </fieldset>
             </div>
             <div className="flex flex-wrap items-end gap-4 mb-6">
-                <LiveDebugPanel />
+                <LiveDebugPanel userRole={userRole} />
             </div>
             {player.visible && player.mode === "inline" && (
                 <InlinePlayer
                     url={player.url}
+                    serviceId={activeService?.id ?? ""}
                     waitForPlaylist={player.waitForPlaylist}
                     onClose={handleClosePlayer}
                     className="rounded shadow w-full max-w-3xl mx-auto"
@@ -470,6 +494,8 @@ export default function ClientApp({ role }: { role: string }) {
             {player.visible && player.mode === "popup" && (
                 <InlinePlayer
                     url={player.url}
+                    autoPlay={true}
+                    serviceId={activeService?.id ?? ""}
                     waitForPlaylist={player.waitForPlaylist}
                     onClose={handleClosePlayer}
                     showCloseButton={true}
@@ -494,19 +520,31 @@ export default function ClientApp({ role }: { role: string }) {
             />
 
             <div className="grid grid-cols-1 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-x-6 gap-y-8">
-                {entries.map((entry) =>
-                    useInteractiveCard ? (
+                {entries.map((entry) => {
+                    const ext = entry.url.split(".").pop()?.toLowerCase() ?? "";
+                    const isMovie = ["mp4", "mkv"].includes(ext);
+                    const viewslots = (activeService?.maxConcurrentViewers ?? 0) - liveCount;
+                    const canPlay = viewslots > 0;
+                    const showRecord = canPlay &&    !isMovie; 
+                    const showStreaming = canPlay && !isMovie;
+                    const showPlayButton = canPlay && isMovie;
+                    return useInteractiveCard ? (
                         <StreamCardInteractive key={entry.url} entry={entry} />
                     ) : (
+                        // The card figures out if user is allowed to see the buttons based on userRole, app only thinks about the count of cuncurrent viewers
                         <StreamCard
                             key={entry.url}
+                            serviceId={activeService?.id?? ""}
                             entry={entry}
+                            userRole={userRole}
                             showCopy={!appConfig.hideCredentialsInUrl}
-                            showRecord={getUserRole(session?.user?.email) === "admin"}
+                            showRecordButton={showRecord}
+                            showPlayButton={showPlayButton}
+                            showStreamButton={showStreaming}
                             onPlay={(url) => handlePlay(url)}
                         />
-                    )
-                )}
+                    );
+                })}
             </div>
 
             {entries && entries.length > 6 && (

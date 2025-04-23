@@ -1,4 +1,4 @@
-import { StreamingServiceResolver } from "@/utils/StreamingServiceResolver";
+import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 import { describe, it, expect } from "vitest";
 import { M3UEntry } from "@/types/M3UEntry";
 

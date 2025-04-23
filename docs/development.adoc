@@ -218,6 +218,7 @@ For advanced options, see: https://pm2.keymetrics.io/docs/usage/quick-start/
       "viewingBaseUrl": "http://example.com/USERNAME/PASSWORD",
       "username": "USERNAME",
       "password": "PASSWORD",
+      "maxConcurrentViewers": 1,
       "contentCategories": [
         "movies",
         "series",

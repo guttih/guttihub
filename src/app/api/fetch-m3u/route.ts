@@ -5,7 +5,7 @@ import { inferContentCategory, ContentCategoryFieldLabel } from "@/types/Content
 import { M3UResponse } from "@/types/M3UResponse";
 import { sanitizeM3UUrls } from "@/utils/urlSanitizer";
 import { appConfig } from "@/config";
-import { StreamingServiceResolver } from "@/utils/StreamingServiceResolver";
+import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 import { ApiResponse, makeErrorResponse, makeSuccessResponse } from "@/types/ApiResponse";
 import { CashedEntries } from "@/types/CashedEntries";
 import crypto from "crypto";
