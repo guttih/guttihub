@@ -7,6 +7,7 @@ export interface StreamingService {
     maxConcurrentViewers: number;
     username: string;
     password: string;
+    hasFileAccess?: boolean;
     contentCategories: string[]; // Movies, TV shows, etc, or empty string for TV channels
   }
   

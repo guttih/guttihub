@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
@@ -143,6 +143,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown") {
         if (!service) return;
         console.log(`handleFetch called by : ${source}`);
+
         setActiveService(service);
         setLoading(true);
 
@@ -188,7 +189,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     useEffect(() => {
         if (!activeService) return;
-    
+
         const fetchCount = () => {
             fetch(`/api/live/active/count?serviceId=${activeService.id}`)
                 .then((r) => r.json())
@@ -200,12 +201,11 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     setLiveCount(0);
                 });
         };
-    
+
         fetchCount();
         const intervalId = setInterval(fetchCount, 5000);
         return () => clearInterval(intervalId);
     }, [activeService]);
-    
 
     useEffect(() => {
         if (!loading && focusedInput) {
@@ -217,10 +217,15 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }
     }, [loading, focusedInput]);
 
+    const hasFetchedOnce = useRef(false);
+
     useEffect(() => {
-        if (activeService) {
-            handleFetch(activeService, "useEffect:... [currentPage, activeService, debouncedFilters, handleFetch])");
+        if (!activeService) return;
+        if (!hasFetchedOnce.current) {
+            hasFetchedOnce.current = true;
+            return;
         }
+        handleFetch(activeService, "useEffect:... [currentPage, activeService, debouncedFilters, handleFetch])");
     }, [currentPage, activeService, debouncedFilters]);
 
     useEffect(() => {
@@ -307,6 +312,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                                 if (selected) {
                                     setActiveService(selected);
                                     setCurrentPage(1);
+                                    console.log("🌀 Switching to service:", selected);
                                     handleFetch(selected, "onChange: serviceSelect");
                                 }
                             }}
@@ -525,7 +531,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     const isMovie = ["mp4", "mkv"].includes(ext);
                     const viewslots = (activeService?.maxConcurrentViewers ?? 0) - liveCount;
                     const canPlay = viewslots > 0;
-                    const showRecord = canPlay &&    !isMovie; 
+                    const showRecord = canPlay && !isMovie;
                     const showStreaming = canPlay && !isMovie;
                     const showPlayButton = canPlay && isMovie;
                     return useInteractiveCard ? (
@@ -534,14 +540,18 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                         // The card figures out if user is allowed to see the buttons based on userRole, app only thinks about the count of cuncurrent viewers
                         <StreamCard
                             key={entry.url}
-                            serviceId={activeService?.id?? ""}
+                            serviceId={activeService?.id ?? ""}
                             entry={entry}
                             userRole={userRole}
                             showCopy={!appConfig.hideCredentialsInUrl}
                             showRecordButton={showRecord}
                             showPlayButton={showPlayButton}
                             showStreamButton={showStreaming}
+                            showDeleteButton={activeService?.hasFileAccess}
                             onPlay={(url) => handlePlay(url)}
+                            onDelete={(deletedEntry) =>
+                                setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))
+                              }
                         />
                     );
                 })}

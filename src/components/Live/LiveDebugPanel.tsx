@@ -78,8 +78,6 @@ export function LiveDebugPanel({ userRole,  hideIfNone = true, title = "🧪 Liv
                     { (canStopRecording || (canStopStream && job.format === "hls-live" )) && (<button
                         className="text-red-500 hover:text-red-400"
                         onClick={async () => {
-                            const confirmKill = confirm(`Are you sure you want to stop stream: ${job.recordingId}?`);
-                            if (!confirmKill) return;
 
                             try {
                                 const res = await fetch("/api/live/stop", {

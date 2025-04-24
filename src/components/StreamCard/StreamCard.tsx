@@ -15,8 +15,11 @@ interface Props {
     showPlayButton?: boolean;
     showRecordButton?: boolean;
     showStreamButton?: boolean;
+    showDownloadButton?: boolean;
+    showDeleteButton?: boolean;
     className?: string;
     onPlay?: (url: string) => void;
+    onDelete?: (entry: M3UEntry) => void;
 }
 
 export function StreamCard({
@@ -27,8 +30,11 @@ export function StreamCard({
     showRecordButton = false,
     showStreamButton = false,
     showPlayButton = false,
+    showDownloadButton = false,
+    showDeleteButton = false,
     className = "",
     onPlay,
+    onDelete,
 }: Props) {
     const extension = getExtension(entry.url);
     const isRecordable = !extension;
@@ -37,6 +43,7 @@ export function StreamCard({
     const allowedToPlayMovies = showPlayButton && hasRole(userRole, "viewer");
     const allowedToStreamLive = showStreamButton && hasRole(userRole, "streamer");
     const allowedToRecordStream = showRecordButton && hasRole(userRole, "moderator");
+    const allowedToDelete = showDeleteButton && hasRole(userRole, "admin");
     const format = getStreamFormatByExt(entry.url);
     const canLiveStream = format === StreamFormat.M3U8 || format === StreamFormat.UNKNOWN;
     // const isMovie = format === StreamFormat.MP4 || format === StreamFormat.MKV;
@@ -123,33 +130,23 @@ export function StreamCard({
                     title={`${M3UEntryFieldLabel.tvgLogo}='${entry.tvgLogo}'`}
                     onError={(e) => ((e.target as HTMLImageElement).src = "/fallback.png")}
                 />
-                {isRecordable && allowedToRecordStream && (
-                    <button
-                        onClick={handleRecord}
-                        title="Schedule Recording"
-                        className="absolute top-0.5 left-0.5 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full shadow z-20"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="12" r="8" />
-                        </svg>
-                    </button>
-                )}
+                {/* Restore this icon */}
                 {showPlay && (
                     <a
                         href={`/player?streamUrl=${entry.url}&serviceId=${serviceId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="absolute top-0.5 right-0.5 p-0.5 bg-gray-800 bg-opacity-40 rounded-sm hover:bg-gray-500 z-20"
-                        title="Play in new tab"
+                        className="absolute top-1 right-1 p-1 bg-gray-800/70 hover:bg-gray-600 rounded-sm z-20"
+                        title="Open in new tab"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                             <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3ZM5 5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7H5V5Z" />
                         </svg>
                     </a>
                 )}
             </div>
 
-            <div className="p-6 pt-4 space-y-2">
+            <div className="p-6 pt-4 pb-16 space-y-2">
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => window.open(`https://www.imdb.com/find?q=${encodeURIComponent(entry.name)}`, "_blank")}
@@ -172,32 +169,84 @@ export function StreamCard({
                     {entry.groupTitle}
                 </p>
 
-                {showPlay ? ( // todo: We whould not show red stream button if stream is already running the we should only show play
-                    <button
-                        onClick={handlePlay}
-                        title={canLiveStream ? "Go Live" : "Play Stream"}
-                        className={`absolute bottom-5 right-5 w-10 h-10 flex items-center justify-center rounded-full
-                      ${canLiveStream ? "bg-red-600 animate-pulse ring-2 ring-red-400" : "bg-gray-800"}
-                      text-white hover:bg-gray-500 shadow-lg transition duration-300`}
-                    ></button>
-                ) : null}
-                {allowedToStreamLive && showStreamButton ? ( // todo: We whould not show red stream button if stream is already running the we should only show play
-                    <button
-                        onClick={handlePlay}
-                        title={canLiveStream ? "Go Live" : "Play Stream"}
-                        className={`absolute bottom-5 right-5 w-10 h-10 flex items-center justify-center rounded-full
-                      ${canLiveStream ? "bg-red-600 animate-pulse ring-2 ring-red-400" : "bg-gray-800"}
-                      text-white hover:bg-gray-500 shadow-lg transition duration-300`}
-                    >
-                        {canLiveStream ? (
-                            <span className="text-xl">🔴</span>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                                <path d="M8 5v14l11-7z" />
+                {/* Grouped control buttons */}
+                <div className="absolute bottom-4 right-4 flex gap-2">
+                    {showPlay && (
+                        <button
+                            onClick={handlePlay}
+                            title="Play Now"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-green-600 text-white hover:shadow-lg ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-6 h-6"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                                />
                             </svg>
-                        )}
-                    </button>
-                ) : null}
+                        </button>
+                    )}
+
+                    {allowedToStreamLive && showStreamButton && (
+                        <button
+                            onClick={handlePlay}
+                            title="Go Live"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xl ring-2 ring-blue-300 transition-all duration-300 text-2xl"
+                        >
+                            📡
+                        </button>
+                    )}
+
+                    {isRecordable && allowedToRecordStream && (
+                        <button
+                            onClick={handleRecord}
+                            title="Schedule Recording"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-700 text-white shadow-md ring-2 ring-red-300 transition-all duration-300 text-xl"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
+                                <path
+                                    fillRule="evenodd"
+                                    d="M3 3.75A.75.75 0 0 1 3.75 3h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 3.75zM4.5 6h15a.75.75 0 0 1 .75.75v12a.75.75 0 0 1-.75.75h-15a.75.75 0 0 1-.75-.75v-12A.75.75 0 0 1 4.5 6zM12 9.75a.75.75 0 0 1 .75.75v3.19l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 1.06-1.06l1.22 1.22V10.5a.75.75 0 0 1 .75-.75z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                    )}
+
+                    {showDownloadButton && extensionIsSupported && (extension === "mp4" || extension === "mkv") && (
+                        <button
+                            onClick={() => window.open(entry.url, "_blank")}
+                            title="Download Movie"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-purple-600 text-white shadow-md ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300 text-xl"
+                        >
+                            💾
+                        </button>
+                    )}
+                    {allowedToDelete && (
+                        <button
+                            onClick={async () => {
+                                const res = await fetch(new URL(entry.url).pathname, { method: "DELETE" });
+                                if (res.ok) {
+                                    onDelete?.(entry); // 🚀 This triggers the parent to remove it from the list
+                                } else {
+                                    const { error } = await res.json();
+                                    alert(`Failed to delete: ${error}`);
+                                }
+                            }}
+                            title="Delete Recording"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-red-800 hover:bg-red-700 text-white shadow ring-2 ring-red-400 transition text-xl"
+                        >
+                            🗑️
+                        </button>
+                    )}
+                </div>
 
                 <div className="flex items-center justify-between mt-2">
                     {extension && (
@@ -208,10 +257,10 @@ export function StreamCard({
                     {showCopy && (
                         <button
                             onClick={handleCopy}
-                            className="absolute bottom-0.5 right-0.5 text-ls text-blue-400 hover:bg-gray-600"
+                            className="absolute top-[11.5rem] right-2 z-10 text-sm text-white bg-gray-700/70 hover:bg-gray-600 px-2 py-1 rounded-full backdrop-blur-sm transition duration-200"
                             title={`Copy to clipboard\nURL: ${entry.url}`}
                         >
-                            📋 {copied && <span className="ml-2 text-green-400">Copied</span>}
+                            {copied ? <span className="text-green-400 font-semibold">Copied!</span> : <span>📋</span>}
                         </button>
                     )}
                 </div>

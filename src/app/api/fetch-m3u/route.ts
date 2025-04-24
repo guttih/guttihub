@@ -14,18 +14,22 @@ import { StreamFormat, getStreamFormatByExt } from "@/types/StreamFormat";
 import { filterEntries } from "@/utils/filterEntries";
 import { extractYears } from "@/utils/ui/extractYears";
 
-
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
     {
         const { url, snapshotId, pagination, filters }: FetchM3URequest = await req.json();
 
         try {
             // Infer server origin with fallback port
-            const urlObj = new URL(url);
-            let serverOrigin = urlObj.origin;
-            if (!urlObj.port) {
-                serverOrigin += ":80";
+            let resolvedUrl: URL;
+
+            try {
+                resolvedUrl = new URL(url, req.nextUrl.origin); // supports relative URLs
+            } catch (err) {
+                console.error("❌ Invalid URL provided:", url);
+                return makeErrorResponse("Invalid URL", 400);
             }
+
+            let serverOrigin = resolvedUrl.origin;
 
             await ensureCacheDir();
 
@@ -38,7 +42,21 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             await ensureCacheDir();
 
             //We do not need the m3u file, but we want the json file with the entries so let's move next 3 lines to a function
-            const chasedData = await getCachedOrFreshData(url, service.username, service.name);
+            let chasedData: CashedEntries;
+
+            if (service.id === "local-recordings") {
+                console.log("[VIRTUAL] Loading recordings from internal API");
+
+                const res = await fetch(service.refreshUrl);
+                if (!res.ok) {
+                    return makeErrorResponse("Failed to load local recordings", 500);
+                }
+                
+                const json = await res.json();
+                chasedData = json.data as CashedEntries;
+            } else {
+                chasedData = await getCachedOrFreshData(url, service.username, service.name);
+            }
 
             if (pagination?.offset && snapshotId && snapshotId !== chasedData.snapshotId) {
                 console.log("[CACHE] Snapshot ID mismatch. Fetching fresh data.");
@@ -171,21 +189,20 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
     function hasValidFilters(filters: FetchM3URequest["filters"] = {}): boolean {
         return Object.entries(filters).some(([, value]) => {
             if (value === undefined || value === null) return false;
-          
+
             if (typeof value === "string") {
-              return value.trim() !== "";
+                return value.trim() !== "";
             }
-          
+
             if (Array.isArray(value)) {
-              return value.length > 0;
+                return value.length > 0;
             }
-          
+
             if (typeof value === "object" && "value" in value) {
-              return value.value.trim() !== "";
+                return value.value.trim() !== "";
             }
-          
+
             return true;
-          });
-          
+        });
     }
 }

@@ -219,6 +219,7 @@ For advanced options, see: https://pm2.keymetrics.io/docs/usage/quick-start/
       "username": "USERNAME",
       "password": "PASSWORD",
       "maxConcurrentViewers": 1,
+      "hasFileAccess": false,
       "contentCategories": [
         "movies",
         "series",

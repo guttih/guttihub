@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Lists all files in the current directory and its subdirectories, excluding certain paths
-CMD="find . -type f ! -path \"./node_modules/*\" ! -path \"./.next/*\" ! -path \"./.env.local\" ! -path \"./.vscode/*\" ! -path \"./.git/*\" ! -path \"./public/cache/*\" ! -path \"./html/*\" -print"
+CMD='find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/*" ! -path "./html/*" ! -path "./test/*" ! -path "./.cache/*" ! -path "./tmp/*" -print'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
