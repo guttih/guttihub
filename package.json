@@ -6,6 +6,8 @@
         "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
+        "clean": "rm -rf .next",
+        "rebuild": "npm run clean && npm run build",
         "deploy": "bash scripts/deploy.sh",
         "postinstall": "chmod +x src/scripts/*.sh",
         "list": "bash scripts/list.sh",

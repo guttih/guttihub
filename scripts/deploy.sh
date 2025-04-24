@@ -150,7 +150,7 @@ EOF
 fi
 
 # Copy the file into place
-# cp "$ASSET_PATH" "$TARGET_PATH"
+cp "$ASSET_PATH" "$TARGET_PATH"
 echo "📄 Copied services.json into src/config/"
 
 # skip if skip-build is passed

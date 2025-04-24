@@ -107,9 +107,9 @@ function getMimeType(ext: string): string {
 
 const unlink = promisify(fs.unlink);
 
-export async function DELETE(req: NextRequest, context: { params: { serviceId: string; filename: string[] } }) {
-    const { serviceId, filename } = await context.params; // ✅ This works
-  
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ serviceId: string; filename: string[] }> }): Promise<NextResponse> {
+    const { serviceId, filename } = await params;
 
     if (!serviceId || !filename || filename.length === 0) {
         return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -133,12 +133,7 @@ export async function DELETE(req: NextRequest, context: { params: { serviceId: s
 
         await unlink(filePath);
         return NextResponse.json({ message: "File deleted successfully" });
-    } catch (err: any) {
-        if (err.code === "ENOENT") {
-            return NextResponse.json({ error: "File not found" }, { status: 404 });
-        }
-
-        console.error("❌ Failed to delete file:", err);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    } catch {
+        return NextResponse.json({ error: "Unable to delete File" }, { status: 404 });
     }
 }
