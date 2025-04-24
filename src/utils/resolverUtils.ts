@@ -37,6 +37,7 @@ export function getHumanReadableTimestamp(): string {
  */
 export async function readRecordingLogFile(logPath: string): Promise<string[]> {
     try {
+        if (!logPath) return [];
         const text = await readFileRaw(logPath);
         return text.split(/\r?\n/).filter((l) => l.trim().length > 0);
     } catch (err) {
@@ -52,6 +53,7 @@ export async function readRecordingLogFile(logPath: string): Promise<string[]> {
 export async function readRecordingStatusFile(statusPath: string): Promise<Record<string, string | string[]>> {
     const result: Record<string, string | string[]> = {};
     try {
+        if (!statusPath) return result
         const text = await readFileRaw(statusPath);
         for (const line of text.split(/\r?\n/).filter((l) => l.trim())) {
             const [key, ...rest] = line.split("=");

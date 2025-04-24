@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
@@ -23,7 +23,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { LiveDebugPanel } from "@/components/Live/LiveDebugPanel";
 
-import { UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
+import { hasRole, UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -96,14 +96,14 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     const pageSize = Number(appConfig.defaultPageSize);
 
-    function normalizeStreamUrl(playUrl: string): string {
-        const parsed = new URL(playUrl, window.location.origin);
-        const isMixedContent = window.location.protocol === "https:" && parsed.protocol === "http:";
-        const isCrossOrigin = parsed.origin !== window.location.origin;
-        const proxyNeeded = isMixedContent || isCrossOrigin;
+    // function normalizeStreamUrl(playUrl: string): string {
+    //     const parsed = new URL(playUrl, window.location.origin);
+    //     const isMixedContent = window.location.protocol === "https:" && parsed.protocol === "http:";
+    //     const isCrossOrigin = parsed.origin !== window.location.origin;
+    //     const proxyNeeded = isMixedContent || isCrossOrigin;
 
-        return proxyNeeded ? `/api/stream-proxy?url=${encodeURIComponent(playUrl)}` : playUrl;
-    }
+    //     return proxyNeeded ? `/api/stream-proxy?url=${encodeURIComponent(playUrl)}` : playUrl;
+    // }
 
     function handlePlay(url: string) {
         console.log("handlePlay called, input URL:", url);
@@ -217,14 +217,9 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }
     }, [loading, focusedInput]);
 
-    const hasFetchedOnce = useRef(false);
-
+    
     useEffect(() => {
         if (!activeService) return;
-        if (!hasFetchedOnce.current) {
-            hasFetchedOnce.current = true;
-            return;
-        }
         handleFetch(activeService, "useEffect:... [currentPage, activeService, debouncedFilters, handleFetch])");
     }, [currentPage, activeService, debouncedFilters]);
 
@@ -280,15 +275,17 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 {/* ←‑ existing heading */}
                 <h1 className="text-xl font-bold truncate max-w-[60%]">{appConfig.appName}</h1>
 
-                {/* NEW link ‑‑ displays only once session resolved */}
-                <Link
-                    href="/schedule"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 whitespace-nowrap"
-                >
-                    Scheduler
-                </Link>
+                {/* Displays only once session resolved */}
+                {hasRole(userRole, "moderator") && (
+                    <Link
+                        href="/schedule"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 whitespace-nowrap"
+                    >
+                        Scheduler
+                    </Link>
+                )}
 
                 {/* existing user name */}
                 <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
@@ -313,7 +310,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                                     setActiveService(selected);
                                     setCurrentPage(1);
                                     console.log("🌀 Switching to service:", selected);
-                                    handleFetch(selected, "onChange: serviceSelect");
+                                    // handleFetch(selected, "onChange: serviceSelect");
                                 }
                             }}
                             disabled={loading}
@@ -526,7 +523,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             />
 
             <div className="grid grid-cols-1 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-x-6 gap-y-8">
-                {entries.map((entry) => {
+                {activeService && entries.map((entry) => {
                     const ext = entry.url.split(".").pop()?.toLowerCase() ?? "";
                     const isMovie = ["mp4", "mkv"].includes(ext);
                     const viewslots = (activeService?.maxConcurrentViewers ?? 0) - liveCount;
@@ -535,7 +532,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     const showStreaming = canPlay && !isMovie;
                     const showPlayButton = canPlay && isMovie;
                     return useInteractiveCard ? (
-                        <StreamCardInteractive key={entry.url} entry={entry} />
+                        <StreamCardInteractive key={entry.url} serviceId={activeService.id} entry={entry} />
                     ) : (
                         // The card figures out if user is allowed to see the buttons based on userRole, app only thinks about the count of cuncurrent viewers
                         <StreamCard
@@ -549,9 +546,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                             showStreamButton={showStreaming}
                             showDeleteButton={activeService?.hasFileAccess}
                             onPlay={(url) => handlePlay(url)}
-                            onDelete={(deletedEntry) =>
-                                setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))
-                              }
+                            onDelete={(deletedEntry) => setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))}
                         />
                     );
                 })}

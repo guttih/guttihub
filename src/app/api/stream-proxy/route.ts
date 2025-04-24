@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const timeout = setTimeout(() => controller.abort(), 15000); // 15s safeguard
 
     try {
-        const rangeHeader = req.headers.get("range") || "bytes=0-";
+        const rangeHeader = req.headers.get("range");
 
         const upstreamResponse = await fetch(url, {
             method: "GET",
@@ -21,8 +21,7 @@ export async function GET(req: NextRequest) {
                 "User-Agent": "VLC/3.0.18 LibVLC/3.0.18",
                 "Accept": "*/*",
                 "Accept-Language": "en-US,en;q=0.9",
-                "Range": rangeHeader,
-                // Optional: You can pass Referer/Cookie if needed here
+                ...(rangeHeader ? { "Range": rangeHeader } : {}),
             },
             redirect: "follow",
             signal: controller.signal,
@@ -32,9 +31,14 @@ export async function GET(req: NextRequest) {
 
         const headers = new Headers(upstreamResponse.headers);
 
-        // Force proper content type if upstream is vague or wrong
-        if (!headers.get("content-type") || headers.get("content-type") === "application/octet-stream") {
-            headers.set("Content-Type", "video/mp2t");
+        // Set correct content type if missing
+        const contentType = headers.get("content-type");
+        if (!contentType) {
+            if (url.endsWith(".m3u8")) {
+                headers.set("Content-Type", "application/vnd.apple.mpegurl");
+            } else if (url.endsWith(".ts")) {
+                headers.set("Content-Type", "video/mp2t");
+            }
         }
 
         // CORS for browser requests
@@ -43,7 +47,14 @@ export async function GET(req: NextRequest) {
         // Disable content-encoding so we forward raw stream
         headers.delete("content-encoding");
         headers.delete("transfer-encoding");
-        headers.delete("content-length"); // let it stream dynamically
+
+        // Only delete content-length for partial/range requests
+        if (rangeHeader) {
+            headers.delete("content-length");
+        }
+
+        // Let client know it supports ranges
+        headers.set("Accept-Ranges", "bytes");
 
         // Disable caching
         headers.set("Cache-Control", "no-cache, no-store, must-revalidate");

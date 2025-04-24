@@ -4,24 +4,26 @@ import fs from "fs/promises";
 import { existsSync } from "fs";
 import { M3UEntry } from "@/types/M3UEntry";
 import { CashedEntries } from "@/types/CashedEntries";
-import { StreamFormat, getStreamFormatByExt } from "@/types/StreamFormat";
+import {  getStreamFormatByExt } from "@/types/StreamFormat";
 import { ContentCategoryFieldLabel, inferContentCategory } from "@/types/ContentCategoryFieldLabel";
 import { makeSuccessResponse, makeErrorResponse } from "@/types/ApiResponse";
 import { getRecordingJobsDir, readJsonFile } from "@/utils/fileHandler";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 import { StreamingService } from "@/types/StreamingService";
-import { services } from "@/config";
+import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ serviceId: string; }> }): Promise<NextResponse> {
+    const { serviceId } = await params;
     try {
-        console.log("📦 src/app/api/video-local-recordings/route.ts is executing");
-        const service = services.find((s) => s.id === "local-recordings");
+        const resolver = new StreamingServiceResolver();
+        const service = resolver.findById(serviceId);
+
         if (!service) {
             return makeErrorResponse("Service not found", 404);
         }
+
         const jobEntries = await loadValidJobEntries();
-        const origin = req.nextUrl.origin;
-        const fallbackEntries = await loadFallbackEntriesFromDisk(service, origin);
+        const fallbackEntries = await loadFallbackEntriesFromDisk(service);
         const allEntries = [...jobEntries, ...fallbackEntries];
         const response = buildResponse(allEntries);
 

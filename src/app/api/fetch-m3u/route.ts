@@ -24,12 +24,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
             try {
                 resolvedUrl = new URL(url, req.nextUrl.origin); // supports relative URLs
-            } catch (err) {
-                console.error("❌ Invalid URL provided:", url);
-                return makeErrorResponse("Invalid URL", 400);
+            } catch ( err ) {
+                if (err instanceof TypeError) {
+                    return makeErrorResponse(err.message, 400);
+                }
+                return makeErrorResponse(`"Invalid URL provided: ${url}"`, 400);
             }
 
-            let serverOrigin = resolvedUrl.origin;
+            const serverOrigin = resolvedUrl.origin;
 
             await ensureCacheDir();
 
@@ -44,8 +46,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             //We do not need the m3u file, but we want the json file with the entries so let's move next 3 lines to a function
             let chasedData: CashedEntries;
 
-            if (service.id === "local-recordings") {
-                console.log("[VIRTUAL] Loading recordings from internal API");
+            if (service.hasFileAccess ) {
+                console.log("[VIRTUAL] Loading recordings from internal API service %s", service.name);
 
                 const res = await fetch(service.refreshUrl);
                 if (!res.ok) {

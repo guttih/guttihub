@@ -25,7 +25,9 @@ export class StreamingServiceResolver {
   }
 
   findByServer(server: string): StreamingService | undefined {
-    return this.services.find((s) => s.server === server);
+    return this.services.find((s) => 
+        s.server === server || `${s.server}:80` === server || s.server === `${server}:80` 
+);
   }
 
   findByUrlValues(values: StreamingServiceUrlValues): StreamingService | undefined {

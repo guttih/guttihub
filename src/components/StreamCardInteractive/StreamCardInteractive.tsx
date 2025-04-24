@@ -4,10 +4,11 @@ import { M3UEntry } from "@/types/M3UEntry";
 import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
 
 type Props = {
+    serviceId: string;
   entry: M3UEntry;
 };
 
-export default function StreamCardInteractive({ entry }: Props) {
+export default function StreamCardInteractive({ serviceId, entry }: Props) {
   const [playing, setPlaying] = useState(false);
 
   return (
@@ -24,7 +25,7 @@ export default function StreamCardInteractive({ entry }: Props) {
 
       {playing && (
         <div className="mt-3">
-          <InlinePlayer url={entry.url} />
+          <InlinePlayer serviceId={serviceId} url={entry.url} />
         </div>
       )}
     </div>

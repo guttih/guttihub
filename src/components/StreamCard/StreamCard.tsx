@@ -43,12 +43,16 @@ export function StreamCard({
     const allowedToPlayMovies = showPlayButton && hasRole(userRole, "viewer");
     const allowedToStreamLive = showStreamButton && hasRole(userRole, "streamer");
     const allowedToRecordStream = showRecordButton && hasRole(userRole, "moderator");
-    const allowedToDelete = showDeleteButton && hasRole(userRole, "admin");
+    const allowedToDelete = showDeleteButton && showPlayButton && hasRole(userRole, "admin");
     const format = getStreamFormatByExt(entry.url);
     const canLiveStream = format === StreamFormat.M3U8 || format === StreamFormat.UNKNOWN;
     // const isMovie = format === StreamFormat.MP4 || format === StreamFormat.MKV;
     const showPlay = !!onPlay && (extensionIsSupported || canLiveStream) && allowedToPlayMovies;
 
+    const [isStartingStreaming, setIsStartingStreaming] = useState(false);
+    const [isStartingRecording, setIsStartingRecording] = useState(false);
+    const [isStartingPlaying, setIsStartingPlaying] = useState(false);
+    const [isStartingDelete, setIsStartingDelete] = useState(false);
     const [copied, setCopied] = useState(false);
     const handleCopy = async () => {
         try {
@@ -62,6 +66,7 @@ export function StreamCard({
 
     const handleRecord = async () => {
         try {
+            setIsStartingRecording(true);
             const res = await fetch("/api/cache-entry", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -70,6 +75,7 @@ export function StreamCard({
 
             if (!res.ok) {
                 console.error("Failed to cache entry for recording");
+                setIsStartingRecording(false);
                 return;
             }
 
@@ -77,6 +83,7 @@ export function StreamCard({
             window.open(`/record?cacheKey=${cacheKey}`, "_blank");
         } catch (err) {
             console.error("Error caching entry for recording:", err);
+            setIsStartingRecording(false);
         }
     };
 
@@ -88,13 +95,17 @@ export function StreamCard({
 
         if (canLiveStream) {
             try {
+                setIsStartingStreaming(true);
                 const res = await fetch("/api/cache-entry", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(entry),
                 });
 
-                if (!res.ok) throw new Error("Failed to cache entry");
+                if (!res.ok) {
+                    
+                    throw new Error("Failed to cache entry");
+                }
 
                 const { cacheKey } = await res.json();
 
@@ -111,10 +122,13 @@ export function StreamCard({
 
                 onPlay(playlistUrl);
             } catch (err) {
+                setIsStartingStreaming(false);
                 console.error("Live stream error:", err);
             }
         } else {
+            setIsStartingPlaying(true);
             onPlay(entry.url);
+            setIsStartingPlaying(false);
         }
     };
 
@@ -174,6 +188,7 @@ export function StreamCard({
                     {showPlay && (
                         <button
                             onClick={handlePlay}
+                            disabled={isStartingPlaying}
                             title="Play Now"
                             className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-green-600 text-white hover:shadow-lg ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300"
                         >
@@ -197,6 +212,7 @@ export function StreamCard({
                     {allowedToStreamLive && showStreamButton && (
                         <button
                             onClick={handlePlay}
+                            disabled={isStartingStreaming}
                             title="Go Live"
                             className="w-11 h-11 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xl ring-2 ring-blue-300 transition-all duration-300 text-2xl"
                         >
@@ -207,6 +223,7 @@ export function StreamCard({
                     {isRecordable && allowedToRecordStream && (
                         <button
                             onClick={handleRecord}
+                            disabled={isStartingRecording}
                             title="Schedule Recording"
                             className="w-11 h-11 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-700 text-white shadow-md ring-2 ring-red-300 transition-all duration-300 text-xl"
                         >
@@ -232,16 +249,25 @@ export function StreamCard({
                     {allowedToDelete && (
                         <button
                             onClick={async () => {
-                                const res = await fetch(new URL(entry.url).pathname, { method: "DELETE" });
-                                if (res.ok) {
-                                    onDelete?.(entry); // 🚀 This triggers the parent to remove it from the list
-                                } else {
-                                    const { error } = await res.json();
-                                    alert(`Failed to delete: ${error}`);
+                                setIsStartingDelete(true); // Disable button immediately
+                                try {
+                                    const res = await fetch(new URL(entry.url).pathname, { method: "DELETE" });
+                                    if (res.ok) {
+                                        onDelete?.(entry);
+                                    } else {
+                                        const { error } = await res.json();
+                                        alert(`Failed to delete: ${error}`);
+                                    }
+                                } catch (err) {
+                                    console.error("Delete failed:", err);
+                                    alert("Something went wrong while deleting.");
+                                } finally {
+                                    setIsStartingDelete(false); // Re-enable button
                                 }
                             }}
                             title="Delete Recording"
-                            className="w-11 h-11 flex items-center justify-center rounded-full bg-red-800 hover:bg-red-700 text-white shadow ring-2 ring-red-400 transition text-xl"
+                            className="w-11 h-11 flex items-center justify-center rounded-full bg-red-800 hover:bg-red-700 text-white shadow ring-2 ring-red-400 transition text-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isStartingDelete}
                         >
                             🗑️
                         </button>
