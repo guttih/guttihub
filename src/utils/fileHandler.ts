@@ -3,6 +3,7 @@ import path from "path";
 import { existsSync } from "fs";
 import { RecordingJob } from "@/types/RecordingJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
+import { M3UEntry } from "@/types/M3UEntry";
 
 const CACHE_DIR = path.resolve(process.cwd(), ".cache");
 
@@ -85,6 +86,30 @@ export async function readRecordingJobFile(recordingId: string): Promise<Recordi
     const dir = getRecordingJobsDir();
     const filePath = path.join(dir, `${recordingId}.json`);
     return await readJsonFile<RecordingJob>(filePath);
+}
+
+export async function readCashedEntryFile(cacheKey: string): Promise<M3UEntry | null> {
+    const dir = getCacheDir();
+    const recordingPath = `${dir}/recording_${cacheKey}.json`;
+    const entryPath = `${dir}/${cacheKey}.json`;
+
+    try {
+        let entry: M3UEntry;
+        if (await fileExists(recordingPath)) {
+            // console.log("🔍 Found recording file:", recordingPath);
+            entry = await readJsonFile<M3UEntry>(recordingPath);
+        } else if (await fileExists(entryPath)) {
+            // console.log("🔍 Found entry file:", entryPath);
+            entry = await readJsonFile<M3UEntry>(entryPath);
+        } else {
+            // console.warn("❌ No cache file found for:", cacheKey);
+            return null;
+        }
+
+        return entry;
+    } catch {
+        return null;
+    }
 }
 
 export async function readFile(filePath: string): Promise<string> {

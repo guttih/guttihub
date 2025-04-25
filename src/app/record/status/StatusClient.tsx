@@ -5,6 +5,7 @@ import { RecordingJob } from "@/types/RecordingJob";
 import { LiveStatusViewer } from "@/components/LiveStatusViewer/LiveStatusViewer";
 import { LiveLogViewer } from "@/components/LiveLogViewer/LiveLogViewer";
 import StatusBadge from "@/components/StatusBadge/StatusBadge";
+import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
 
 interface Props {
     job: RecordingJob;
@@ -97,6 +98,15 @@ export default function StatusClient({ job }: Props) {
                         >
                             {extractFileName(job.outputFile)}
                         </a>
+                    </div>
+                )}
+                {job.recordingId && status === "recording" && (
+                    <div className="mt-2">
+                        <ProgressBarTime 
+                            showTime={true}
+                            start={job.startTime}
+                            end={new Date(Date.now() + job.duration * 1000).toISOString()}
+                            now={new Date().toISOString()}/>
                     </div>
                 )}
             </div>

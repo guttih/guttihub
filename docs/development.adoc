@@ -109,6 +109,8 @@ import StreamCard from '@/components/StreamCard';
 
 === Tests
 
+In this project, we use https://vitest.dev/[Vitest] for testing. 
+
 - Unit tests go in `test/` or in `__tests__` folders near their targets
 - Match the source file name with a `.test.ts` suffix
 - Test assets (e.g. `.m3u` files) go in `test/assets/`

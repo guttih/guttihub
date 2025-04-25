@@ -1,196 +1,80 @@
-//src/app/schedule/page.tsx
+// src/app/schedule/page.tsx
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { EnrichedScheduledJobCard } from "@/components/cards/EnrichedScheduledJobCard/EnrichedScheduledJobCard";
+import { JobctlEnrichedScheduledJob } from "@/types/JobctlEnrichedScheduledJob";
 import Link from "next/link";
-
-type Job = { id: string; datetime: string; description: string; command: string };
+import { confirmDialog  } from "@/components/ui/ConfirmDialog";
 
 export default function SchedulePage() {
-    /* ---------------- form state ---------------- */
-    const [datetime, setDatetime] = useState(() => {
-        // HTML <input type="datetime‑local"> expects YYYY‑MM‑DDTHH:MM
-        const t = new Date(Date.now() + 60 * 60 * 1000); // +1 hour
-        return t.toISOString().slice(0, 16);
-    });
-    const [desc, setDesc] = useState("");
-    const [cmd, setCmd] = useState("");
-    const [error, setError] = useState<string | null>(null);
-
-    /* ---------------- list state ---------------- */
-    const [jobs, setJobs] = useState<Job[]>([]);
+    const [jobs, setJobs] = useState<JobctlEnrichedScheduledJob[]>([]);
     const [loading, setLoading] = useState(true);
-    const nextRefresh = useRef<NodeJS.Timeout | null>(null);
-
-    // live clock (updates every 1 s)
-    const [now, setNow] = useState<Date | null>(null);
-const [hasMounted, setHasMounted] = useState(false);
-
-
-    function scheduleNextAutoReload(jobs: Job[]) {
-        // clear any previous timeout
-        if (nextRefresh.current) clearTimeout(nextRefresh.current);
-
-        if (jobs.length === 0) return; // nothing scheduled
-
-        const soonest = Math.min(...jobs.map((j) => new Date(j.datetime).getTime()));
-
-        const ms = soonest - Date.now() + 5_000; // 5 s grace
-        if (ms > 0 && ms < 24 * 60 * 60 * 1000) {
-            // don’t queue absurd delays
-            nextRefresh.current = setTimeout(() => reload(), ms);
-        }
-    }
+    const [error, setError] = useState<string | null>(null);
+    const [now, setNow] = useState(new Date());
+    const [showConfirm, setShowConfirm] = useState(false);
 
     useEffect(() => {
-        const id = setInterval(() => setNow(new Date()), 1_000);
-        setHasMounted(true);
-        return () => clearInterval(id);
+        const interval = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(interval);
     }, []);
-    
-
-    const reload = useCallback(async () => {
-        setLoading(true);
-        const r = await fetch("/api/schedule");
-        const j = await r.json();
-        setLoading(false);
-      
-        if (!j.ok) return setError(j.error ?? "load error");
-        setJobs(j.jobs);
-        scheduleNextAutoReload(j.jobs);
-      }, []);            //  ←  nothing inside changes between renders
-      
-      /* then update the effect */
-      useEffect(() => { reload(); }, [reload]);
 
     useEffect(() => {
-        return () => {
-            // cleanup on unmount
-            if (nextRefresh.current) clearTimeout(nextRefresh.current);
-        };
+        fetch("/api/schedule/enriched")
+            .then((res) => res.json())
+            .then((data) => {
+                if (!data.ok) throw new Error(data.error || "Unknown error");
+                setJobs(data.enrichedJobs);
+            })
+            .catch((err) => setError(err.message))
+            .finally(() => setLoading(false));
     }, []);
 
-    /* ---------------- add ----------------------- */
-    async function add(e: React.FormEvent) {
-        e.preventDefault();
-        setError(null);
-        const r = await fetch("/api/schedule", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ datetime, desc, cmd }),
-        });
-        const j = await r.json();
-        if (!j.ok) return setError(j.error);
-        setDatetime("");
-        setDesc("");
-        setCmd("");
-        reload();
-    }
+    const handleDelete = async (systemJobId: string) => {
+        if (! await confirmDialog ({
+            title: "Delete Job",
+            message: "Are you sure you want remove this scheduled recording ?",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+        })) return;
 
-    /* ---------------- delete -------------------- */
-    async function del(id: string) {
-        if (!confirm(`Delete job ${id}?`)) return;
-        const r = await fetch("/api/schedule", {
+        const res = await fetch("/api/schedule", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id }),
+            body: JSON.stringify({ systemJobId }),
         });
-        const j = await r.json();
-        if (!j.ok) return alert(j.error);
-        reload();
-    }
+        const data = await res.json();
+        if (!data.ok) return alert(data.error || "Failed to delete job");
+        setJobs((prev) => prev.filter((job) => job.systemJobId !== systemJobId));
+    };
 
     return (
-        <div className="mx-auto max-w-3xl p-6 space-y-8">
-            {/* --- header row --------------------------------------------------- */}
-            <div className="flex items-center justify-between mb-6">
-                {/* title */}
-                <h1 className="text-3xl font-bold text-white">Scheduler</h1>
-
-                {/* live clock */}
-                <span
-                    className="inline-flex items-center gap-2 bg-gray-800 text-gray-300 font-mono 
-               px-3 py-1 rounded-full shadow-sm ring-1 ring-gray-700 select-none"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l2 2m8-2a10 10 0 11-20 0 10 10 0 0120 0z" />
-                    </svg>
-                    {hasMounted && now ? now.toLocaleString() : "Loading time…"}
-
+        <div className="max-w-3xl mx-auto p-6 space-y-6">
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold text-white">Scheduled Jobs</h1>
+                <span className="font-mono text-sm bg-gray-800 text-gray-300 px-3 py-1 rounded shadow-sm ring-1 ring-gray-700">
+                    {now.toLocaleString(undefined, { hour12: false })}
                 </span>
             </div>
 
-            {/* === Add form === */}
-            <form onSubmit={add} className="space-y-3">
-                <input
-                    type="datetime-local"
-                    className="w-full p-2 border rounded"
-                    value={datetime}
-                    onChange={(e) => setDatetime(e.target.value)}
-                    required
-                />
-
-                <input
-                    type="text"
-                    placeholder="Description"
-                    className="w-full p-2 border rounded"
-                    value={desc}
-                    onChange={(e) => setDesc(e.target.value)}
-                    required
-                />
-
-                <textarea
-                    placeholder="Command…"
-                    rows={3}
-                    className="w-full p-2 border rounded font-mono"
-                    value={cmd}
-                    onChange={(e) => setCmd(e.target.value)}
-                    required
-                />
-
-                {error && <p className="text-red-600">{error}</p>}
-
-                <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Schedule</button>
-            </form>
-
-            {/* === List === */}
             {loading ? (
-                <p>Loading…</p>
+                <p className="text-gray-400">Loading jobs…</p>
+            ) : error ? (
+                <p className="text-red-400">❌ {error}</p>
             ) : jobs.length === 0 ? (
-                <p>No jobs yet.</p>
+                <p className="text-gray-500">No scheduled jobs found.</p>
             ) : (
-                <table className="w-full border-collapse">
-                    <thead>
-                        <tr className="text-left border-b">
-                            <th className="p-2">ID</th>
-                            <th className="p-2">When</th>
-                            <th className="p-2">Description</th>
-                            <th className="p-2">Command</th>
-                            <th />
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {jobs.map((j) => (
-                            <tr key={j.id} className="border-b">
-                                <td className="p-2">{j.id}</td>
-                                <td className="p-2 whitespace-nowrap">{j.datetime}</td>
-                                <td className="p-2">{j.description}</td>
-                                <td className="p-2 font-mono truncate max-w-xs" title={j.command}
-                                >{j.command}</td>
-                                <td className="p-2">
-                                    <button onClick={() => del(j.id)} className="text-red-600 hover:underline">
-                                        ✕
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                <div className="space-y-4">
+                    {jobs.map((job) => (
+                        <EnrichedScheduledJobCard key={job.systemJobId} job={job} onDelete={handleDelete} />
+                    ))}
+                </div>
             )}
 
-            <Link href="/record" className="underline text-sm">
-                ← back to Record home
+            <Link href="/record" className="underline text-sm block pt-4">
+                ← Back to Record
             </Link>
+
         </div>
     );
 }

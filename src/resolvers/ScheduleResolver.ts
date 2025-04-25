@@ -90,7 +90,8 @@ export class ScheduleResolver {
 
         // 🕓 Schedule the job via /api/schedule POST
         const cmd = `bash ${ScheduleResolver.scriptStartRecording} ${args.map((a) => `"${a}"`).join(" ")}`;
-        const desc = `Recording ${entry.name} for ${durationSec}s`;
+        const desc = `Recording ${entry.name} for ${durationSec}s [${cacheKey}]`;
+
 
         try {
             const result = await runJobctl("add", startTime, desc, cmd);

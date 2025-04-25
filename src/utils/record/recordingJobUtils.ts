@@ -1,33 +1,10 @@
-import { fileExists, getCacheDir, getRecordingJobsDir, readJsonFile } from "@/utils/fileHandler";
-import { M3UEntry } from "@/types/M3UEntry";
+import { getRecordingJobsDir, readCashedEntryFile } from "@/utils/fileHandler";
 import { RecordingJob } from "@/types/RecordingJob";
 import { parseLatestStatus } from "@/utils/resolverUtils";
 import path from "path";
 import fs from "fs/promises";
 
-export async function getEntryByCacheKey(cacheKey: string): Promise<M3UEntry | null> {
-    const dir = getCacheDir();
-    const recordingPath = `${dir}/recording_${cacheKey}.json`;
-    const entryPath = `${dir}/${cacheKey}.json`;
-
-    try {
-        let entry: M3UEntry;
-        if (await fileExists(recordingPath)) {
-            // console.log("🔍 Found recording file:", recordingPath);
-            entry = await readJsonFile<M3UEntry>(recordingPath);
-        } else if (await fileExists(entryPath)) {
-            // console.log("🔍 Found entry file:", entryPath);
-            entry = await readJsonFile<M3UEntry>(entryPath);
-        } else {
-            // console.warn("❌ No cache file found for:", cacheKey);
-            return null;
-        }
-
-        return entry;
-    } catch {
-        return null;
-    }
-}
+export { readCashedEntryFile as getEntryByCacheKey };
 
 /**
  * Return all RecordingJobs whose last STATUS is "live" or "recording".
