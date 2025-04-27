@@ -91,12 +91,13 @@ restart_pm2_app_on_server() {
     npm install --omit=dev
 
     echo "🔁 Reloading app with PM2..."
-    PORT=6301 NODE_ENV=production pm2 reload "$APP_NAME" || \
-    PORT=6301 NODE_ENV=production pm2 start npm --name "$APP_NAME" -- run start
+    pm2 reload ecosystem.config.js --env production || \
+    pm2 start ecosystem.config.js --env production
 
     pm2 save
 EOF
 }
+
 
 
 
