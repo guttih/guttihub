@@ -2,9 +2,9 @@
 import { JobctlParsedMeta, JobctlEnrichedScheduledJob } from "@/types/JobctlParsedMeta";
 import { Job, JobctlListSuccess, JobctlResult } from "@/types/Jobctl";
 import { jobctlParser } from "./jobctlParser";
-import { readCashedEntryFile } from "@/utils/fileHandler";
-import { M3UEntry } from "@/types/M3UEntry";
+import { readRecordingJobFile } from "@/utils/fileHandler";
 import { runJobctl } from "./jobctl";
+import { RecordingJob } from "@/types/RecordingJob";
 
 
 export async function expandAllJobs(): Promise<JobctlEnrichedScheduledJob[]> {
@@ -25,15 +25,33 @@ export async function expandAllJobs(): Promise<JobctlEnrichedScheduledJob[]> {
     return expanded.filter((j): j is JobctlEnrichedScheduledJob => j !== null);
   }
 
-export async function expandSingleJob(job: Job): Promise<JobctlEnrichedScheduledJob | null> {
+// export async function getExpandedJobById(id: string): Promise<JobctlEnrichedScheduledJob | null> {
+//     const result: JobctlResult = await runJobctl("list");
+//     if (!result.ok || !("jobs" in result)) {
+//         console.error("❌ Failed to load job list");
+//         return null;
+//     }
+
+//     const singleJob = (result as JobctlListSuccess).jobs.find((job) => job.id === id);
+
+//     if (!singleJob) {
+//         console.error("❌ Job not found");
+//         return null;
+//     }
+    
+//     return expandSingleJob(singleJob);
+// }
+    
+
+export async function expandSingleJob(job: Job): Promise<JobctlEnrichedScheduledJob> {
   const parsed: JobctlParsedMeta = jobctlParser(job);
 
-  let entry: M3UEntry | null = null;
+  let jobOnDisk: RecordingJob | null = null;
   if (parsed.cacheKey) {
     try {
-        entry = await readCashedEntryFile(parsed.cacheKey);
+        jobOnDisk = await readRecordingJobFile(parsed.cacheKey);
       } catch (err) {
-        console.warn("⚠️ Failed to read M3UEntry for", parsed.cacheKey, err);
+        console.warn("⚠️ Failed to read RecordingJob for", parsed.cacheKey, err);
       }
     }
   
@@ -44,6 +62,6 @@ export async function expandSingleJob(job: Job): Promise<JobctlEnrichedScheduled
     datetime: job.datetime,
     description: job.description,
     command: job.command,
-    entry: entry || undefined,
+    entry: jobOnDisk?.entry || undefined,
   };
 }

@@ -1,10 +1,11 @@
-// src/app/api/cache-entry/route.ts
+// src/app/api/cache/route.ts
 import { v4 as uuidv4 } from "uuid";
 import { NextResponse } from "next/server";
 import { writeJsonFile, ensureRecordingJobsDir, getCacheDir } from "@/utils/fileHandler";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
 
+// Creates a cache entry 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -13,7 +14,8 @@ export async function POST(req: Request) {
 
     await ensureRecordingJobsDir();
 
-    const cacheKey = `${session.user?.email?.split("@")[0] ?? "unknown"}-${Date.now()}-${uuidv4()}`;
+    // const cacheKey = `${session.user?.email?.split("@")[0] ?? "unknown"}-${Date.now()}-${uuidv4()}`;
+    const cacheKey = `cache-${Date.now()}-${uuidv4()}`;
     const fullPath = `${getCacheDir()}/${cacheKey}.json`;
 
     try {

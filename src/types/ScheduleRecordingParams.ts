@@ -4,10 +4,10 @@ import { M3UEntry } from "@/types/M3UEntry";
 
 export interface ScheduleRecordingParams {
   cacheKey: string;
-  entry: M3UEntry;
-  startTime: string;
+  startTime?: string;
   durationSec: number;
   user: string;
-  outputFile: string;
-  recordNow?: boolean;
+  recordNow: boolean;
+  entry: M3UEntry;
+  location: string;
 }

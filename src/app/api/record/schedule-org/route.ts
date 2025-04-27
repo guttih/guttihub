@@ -2,10 +2,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
-import { readJsonFile, getCacheDir } from "@/utils/fileHandler";
+import { readJsonFile, getCacheDir, deleteFileAndForget } from "@/utils/fileHandler";
 import { ScheduleResolver } from "@/resolvers/ScheduleResolver";
 import { M3UEntry } from "@/types/M3UEntry";
-import { buildOutputFileName } from "@/utils/resolverUtils";
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
@@ -26,34 +25,40 @@ export async function POST(req: Request) {
         console.warn("❌ Missing form values:", { cacheKey, duration, location, recordNow, startTime });
         return NextResponse.json({ error: "Missing form values" }, { status: 400 });
     }
-
-    // ✅ Load the cached entry from disk
+    
+    // Load the cached entry from disk
+    const entryPath = `${getCacheDir()}/${cacheKey}.json`;
     let entry: M3UEntry;
     try {
-        const entryPath = `${getCacheDir()}/${cacheKey}.json`;
+        
         entry = await readJsonFile<M3UEntry>(entryPath);
+
     } catch (err) {
         console.error("❌ Could not load cached entry:", err);
         return NextResponse.json({ error: "Invalid or expired cache key" }, { status: 404 });
     }
 
 
-
-    const outputFile = buildOutputFileName("recording-", entry, location, ".mp4");
-    // 🧠 Delegate to resolver
-    console.log("Before scheduling recording with file...", outputFile);
+    // const recordingId = buildRecordingId("recording-", new Date(), entry.url, "mp4");
+    // const outputFile = `${location}/${recordingId}`;
+    // // 🧠 Delegate to resolver
+    // //recordingId we get from the old casche file
+    // const oldDiskContent = await readRecordingJobFile(entryPath);
     const result = await ScheduleResolver.scheduleRecording({
         cacheKey,
-        entry,
+        location,
         durationSec: parseInt(duration, 10),
         user: session.user?.email ?? "unknown",
-        outputFile,
         recordNow: form.get("recordNow") === "true",
-        startTime: recordNow ? new Date().toISOString() : new Date(startTime).toISOString()
+        startTime: recordNow ? new Date().toISOString() : new Date(startTime).toISOString(),
+        entry: entry
         
     });
-    console.log("📦 schedule-recording response:", result.success, result.message);
+    
+    if (result.success)
+        deleteFileAndForget(entryPath);
+    console.log("📦 schedule-recording response:", JSON.stringify(result, null, 4));
     return result.success 
-        ? NextResponse.json({ message: result.message, recordingId: result.recordingId }) 
+        ? NextResponse.json({ message: result.message, cacheKey : result.cacheKey , recordingId: result.recordingId }, { status: 200 }) 
         : NextResponse.json({ error: result.error }, { status: 500 });
 }

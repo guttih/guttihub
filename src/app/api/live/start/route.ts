@@ -2,15 +2,15 @@
 
 import { NextRequest } from "next/server";
 import { outDirectories } from "@/config";
-import { getRecordingIdByCacheKey, buildOutputFileName } from "@/utils/resolverUtils";
-import { getEntryByCacheKey } from "@/utils/record/recordingJobUtils";
+import { getRecordingIdByCacheKey } from "@/utils/resolverUtils";
+import { readCashedEntryFile } from "@/utils/record/recordingJobUtils";
 import { LiveResolver } from "@/resolvers/LiveResolver";
 
 export async function POST(req: NextRequest) {
     const { cacheKey } = await req.json();
 
     if (!cacheKey) {
-        return new Response(JSON.stringify({ error: "Missing cacheKey" }), { status: 400 });
+        return new Response(JSON.stringify({ error: "Missing live start cacheKey" }), { status: 400 });
     }
     // Before spawning live.sh
     const recordingId = await getRecordingIdByCacheKey(cacheKey);
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const entry = await getEntryByCacheKey(cacheKey);
+        const entry = await readCashedEntryFile(cacheKey, "live-");
         if (!entry) {
             return new Response(JSON.stringify({ error: "Invalid or expired cache key" }), { status: 404 });
         }
@@ -33,17 +33,14 @@ export async function POST(req: NextRequest) {
         const location = outDirectories.find((d) => d.label === "Recordings");
         if (!location) throw new Error("Recording output directory not found");
 
-        const outputFile = buildOutputFileName("live-", entry, location.path);
+        
 
-        console.log("📦 Spaning live stream at ", outputFile);
+        
         const result = await LiveResolver.startStream({
             cacheKey,
             entry,
-            user: "live-session",
-            outputFile,
-            startTime: new Date().toISOString(),
+            location: location.path
         });
-        console.log("📦 Start stream response:", result.success, result.message);
         const recordingId = result.recordingId;
         return new Response(JSON.stringify({ recordingId, entry }), {
             status: 200,

@@ -12,13 +12,13 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const recordingId = searchParams.get("recordingId");
+    const cacheKey = searchParams.get("cacheKey");
 
-    if (!recordingId) {
-        return NextResponse.json({ error: "Missing recordingId" }, { status: 400 });
+    if (!cacheKey) {
+        return NextResponse.json({ error: "Missing cacheKey" }, { status: 400 });
     }
 
-    const status = await ScheduleResolver.stopRecording(recordingId);
+    const status = await ScheduleResolver.stopRecording(cacheKey);
     if (!status.success) {
         return NextResponse.json({ error: status.error }, { status: 500 });
     }

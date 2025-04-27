@@ -4,17 +4,19 @@ import { spawn } from "child_process";
 import path from "path";
 import { LiveParams } from "@/types/LiveParams";
 import { RecordingJob } from "@/types/RecordingJob";
-import { getRecordingJobsDir, readJsonFile, writeRecordingJobFile } from "@/utils/fileHandler";
-import { cleanupStreamingJobs, getHumanReadableTimestamp } from "@/utils/resolverUtils";
+import { readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
+import { buildRecordingId, cleanupStreamingJobs } from "@/utils/resolverUtils";
 
 export class LiveResolver {
     static recordScript = path.resolve("src/scripts/live.sh");
     static stopRecordScript = path.resolve("src/scripts/stop-record.sh");
 
-    static async stopRecording(recordingId: string): Promise<{ success: boolean; message?: string; error?: string }> {
-        const jobPath = path.join(getRecordingJobsDir(), `${recordingId}.json`);
-        const job = await readJsonFile<RecordingJob>(jobPath);
-        const args = ["--outputFile", job.outputFile];
+    static async stopRecording(cacheKey: string): Promise<{ success: boolean; message?: string; error?: string }> {
+        
+        const job = await readRecordingJobFile(cacheKey);
+        // const jobPath = path.join(getRecordingJobsDir(), `${cacheKey}.json`);
+        // const job = await readJsonFile<RecordingJob>(jobPath);
+         const args = ["--outputFile", job.outputFile];
 
         spawn("bash", [LiveResolver.stopRecordScript, ...args], {
             detached: true,
@@ -24,52 +26,45 @@ export class LiveResolver {
         cleanupStreamingJobs();
         return {
             success: true,
-            message: `Recording ${recordingId} stopped.`,
+            message: `Recording ${job.recordingId} stopped.`,
         };
     }
 
-    static async startStream({ cacheKey, entry, user, outputFile }: LiveParams): Promise<{
-        success: boolean;
-        message?: string;
-        error?: string;
-        recordingId?: string;
-    }> {
-    
+    static makeStreamFilePath(prefix: string, cashe: string): string {
+        return `${prefix}/${cashe}`;
+    }
 
-        const timestamp = getHumanReadableTimestamp();
-        const lastSegment = entry.url.split("/").pop() ?? "unknown";
-        const recordingId = `live-${timestamp}-${lastSegment}`;
-        const logFile = `${outputFile}.log`;
-        const statusFile = `${outputFile}.status`;
-
+    static async startStream({ cacheKey, entry, location }: LiveParams): Promise<{ recordingId: string; }> {
+        const startTime = new Date().toISOString();
+        const fileName= buildRecordingId("live-", new Date(), entry.url);
+        const outputFile = LiveResolver.makeStreamFilePath(location, fileName);
+        console.log("📦 Spaning live stream at ", outputFile);
         const job: RecordingJob = {
-            recordingId,
+            recordingId: fileName,
             cacheKey,
-            duration: 60*60*6,
-            user,
+            user: "live-session",
             outputFile,
-            logFile,
-            statusFile,
+            logFile: `${outputFile}.log`,
+            statusFile: `${outputFile}.status`,
+            duration: 60*60*6,
             format: "hls-live",
             recordingType: "hls",
-            createdAt: new Date().toISOString(),
-            startTime: new Date().toISOString()
+            startTime,
+            createdAt: startTime,
+            entry
 
         };
 
         const args = [  
             "--url", entry.url, 
-            "--user", user,
-            "--outputFile", outputFile, 
+            "--user", job.user,
+            "--outputFile", job.outputFile, 
             "--loglevel", "info"
         ];
 
-        
-
         console.log("📝 Writing recording job metadata:", job);
         await writeRecordingJobFile(job);
-
-            console.log("Entire command:", LiveResolver.recordScript, ...args); 
+        console.log("Entire command:", LiveResolver.recordScript, ...args); 
             // 🚀 Spawn the bash script in background (non-blocking)
             spawn("bash", [LiveResolver.recordScript, ...args], {
                 detached: true,
@@ -77,8 +72,6 @@ export class LiveResolver {
             }).unref();
 
             return {
-                success: true,
-                message: `Recording ${recordingId} launched in background.`,
                 recordingId: job.recordingId,
             };
     }

@@ -4,19 +4,18 @@ import fs from "fs/promises";
 import * as fsSync from "fs"; //todo: we should only use fs/promises I think
 import path from "path";
 import { readRecordingJobFile, readRecordingJobInfo, infoJsonExists, readFileRaw, getRecordingJobsDir } from "@/utils/fileHandler";
-import { M3UEntry } from "@/types/M3UEntry";
 import { getCacheDir, readJsonFile, writeJsonFile } from "@/utils/fileHandler";
 import { RecordingJob } from "@/types/RecordingJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
-import { getActiveLiveJobs, getEntryByCacheKey } from "@/utils/record/recordingJobUtils";
+import { getActiveLiveJobs } from "@/utils/record/recordingJobUtils";
 
-export function buildOutputFileName(prefix: string, entry: M3UEntry, outputDir: string, extension: string | null = null): string {
-    const dateStr = new Date().toISOString().slice(2, 19).replace(/[-:]/g, "").replace("T", "T");
-    const streamId = entry.url.trim().split("/").filter(Boolean).pop() ?? "unknown";
+export function buildRecordingId(prefix:string, date: Date, url: string,  extension: string | null = null ): string {
+    const dateStr = date.toISOString().slice(2, 19).replace(/[-:]/g, "").replace("T", "T");
+    const streamId = url.trim().split("/").filter(Boolean).pop() ?? "unknown";
     const ext =
         extension && extension.trim() !== "" && extension.startsWith(".") ? extension : extension && extension.trim() !== "" ? `.${extension}` : "";
-    const fileName = `${prefix}${dateStr}-${streamId}${ext}`;
-    return path.resolve(outputDir, fileName);
+        const fileName = `${prefix}${dateStr}-${streamId}${ext}`;
+    return fileName;
 }
 
 // 🕓 Timestamp like 240417T124312
@@ -84,8 +83,6 @@ export async function processFinishedRecording(job: RecordingJob): Promise<boole
     // assemble and write the -info.json
     const info = { job, logs, status };
     const infoPath = path.join(getRecordingJobsDir(), `${job.recordingId}-info.json`);
-    await writeJsonFile(infoPath, info);
-
     await writeJsonFile(infoPath, info);
 
     // now clean up
@@ -171,12 +168,16 @@ export function parseStatus(text: string): Record<string, string | string[]> {
     return result;
 }
 
-export async function getRecordingJobInfo(id: string): Promise<RecordingJobInfo> {
-    if (infoJsonExists(id)) {
-        return readRecordingJobInfo(id);
+export async function getRecordingJobInfo(cacheKey: string|null, recordingId: string|null): Promise<RecordingJobInfo> {
+    if (recordingId && infoJsonExists(recordingId)) {
+        return await readRecordingJobInfo(recordingId);
     }
-    const job = await readRecordingJobFile(id);
-    const [logText, statusText, entry] = await Promise.all([readFileRaw(job.logFile), readFileRaw(job.statusFile), getEntryByCacheKey(job.cacheKey)]);
+
+    if (!cacheKey) {
+        throw new Error("Missing cacheKey");
+    }
+    const job = await readRecordingJobFile(cacheKey);
+    const [logText, statusText, entry] = await Promise.all([readFileRaw(job.logFile), readFileRaw(job.statusFile), (await readRecordingJobFile(`recording-${job.cacheKey}`)).entry]);
     return {
         job,
         entry: entry!,

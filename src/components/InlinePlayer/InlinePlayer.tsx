@@ -10,6 +10,7 @@ import Hls, { ErrorData } from "hls.js";
 
 export interface InlinePlayerProps {
     url: string;
+    movieTitle?:string
     /** Which service this playback belongs to */
     serviceId: string;
     autoPlay?: boolean;
@@ -43,6 +44,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     onMove,
     onResize,
     waitForPlaylist = false,
+    movieTitle
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [canPlay, setCanPlay] = useState(false);
@@ -250,6 +252,7 @@ useEffect(() => {
 {finalUrl && (
     <div className="absolute top-1 left-1 text-xs bg-black bg-opacity-50 text-white px-2 py-1 rounded z-40">
         mode: {finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl) ? "unshared" : "shared"}
+        {movieTitle && <span className="ml-2">{` - ${movieTitle}`}</span>}
     </div>
 )}
 

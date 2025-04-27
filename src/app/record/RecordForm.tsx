@@ -59,7 +59,9 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     fetchFolders();
   }, [location]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
     if (durationSeconds < 10) {
       setStatus({ type: "error", message: "Duration must be at least 10 seconds." });
       return;
@@ -69,7 +71,7 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     setStatus(null);
 
     const form = new FormData();
-    form.append("cacheKey", cacheKey);
+    form.append("cacheKey", cacheKey );
     form.append("startTime", recordNow ? liveNow.toISOString() : startTime);
     form.append("duration", durationSeconds.toString());
     form.append("location", location);
@@ -78,14 +80,25 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     form.append("baseUrl", window.location.origin);
 
     try {
+       console.log("Sending cacheKey from RecordForm", cacheKey);
       const res = await fetch("/api/record/schedule-org", {
         method: "POST",
         body: form,
       });
 
       const json = await res.json();
+      console.log("Server responded:", json);
       if (res.ok) {
-        const target = recordNow ? `/record/status?recordingId=${json.recordingId}` : `/schedule`;
+        const { cacheKey, recordingId } = json;
+        const params = new URLSearchParams({
+            cacheKey,
+            recordingId,
+          });
+          
+          const target = recordNow
+            ? `/record/status?${params.toString()}`
+            : `/schedule`;
+        console.log("Would have redirected to Redirecting to:", target);
         window.location.href = target;
       } else {
         setStatus({ type: "error", message: json.error || "Unknown error" });

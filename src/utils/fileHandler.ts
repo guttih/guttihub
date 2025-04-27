@@ -3,13 +3,13 @@ import path from "path";
 import { existsSync } from "fs";
 import { RecordingJob } from "@/types/RecordingJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
-import { M3UEntry } from "@/types/M3UEntry";
 
 const CACHE_DIR = path.resolve(process.cwd(), ".cache");
 
 export function getCacheDir(): string {
     return CACHE_DIR;
 }
+
 
 export function getCacheFilePath(username: string, serviceName: string, extension: string): string {
     const safeService = serviceName.toLowerCase().replace(/\s+/g, "_");
@@ -39,6 +39,23 @@ export async function readJsonFile<T>(filePath: string): Promise<T> {
     }
 }
 
+export async function deleteFile(filePath: string): Promise<void> { 
+    try {
+        await fs.unlink(filePath);
+    } catch (err) {
+        console.error("❌ Failed to delete file:", filePath, err);
+        throw err;
+    }
+}
+
+export function deleteFileAndForget(filePath: string) { 
+    try {
+        fs.unlink(filePath);
+    } catch {
+        // Ignore errors
+    }
+}
+
 export async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
     const content = JSON.stringify(data, null, 2);
     await fs.writeFile(filePath, content, "utf-8");
@@ -52,7 +69,7 @@ export async function ensureRecordingJobsDir(): Promise<void> {
 export function getRecordingJobsDir(): string {
     return path.join(getCacheDir(), "recording-jobs");
 }
- 
+
   // Build the path to the bundle
   export function getInfoJsonPath(id: string): string {
     return path.join(getRecordingJobsDir(), `${id}-info.json`);
@@ -78,38 +95,14 @@ export function getRecordingJobsDir(): string {
 export async function writeRecordingJobFile(job: RecordingJob): Promise<void> {
     const dir = getRecordingJobsDir();
     await fs.mkdir(dir, { recursive: true });
-    const filePath = path.join(dir, `${job.recordingId}.json`);
+    const filePath = path.join(dir, `${job.cacheKey}.json`);
     await writeJsonFile(filePath, job);
 }
+export async function readRecordingJobFile(cacheKey: string): Promise<RecordingJob> {
 
-export async function readRecordingJobFile(recordingId: string): Promise<RecordingJob> {
     const dir = getRecordingJobsDir();
-    const filePath = path.join(dir, `${recordingId}.json`);
+    const filePath = path.join(dir, `${cacheKey}.json`);
     return await readJsonFile<RecordingJob>(filePath);
-}
-
-export async function readCashedEntryFile(cacheKey: string): Promise<M3UEntry | null> {
-    const dir = getCacheDir();
-    const recordingPath = `${dir}/recording_${cacheKey}.json`;
-    const entryPath = `${dir}/${cacheKey}.json`;
-
-    try {
-        let entry: M3UEntry;
-        if (await fileExists(recordingPath)) {
-            // console.log("🔍 Found recording file:", recordingPath);
-            entry = await readJsonFile<M3UEntry>(recordingPath);
-        } else if (await fileExists(entryPath)) {
-            // console.log("🔍 Found entry file:", entryPath);
-            entry = await readJsonFile<M3UEntry>(entryPath);
-        } else {
-            // console.warn("❌ No cache file found for:", cacheKey);
-            return null;
-        }
-
-        return entry;
-    } catch {
-        return null;
-    }
 }
 
 export async function readFile(filePath: string): Promise<string> {

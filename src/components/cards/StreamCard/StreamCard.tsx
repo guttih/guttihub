@@ -6,6 +6,7 @@ import { supportedFormats, getStreamFormatByExt, StreamFormat } from "@/types/St
 import { getExtension } from "@/utils/ui/getExtension";
 import { makeImageProxyUrl } from "@/utils/ui/makeImageProxyUrl";
 import { hasRole, UserRole } from "@/types/UserRole";
+import { showMessageBox } from "@/components/ui/MessageBox";
 
 interface Props {
     entry: M3UEntry;
@@ -65,13 +66,16 @@ export function StreamCard({
     };
 
     const handleRecord = async () => {
+        
         try {
+            console.log("Posting to /api/cache");
             setIsStartingRecording(true);
-            const res = await fetch("/api/cache-entry", {
+            const res = await fetch("/api/cache", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(entry),
             });
+            
 
             if (!res.ok) {
                 console.error("Failed to cache entry for recording");
@@ -96,7 +100,7 @@ export function StreamCard({
         if (canLiveStream) {
             try {
                 setIsStartingStreaming(true);
-                const res = await fetch("/api/cache-entry", {
+                const res = await fetch("/api/cache/entry", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(entry),
@@ -256,11 +260,11 @@ export function StreamCard({
                                         onDelete?.(entry);
                                     } else {
                                         const { error } = await res.json();
-                                        alert(`Failed to delete: ${error}`);
+                                        showMessageBox({variant: "error", title: "Error", message: error || "Failed to delete entry"});
                                     }
                                 } catch (err) {
                                     console.error("Delete failed:", err);
-                                    alert("Something went wrong while deleting.");
+                                    showMessageBox({variant: "error", title: "Error", message: "Something went wrong while deleting."});
                                 } finally {
                                     setIsStartingDelete(false); // Re-enable button
                                 }

@@ -24,6 +24,7 @@ import Link from "next/link";
 import { LiveDebugPanel } from "@/components/Live/LiveDebugPanel";
 
 import { hasRole, UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
+import { showMessageBox } from "@/components/ui/MessageBox";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -165,8 +166,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             const json: ApiResponse<M3UResponse> = await res.json();
 
             if (!json.success) {
-                alert(`Failed to load: ${json.error}`);
-                return;
+                return showMessageBox({ variant: "warning", title: "No items found", message: json.error, toast:true, blocking:false, position:"bottom-right", displayTime: 5000 });
             }
 
             setSnapshotId(json.data.snapshotId);

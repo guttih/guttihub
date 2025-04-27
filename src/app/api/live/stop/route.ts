@@ -8,16 +8,16 @@ import { LiveResolver } from "@/resolvers/LiveResolver";
 
 export async function POST(req: NextRequest) {
     try {
-        const { recordingId } = await req.json();
+        const { cacheKey  } = await req.json();
 
-        if (!recordingId) {
-            return new Response(JSON.stringify({ error: "Missing recordingId" }), {
+        if (!cacheKey ) {
+            return new Response(JSON.stringify({ error: "Missing live cacheKey" }), {
                 status: 400,
                 headers: { "Content-Type": "application/json" },
             });
         }
 
-        const job = await readRecordingJobFile(recordingId);
+        const job = await readRecordingJobFile(cacheKey );
         if (!job) {
             return new Response(JSON.stringify({ error: "Job not found" }), {
                 status: 404,
@@ -54,10 +54,10 @@ export async function POST(req: NextRequest) {
 
         if (job.format === "mp4") {
             // its a recording job
-            ScheduleResolver.stopRecording(recordingId);
+            ScheduleResolver.stopRecording(cacheKey);
         } else { 
             //its a live job
-            LiveResolver.stopRecording(recordingId);
+            LiveResolver.stopRecording(cacheKey);
         }
 
         const pid = parseInt(pidLine.replace("PID=", "").trim(), 10);
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         // try {
         //     process.kill(pid, "SIGTERM");
         // } catch {
-        //     //console.error("Failed to kill process of job with recordingId:", recordingId);
+        //     //console.error("Failed to kill process of job with cacheKey:", cacheKey);
         //     // Ignore error if process is already dead becuse LiveResolver or ScheduleResolver managed to kill it
         // }
 

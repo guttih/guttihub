@@ -8,26 +8,27 @@ import { RecordingJob } from "@/types/RecordingJob";
 
 function StatusPageContent() {
     const searchParams = useSearchParams();
-    const [recordingId, setRecordingId] = useState<string | null>(null);
+    const [cacheKey, setCacheKey] = useState<string | null>(null);
 
     useEffect(() => {
         // force update when the URL param changes
-        const id = searchParams.get("recordingId");
-        setRecordingId(id);
+        const key = searchParams.get("cacheKey");
+        setCacheKey(key);
     }, [searchParams]);
 
     const [job, setJob] = useState<RecordingJob | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!recordingId) return;
+        if (!cacheKey) return;
 
         const fetchData = async () => {
             try {
-                const jobRes = await fetch(`/api/record/job?recordingId=${recordingId}`);
+                const jobRes = await fetch(`/api/record/job?cacheKey=${cacheKey}`);
                 const jobJson = await jobRes.json();
+                console.log(`-> /api/record/job?cacheKey=${cacheKey}`, jobJson);
 
-                if (!jobRes.ok || !jobJson?.recordingId) throw new Error("Invalid job data");
+                if (!jobRes.ok || !jobJson?.cacheKey) throw new Error("Invalid job data");
 
                 setJob(jobJson);
             } catch (err: unknown) {
@@ -40,7 +41,7 @@ function StatusPageContent() {
         };
 
         fetchData();
-    }, [recordingId]);
+    }, [cacheKey]);
 
 
     if (error) return <div className="p-6 text-red-400">{error}</div>;

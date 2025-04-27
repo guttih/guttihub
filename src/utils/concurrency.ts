@@ -1,6 +1,6 @@
 // src/utils/concurrency.ts
 
-import { getActiveLiveJobs, getEntryByCacheKey } from "@/utils/record/recordingJobUtils";
+import { getActiveLiveJobs, readCashedEntryFile } from "@/utils/record/recordingJobUtils";
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 
 /**
@@ -30,7 +30,7 @@ export async function getCombinedActiveCount(serviceId: string): Promise<number>
   const jobs = await getActiveLiveJobs();
   let liveCount = 0;
   for (const job of jobs) {
-    const entry = await getEntryByCacheKey(job.cacheKey);
+    const entry = await readCashedEntryFile(job.cacheKey);
     if (!entry) continue;
 
     // figure out which service this entry belongs to

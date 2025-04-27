@@ -1,7 +1,7 @@
 // src/app/api/live/active/route.ts
 
 import { NextResponse } from "next/server";
-import { getActiveLiveJobs, getEntryByCacheKey } from "@/utils/record/recordingJobUtils";
+import { getActiveLiveJobs, readCashedEntryFile } from "@/utils/record/recordingJobUtils";
 import { RecordingJob } from "@/types/RecordingJob";
 
 
@@ -13,7 +13,7 @@ export async function GET() {
     const enriched = await Promise.all(
       jobs.map(async (job: RecordingJob) => {
             
-        const entry = await getEntryByCacheKey(job.cacheKey);
+        const entry = await readCashedEntryFile(job.cacheKey, "live-");
         return {
           recordingId: job.recordingId,
           cacheKey: job.cacheKey,

@@ -1,6 +1,7 @@
 "use client";
 import { UserRole } from "@/types/UserRole";
 import { useEffect, useState } from "react";
+import { showMessageBox } from "../ui/MessageBox";
 
 interface LiveJob {
     recordingId: string;
@@ -83,15 +84,14 @@ export function LiveDebugPanel({ userRole,  hideIfNone = true, title = "🧪 Liv
                                 const res = await fetch("/api/live/stop", {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ recordingId: job.recordingId }),
+                                    body: JSON.stringify({ recordingId: job.cacheKey }),
                                 });
 
                                 if (!res.ok) throw new Error("Failed to stop stream");
 
                                 setJobs((prev) => prev.filter((j) => j.recordingId !== job.recordingId));
                             } catch (err) {
-                                alert(`Failed to stop stream: ${err}`);
-                                console.error(err);
+                                showMessageBox({ variant: "error", title: "Error", message: `Failed to stop stream: ${err}`});
                             }
                         }}
                     >

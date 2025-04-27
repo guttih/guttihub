@@ -9,14 +9,15 @@ export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const id = new URL(req.url).searchParams.get("recordingId");
-    if (!id) return NextResponse.json({ error: "Missing recordingId" }, { status: 400 });
+    const recordingId = new URL(req.url).searchParams.get("recordingId");
+    const cacheKey = new URL(req.url).searchParams.get("cacheKey");
+    if (!recordingId) return NextResponse.json({ error: "Missing recordingId" }, { status: 400 });
 
     try {
-        const info = await getRecordingJobInfo(id);
+        const info = await getRecordingJobInfo(cacheKey, recordingId);
         return NextResponse.json({ log: info.logs.join("\n") });
     } catch (err) {
-        console.warn("Failed to load logs for", id, err);
+        console.warn("Failed to load logs for", recordingId, err);
         return NextResponse.json({ log: "(log unavailable)" });
     }
 }

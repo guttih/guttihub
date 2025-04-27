@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runJobctl } from "@/utils/jobctl";
 import { SystemScheduledJob } from "@/types/SystemScheduledJob";
 import { Job, JobctlResult } from "@/types/Jobctl";
-import { jobctlToSystemScheduledJobMapper } from "@/utils/jobctlMappers";
+import { jobctlToSystemScheduledJobMapper } from "@/types/SystemScheduledJob";
 
 /* ---------- list -------------------------------------------------- */
 export async function GET() {
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
         description?: string;
         command?: string;
     };
+    
     if (!datetime || !description || !command) return NextResponse.json({ ok: false, error: "Missing field" }, { status: 400 });
 
     const json = await runJobctl("add", datetime, description, command);

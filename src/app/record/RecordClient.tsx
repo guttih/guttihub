@@ -20,7 +20,7 @@ export default function RecordClient() {
       }
 
       try {
-        const res = await fetch(`/api/entry-by-cachekey?cacheKey=${cacheKey}`);
+        const res = await fetch(`/api/cache/${cacheKey}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to fetch entry");
         setEntry(data.entry);
