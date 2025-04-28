@@ -21,7 +21,7 @@ import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect
 import { Spinner } from "@/components/Spinner/Spinner";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { LiveDebugPanel } from "@/components/Live/LiveDebugPanel";
+import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel";
 
 import { hasRole, UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
 import { showMessageBox } from "@/components/ui/MessageBox";
@@ -481,7 +481,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 </fieldset>
             </div>
             <div className="flex flex-wrap items-end gap-4 mb-6">
-                <LiveDebugPanel userRole={userRole} />
+                <LiveMonitorPanel userRole={userRole} />
             </div>
             {player.visible && player.mode === "inline" && (
                 <InlinePlayer

@@ -2,7 +2,7 @@ import classNames from "classnames";
 import { forwardRef, ButtonHTMLAttributes } from "react";
 
 export interface BaseButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: "default" | "danger" | "important" | "success" | "secondary";
+    variant?: "default" | "danger"| "warning" | "important" | "success" | "secondary";
     size?: "sm" | "md" | "lg";
     className?: string;
   }
@@ -24,6 +24,7 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
         danger: "bg-red-600 text-white hover:bg-red-700",
         success: "bg-green-600 text-white hover:bg-green-700",
         secondary: "bg-gray-500 text-white hover:bg-gray-400",
+        warning: "bg-yellow-600 text-white hover:bg-yellow-700",
       };
 
     return (

@@ -1,4 +1,4 @@
-import { fileExists, getCacheDir, getRecordingJobsDir, readJsonFile } from "@/utils/fileHandler";
+import { fileExists, getCacheDir, getRecordingJobsDir, readJsonFile, readFile  } from "@/utils/fileHandler";
 import { RecordingJob } from "@/types/RecordingJob";
 import { parseLatestStatus } from "@/utils/resolverUtils";
 import path from "path";
@@ -65,10 +65,35 @@ export async function getActiveLiveJobs(): Promise<RecordingJob[]> {
             const status = parseLatestStatus(raw).STATUS;
 
             if (status === "live" || status === "recording") {
-                active.push(job);
+                const pidAlive = await isPidRunningFromStatus(job.statusFile);
+                if (pidAlive) {
+                    active.push(job);
+                } else {
+                    console.warn(`🧟 Zombie detected: job ${job.recordingId} is dead but status=${status}`);
+                }
             }
         })
     );
 
     return active;
+}
+
+
+import { readFileRaw } from "@/utils/fileHandler"; // make sure this is imported!
+
+export async function isPidRunningFromStatus(statusFilePath: string): Promise<boolean> {
+    try {
+        const raw = await readFileRaw(statusFilePath);
+        const pidMatch = raw.match(/^PID=(\d+)/m);
+        if (!pidMatch) return false;
+
+        const pid = parseInt(pidMatch[1], 10);
+        if (isNaN(pid)) return false;
+
+        // 🧟 Check if the process exists by looking in /proc
+        return await fileExists(`/proc/${pid}`);
+    } catch (err) {
+        console.warn(`⚠️ Failed to check PID from ${statusFilePath}`, err);
+        return false;
+    }
 }

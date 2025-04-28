@@ -1,9 +1,10 @@
 // src/app/api/record/monitor/route.ts
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { infoJsonExists, readRecordingJobInfo, readRecordingJobFile } from "@/utils/fileHandler";
 import { readRecordingLogFile, readRecordingStatusFile } from "@/utils/resolverUtils";
-import { getRecordingJobsDir, readRecordingJobFile, infoJsonExists, readRecordingJobInfo } from "@/utils/fileHandler";
-import path from "path";
+import { isPidRunningFromStatus } from "@/utils/record/recordingJobUtils";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // --- Try to find finalized info first ---
+    // --- Finalized recordings first ---
     if (recordingId && infoJsonExists(recordingId)) {
       const info = await readRecordingJobInfo(recordingId);
       return NextResponse.json({
@@ -34,15 +35,21 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // --- Otherwise live monitor from working files ---
+    // --- Otherwise live recording ---
     const job = await readRecordingJobFile(cacheKey!);
 
     const statusLinesRaw = await readRecordingStatusFile(job.statusFile);
     const logLinesRaw = await readRecordingLogFile(job.logFile);
 
-    const latestStatus = Array.isArray(statusLinesRaw.STATUS)
+    let latestStatus = Array.isArray(statusLinesRaw.STATUS)
       ? statusLinesRaw.STATUS[statusLinesRaw.STATUS.length - 1]
       : statusLinesRaw.STATUS ?? "unknown";
+
+    // 🔥 Detect if FFmpeg is actually dead
+    if ((latestStatus === "recording" || latestStatus === "live") && !(await isPidRunningFromStatus(job.statusFile))) {
+      console.warn(`🧟 Zombie recording detected for ${job.recordingId}`);
+      latestStatus = "error"; // or "dead" or "interrupted"
+    }
 
     return NextResponse.json({
       recordingId: job.recordingId || "(unknown)",

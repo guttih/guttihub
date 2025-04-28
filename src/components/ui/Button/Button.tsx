@@ -20,6 +20,7 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
         const variantMap = {
             default: "bg-blue-600 text-white hover:bg-blue-700",
             danger: "bg-red-600 text-white hover:bg-red-700",
+            
         };
 
         return (

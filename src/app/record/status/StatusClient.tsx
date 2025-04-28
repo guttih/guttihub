@@ -51,25 +51,10 @@ export default function StatusClient({ job }: Props) {
     return (
         <div className="p-6 text-sm text-gray-300 max-w-2xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-lg font-semibold">Recording Status</h1>
-                <StatusBadge status={status} />
+                <h1 className="text-lg font-semibold">Recording</h1>
             </div>
             <div className="space-y-1 text-xs text-gray-400 border border-gray-700 rounded p-3 bg-gray-900">
-                <div>
-                    <strong>cacheKey:</strong> {job.cacheKey}
-                </div>
-                <div>
-                    <strong>cacheKey:</strong> {job.cacheKey}
-                </div>
-                <div>
-                    <strong>user:</strong> {job.user}
-                </div>
-                <div>
-                    <strong>duration:</strong> {job.duration}s
-                </div>
-                <div>
-                    <strong>createdAt:</strong> {new Date(job.createdAt).toLocaleString()}
-                </div>
+
                 {job.cacheKey && status !== "done" && (
                     <div className="mt-2">
                         <strong>Output:</strong>{" "}
@@ -109,7 +94,7 @@ export default function StatusClient({ job }: Props) {
                     </div>
                 )}
             </div>
-            <RecordingMonitor cacheKey={job.cacheKey} />
+            <RecordingMonitor cacheKey={job.cacheKey} onStopRecording={handleStopRecording} />
             {status === "done" && (
                 <div className="mt-6 text-green-400 bg-green-900 border border-green-700 rounded p-3 text-sm">
                     ✅ Recording complete! You may close this tab or open the output file above.

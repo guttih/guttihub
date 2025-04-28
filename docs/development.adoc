@@ -166,26 +166,60 @@ This provides real-time autocomplete, previews, and hover tooltips for Tailwind 
 
 == Local Deployment Setup
 
-=== Using PM2 for Process Management
+[NOTE]
+====
+Quick PM2 Commands:
 
-This project recommends using https://pm2.keymetrics.io/[PM2] to run the production server reliably in the background.
+- Start: `pm2 start ecosystem.config.js --env production`
+- Restart: `pm2 reload ecosystem.config.js --env production`
+- Logs: `pm2 logs`
+- List: `pm2 list`
+====
 
-First, install PM2 globally on your server:
 
+=== Running with PM2
+
+This project uses PM2 for production process management.
+
+.Install PM2 (if not already)
 [source,sh]
 ----
 npm install -g pm2
 ----
 
-Then, after deploying your files, start the server:
-
+.Start the app (production mode)
 [source,sh]
 ----
 cd /var/www/guttihub
 npm install --omit=dev
-pm2 start npm --name guttihub -- run start --env production
+pm2 start ecosystem.config.js --env production
 pm2 save
 ----
+
+.Check logs and status
+[source,sh]
+----
+pm2 logs
+pm2 list
+----
+
+.Restart manually if needed
+[source,sh]
+----
+pm2 reload ecosystem.config.js --env production
+----
+
+.Enable auto-start after reboot
+[source,sh]
+----
+pm2 startup
+pm2 save
+----
+
+.App Ports
+- Dev: `PORT=3000`
+- Prod: `PORT=6301`
+
 
 To ensure PM2 restarts the app after a server reboot:
 

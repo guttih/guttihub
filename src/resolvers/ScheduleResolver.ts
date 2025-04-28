@@ -100,6 +100,12 @@ export class ScheduleResolver {
                 detached: true,
                 stdio: "ignore",
             }).unref();
+
+            // Lets console.log the whole command so we can test it in the terminal
+            console.log(" -------------      Command given      -------------");
+            console.log("bash", ScheduleResolver.scriptStartRecording, ...args);
+            console.log("----------------------------------------------------");
+
     
             return {
                 success: true,

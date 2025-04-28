@@ -108,4 +108,18 @@ export class StreamingServiceResolver {
       return '';
     }
   }
+
+  static extractServerFromUrl(url: string): string | null {
+    try {
+      const parts = url.split("/");
+      if (parts.length < 3) return null;
+
+      const server = parts[0] + "//" + parts[2];
+      return server;
+    } catch {
+      return null;
+    }
+  }
+
 }
+

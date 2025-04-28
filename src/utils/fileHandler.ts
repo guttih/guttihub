@@ -130,3 +130,24 @@ export async function isFileFresh(filePath: string, maxAgeMs: number): Promise<b
         return false;
     }
 }
+
+
+export async function readStatusFile(filePath: string): Promise<Record<string, string>> {
+    try {
+        const raw = await readFile(filePath, "utf-8");
+        const lines = raw.split("\n");
+        const obj: Record<string, string> = {};
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith("#")) continue;
+            const [key, ...valueParts] = trimmed.split("=");
+            if (key && valueParts.length > 0) {
+                obj[key] = valueParts.join("="); // allow '=' in values
+            }
+        }
+        return obj;
+    } catch (err) {
+        console.warn(`⚠️ readStatusFile(${filePath}) failed`, err);
+        return {}; // <– instead of throwing error, we return empty object
+    }
+}

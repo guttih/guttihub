@@ -4,8 +4,9 @@
 import { useEffect, useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge/StatusBadge";
 import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
+import { BaseButton } from "@/components/ui/BaseButton/BaseButton";
 
-interface MonitorData {
+export interface MonitorData {
     cacheKey: string;
     recordingId?: string;
     user?: string;
@@ -18,45 +19,73 @@ interface MonitorData {
     startedAt?: string;
     expectedStop?: string;
     serverTime?: string;
-    intervalMs?: number;
     log: string;
     status: Record<string, string>;
 }
 
-export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2000 }: MonitorData) {
+interface RecordingMonitorProps {
+    cacheKey?: string;
+    recordingId?: string;
+    intervalMs?: number;
+    onStopRecording?: () => void;
+}
+
+export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2000, onStopRecording }: RecordingMonitorProps) {
     const [monitorData, setMonitorData] = useState<MonitorData | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        let mounted = true;
+    const [stopCountdown, setStopCountdown] = useState<number | null>(null);
 
-        const fetchMonitorData = async () => {
-            try {
-                const params = new URLSearchParams();
-                if (cacheKey) params.set("cacheKey", cacheKey);
-                if (recordingId) params.set("recordingId", recordingId);
+useEffect(() => {
+  let interval: NodeJS.Timeout;
+  let mounted = true;
 
-                const res = await fetch(`/api/record/monitor?${params.toString()}`);
-                const json = await res.json();
+  const fetchMonitorData = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (cacheKey) params.set("cacheKey", cacheKey);
+      if (recordingId) params.set("recordingId", recordingId);
 
-                if (!res.ok) throw new Error(json.error || "Failed to fetch monitor data");
+      const res = await fetch(`/api/record/monitor?${params.toString()}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to fetch monitor data");
 
-                if (mounted) setMonitorData(json);
-            } catch (err) {
-                console.error("❌ Monitor fetch failed:", err);
-                if (mounted) setError((err as Error).message);
-            }
-        };
+      if (mounted) {
+        setMonitorData(json);
 
-        fetchMonitorData();
-        interval = setInterval(fetchMonitorData, intervalMs);
+        const lowerStatus = json.currentStatus?.toLowerCase();
+        if (["done", "stopped", "error"].includes(lowerStatus)) {
+          if (stopCountdown === null) {
+            setStopCountdown(5); // start 5 pulls grace period
+          }
+        } else {
+          setStopCountdown(null); // reset countdown if recording again
+        }
+      }
+    } catch (err) {
+      console.error("❌ Monitor fetch failed:", err);
+      if (mounted) setError((err as Error).message);
+    }
+  };
 
-        return () => {
-            mounted = false;
-            clearInterval(interval);
-        };
-    }, [cacheKey, recordingId, intervalMs]);
+  fetchMonitorData();
+  interval = setInterval(() => {
+    if (stopCountdown !== null && stopCountdown <= 0) {
+      clearInterval(interval);
+    } else {
+      fetchMonitorData();
+      if (stopCountdown !== null) {
+        setStopCountdown(prev => (prev !== null ? prev - 1 : null));
+      }
+    }
+  }, intervalMs);
+
+  return () => {
+    mounted = false;
+    clearInterval(interval);
+  };
+}, [cacheKey, recordingId, intervalMs, stopCountdown]);
+
 
     if (error) {
         return <div className="p-4 text-red-400">❌ {error}</div>;
@@ -66,26 +95,19 @@ export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2
         return <div className="p-4 text-gray-400">Loading monitor info...</div>;
     }
 
-    function getStatusColor(status: string) {
-        switch (status) {
-            case "recording":
-                return "bg-yellow-500 text-black";
-            case "done":
-                return "bg-green-600 text-white";
-            case "stopped":
-                return "bg-blue-500 text-white";
-            case "error":
-                return "bg-red-600 text-white";
-            default:
-                return "bg-gray-500 text-white";
-        }
-    }
-
     return (
         <div className="space-y-6 p-4">
             {/* Top status box */}
             <div className="bg-gray-900 p-4 rounded-xl shadow-md space-y-2">
-                <h2 className="text-2xl font-bold mb-4">Recording Monitor</h2>
+            <div className="flex items-center justify-between">
+    <h2 className="text-2xl font-bold">Recording Monitor</h2>
+    {monitorData?.currentStatus?.toLowerCase() === "recording" && onStopRecording && (
+        <BaseButton variant="secondary" size="sm" onClick={onStopRecording}>
+            🛑 Stop
+        </BaseButton>
+    )}
+</div>
+
 
                 <div className="text-sm space-y-1 mb-4">
                     <div>
@@ -103,19 +125,7 @@ export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2
                     <div>
                         <b>createdAt:</b> {monitorData?.createdAt ?? "(unknown)"}
                     </div>
-                    {monitorData.outputFile && (
-                        <div>
-                            <b>Output:</b>{" "}
-                            <a
-                                href={`/${monitorData.outputFile.replace(/^public\//, "")}`}
-                                className="text-blue-400 underline hover:text-blue-300"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                Live Stream playlist
-                            </a>
-                        </div>
-                    )}
+                   
                 </div>
 
                 {/* Recording Status */}
