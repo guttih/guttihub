@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { RecordingJob } from "@/types/RecordingJob";
-import { StatusBadge } from "@/components/StatusBadge/StatusBadge";
 import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
 import RecordingMonitor from "@/components/RecordingMonitor/RecordingMonitor";
 
@@ -11,7 +10,6 @@ interface Props {
 }
 
 export default function StatusClient({ job }: Props) {
-    const [autoScroll, setAutoScroll] = useState(true);
     const [status, setStatus] = useState<string>("loading");
     const [isStopping, setIsStopping] = useState(false);
     const [isStopped, setIsStopped] = useState(false);

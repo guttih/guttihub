@@ -6,8 +6,10 @@ import path from "path";
 import { readRecordingJobFile, readRecordingJobInfo, infoJsonExists, readFileRaw, getRecordingJobsDir } from "@/utils/fileHandler";
 import { getCacheDir, readJsonFile, writeJsonFile } from "@/utils/fileHandler";
 import { RecordingJob } from "@/types/RecordingJob";
+import { DownloadJob } from "@/types/DownloadJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 import { getActiveLiveJobs } from "@/utils/record/recordingJobUtils";
+import { M3UEntry } from "@/types/M3UEntry";
 
 export function buildRecordingId(prefix:string, date: Date, url: string,  extension: string | null = null ): string {
     const dateStr = date.toISOString().slice(2, 19).replace(/[-:]/g, "").replace("T", "T");
@@ -17,6 +19,27 @@ export function buildRecordingId(prefix:string, date: Date, url: string,  extens
         const fileName = `${prefix}${dateStr}-${streamId}${ext}`;
     return fileName;
 }
+
+
+// 🔥 Create a safe filename from an M3UEntry
+export function makeSafeDiskName(entry: M3UEntry): string {
+    const base = entry.name || "unnamed";
+  
+    const safe = base
+      .replace(/[^a-zA-Z0-9-_]/g, "_") // Replace anything not safe
+      .replace(/_+/g, "_")             // Collapse multiple underscores
+      .replace(/^_+|_+$/g, "")          // Trim underscores
+      .toLowerCase();
+  
+    return safe || "untitled";
+  }
+
+  export function getExtensionFromUrl(url: string): string {
+    const match = url.match(/\.(\w+)(?:\?|$)/);
+    return match ? match[1].toLowerCase() : "mp4";
+  }
+  
+  
 
 // 🕓 Timestamp like 240417T124312
 export function getHumanReadableTimestamp(): string {
@@ -269,3 +292,30 @@ export function humanizeStatus(raw: string): string {
             return "Unknown";
     }
 }
+
+
+
+
+/**
+ * Maps a DownloadJob to a RecordingJob format for monitoring UI.
+ */
+
+export function mapDownloadJobToRecordingJob(downloadJob: DownloadJob /*, status: DownloadStatus */): RecordingJob {
+    // TODO: Later we might also use `status` to enrich or verify the job info
+    return {
+      recordingId: downloadJob.recordingId,
+      cacheKey: downloadJob.cacheKey,
+      user: downloadJob.user,
+      outputFile: downloadJob.outputFile,
+      logFile: downloadJob.logFile,
+      statusFile: downloadJob.statusFile,
+      duration: 0,
+      format: downloadJob.format,
+      recordingType: downloadJob.recordingType,
+      startTime: downloadJob.startTime,
+      createdAt: downloadJob.createdAt,
+      entry: downloadJob.entry,
+    };
+  }
+  
+  

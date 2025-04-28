@@ -5,7 +5,7 @@ import path from "path";
 import { LiveParams } from "@/types/LiveParams";
 import { RecordingJob } from "@/types/RecordingJob";
 import { readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
-import { buildRecordingId, cleanupStreamingJobs } from "@/utils/resolverUtils";
+import { buildRecordingId } from "@/utils/resolverUtils";
 
 export class LiveResolver {
     static startStreamScript = path.resolve("src/scripts/live.sh");

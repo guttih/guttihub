@@ -9,6 +9,7 @@ import { hasRole, UserRole } from "@/types/UserRole";
 import { showMessageBox } from "@/components/ui/MessageBox";
 
 interface Props {
+    userName?: string;
     entry: M3UEntry;
     serviceId: string;
     userRole: UserRole;
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function StreamCard({
+    userName,
     entry,
     serviceId,
     userRole,
@@ -45,12 +47,14 @@ export function StreamCard({
     const allowedToStreamLive = showStreamButton && hasRole(userRole, "streamer");
     const allowedToRecordStream = showRecordButton && hasRole(userRole, "moderator");
     const allowedToDelete = showDeleteButton && showPlayButton && hasRole(userRole, "admin");
+    const allowedToDownload = showDownloadButton && hasRole(userRole, "moderator");
     const format = getStreamFormatByExt(entry.url);
     const canLiveStream = format === StreamFormat.M3U8 || format === StreamFormat.UNKNOWN;
     // const isMovie = format === StreamFormat.MP4 || format === StreamFormat.MKV;
     const showPlay = !!onPlay && (extensionIsSupported || canLiveStream) && allowedToPlayMovies;
 
     const [isStartingStreaming, setIsStartingStreaming] = useState(false);
+    const [isStartingdownloading, setIsStartingDownloading] = useState(false);
     const [isStartingRecording, setIsStartingRecording] = useState(false);
     const [isStartingPlaying, setIsStartingPlaying] = useState(false);
     const [isStartingDelete, setIsStartingDelete] = useState(false);
@@ -66,7 +70,6 @@ export function StreamCard({
     };
 
     const handleRecord = async () => {
-        
         try {
             console.log("Posting to /api/cache");
             setIsStartingRecording(true);
@@ -75,7 +78,6 @@ export function StreamCard({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(entry),
             });
-            
 
             if (!res.ok) {
                 console.error("Failed to cache entry for recording");
@@ -107,7 +109,6 @@ export function StreamCard({
                 });
 
                 if (!res.ok) {
-                    
                     throw new Error("Failed to cache entry");
                 }
 
@@ -133,6 +134,41 @@ export function StreamCard({
             setIsStartingPlaying(true);
             onPlay(entry.url);
             setIsStartingPlaying(false);
+        }
+    };
+
+    const handleDownload = async () => {
+        try {
+            setIsStartingDownloading(true);
+            const res = await fetch("/api/cache", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(entry),
+            });
+
+            if (!res.ok) {
+                throw new Error("Failed to cache entry");
+            }
+
+            const { cacheKey } = await res.json();
+            const startRes = await fetch("/api/download/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cacheKey, entry, user: userName }),
+            });
+
+            if (!startRes.ok) {
+                console.error("Failed to start download");
+                setIsStartingDownloading(false);
+                return;
+            }
+
+            const { recordingId } = await res.json();
+            console.log("✅ Started download job:", recordingId);
+        } catch (err) {
+            console.error("❌ Error starting download:", err);
+        } finally {
+            setIsStartingRecording(false);
         }
     };
 
@@ -241,15 +277,17 @@ export function StreamCard({
                         </button>
                     )}
 
-                    {showDownloadButton && extensionIsSupported && (extension === "mp4" || extension === "mkv") && (
+                    {allowedToDownload && extensionIsSupported && (extension === "mp4" || extension === "mkv") && (
                         <button
-                            onClick={() => window.open(entry.url, "_blank")}
-                            title="Download Movie"
+                            onClick={handleDownload}
+                            disabled={isStartingdownloading}
+                            title="Queue Download"
                             className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-purple-600 text-white shadow-md ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300 text-xl"
                         >
                             💾
                         </button>
                     )}
+
                     {allowedToDelete && (
                         <button
                             onClick={async () => {
@@ -260,11 +298,11 @@ export function StreamCard({
                                         onDelete?.(entry);
                                     } else {
                                         const { error } = await res.json();
-                                        showMessageBox({variant: "error", title: "Error", message: error || "Failed to delete entry"});
+                                        showMessageBox({ variant: "error", title: "Error", message: error || "Failed to delete entry" });
                                     }
                                 } catch (err) {
                                     console.error("Delete failed:", err);
-                                    showMessageBox({variant: "error", title: "Error", message: "Something went wrong while deleting."});
+                                    showMessageBox({ variant: "error", title: "Error", message: "Something went wrong while deleting." });
                                 } finally {
                                     setIsStartingDelete(false); // Re-enable button
                                 }

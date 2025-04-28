@@ -289,7 +289,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
                 {/* existing user name */}
                 <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
-                    {session?.user?.name} {userRole}
+                        {session?.user?.name ?? "unknown"} {userRole}
                 </h3>
             </div>
 
@@ -537,6 +537,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                         // The card figures out if user is allowed to see the buttons based on userRole, app only thinks about the count of cuncurrent viewers
                         <StreamCard
                             key={entry.url}
+                            userName={session?.user?.name ?? "unknown"}
                             serviceId={activeService?.id ?? ""}
                             entry={entry}
                             userRole={userRole}
@@ -545,6 +546,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                             showPlayButton={showPlayButton}
                             showStreamButton={showStreaming}
                             showDeleteButton={activeService?.hasFileAccess}
+                            showDownloadButton={!activeService?.hasFileAccess}
                             onPlay={(url) => handlePlay(url)}
                             onDelete={(deletedEntry) => setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))}
                         />

@@ -13,7 +13,7 @@ export async function isProcessAlive(pid: number): Promise<boolean> {
   try {
     const { stdout } = await execAsync(`ps -p ${pid} -o pid=`);
     return stdout.trim() !== "";
-  } catch (err) {
+  } catch  {
     return false; // Assume not alive on error
   }
 }

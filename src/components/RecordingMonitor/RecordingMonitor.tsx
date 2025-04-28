@@ -36,55 +36,55 @@ export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2
 
     const [stopCountdown, setStopCountdown] = useState<number | null>(null);
 
-useEffect(() => {
-  let interval: NodeJS.Timeout;
-  let mounted = true;
-
-  const fetchMonitorData = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (cacheKey) params.set("cacheKey", cacheKey);
-      if (recordingId) params.set("recordingId", recordingId);
-
-      const res = await fetch(`/api/record/monitor?${params.toString()}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to fetch monitor data");
-
-      if (mounted) {
-        setMonitorData(json);
-
-        const lowerStatus = json.currentStatus?.toLowerCase();
-        if (["done", "stopped", "error"].includes(lowerStatus)) {
-          if (stopCountdown === null) {
-            setStopCountdown(5); // start 5 pulls grace period
+    useEffect(() => {
+        let mounted = true;
+    
+        const fetchMonitorData = async () => {
+          try {
+            const params = new URLSearchParams();
+            if (cacheKey) params.set("cacheKey", cacheKey);
+            if (recordingId) params.set("recordingId", recordingId);
+    
+            const res = await fetch(`/api/record/monitor?${params.toString()}`);
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || "Failed to fetch monitor data");
+    
+            if (mounted) {
+              setMonitorData(json);
+    
+              const lowerStatus = json.currentStatus?.toLowerCase();
+              if (["done", "stopped", "error"].includes(lowerStatus)) {
+                if (stopCountdown === null) {
+                  setStopCountdown(5); // start 5 pulls grace period
+                }
+              } else {
+                setStopCountdown(null); // reset countdown if recording again
+              }
+            }
+          } catch (err) {
+            console.error("❌ Monitor fetch failed:", err);
+            if (mounted) setError((err as Error).message);
           }
-        } else {
-          setStopCountdown(null); // reset countdown if recording again
-        }
-      }
-    } catch (err) {
-      console.error("❌ Monitor fetch failed:", err);
-      if (mounted) setError((err as Error).message);
-    }
-  };
-
-  fetchMonitorData();
-  interval = setInterval(() => {
-    if (stopCountdown !== null && stopCountdown <= 0) {
-      clearInterval(interval);
-    } else {
-      fetchMonitorData();
-      if (stopCountdown !== null) {
-        setStopCountdown(prev => (prev !== null ? prev - 1 : null));
-      }
-    }
-  }, intervalMs);
-
-  return () => {
-    mounted = false;
-    clearInterval(interval);
-  };
-}, [cacheKey, recordingId, intervalMs, stopCountdown]);
+        };
+    
+        fetchMonitorData();
+    
+        const interval = setInterval(() => {
+          if (stopCountdown !== null && stopCountdown <= 0) {
+            clearInterval(interval);
+          } else {
+            fetchMonitorData();
+            if (stopCountdown !== null) {
+              setStopCountdown((prev) => (prev !== null ? prev - 1 : null));
+            }
+          }
+        }, intervalMs);
+    
+        return () => {
+          mounted = false;
+          clearInterval(interval);
+        };
+      }, [cacheKey, recordingId, intervalMs, stopCountdown]);
 
 
     if (error) {

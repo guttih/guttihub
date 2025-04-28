@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import StatusBadge from "@/components/StatusBadge/StatusBadge";
+import { StatusBadge } from "@/components/StatusBadge/StatusBadge";
 import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
 import { LiveStatusPackagingBar } from "../LiveStatusPackagingBar/LiveStatusPackagingBar";
 

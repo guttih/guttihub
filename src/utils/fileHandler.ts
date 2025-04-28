@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
+import { DownloadJob } from "@/types/DownloadJob";
 import { RecordingJob } from "@/types/RecordingJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 
@@ -18,6 +19,10 @@ export function getCacheFilePath(username: string, serviceName: string, extensio
 
 export async function ensureCacheDir(): Promise<void> {
     await fs.mkdir(CACHE_DIR, { recursive: true });
+}
+
+export async function ensureDownloadJobsDir(): Promise<void> {
+    await fs.mkdir(getDownloadJobsDir(), { recursive: true });
 }
 
 export async function fileExists(filePath: string): Promise<boolean> {
@@ -70,6 +75,10 @@ export function getRecordingJobsDir(): string {
     return path.join(getCacheDir(), "recording-jobs");
 }
 
+export function getDownloadJobsDir(): string {
+    return path.join(getCacheDir(), "downloading-jobs");
+}
+
   // Build the path to the bundle
   export function getInfoJsonPath(id: string): string {
     return path.join(getRecordingJobsDir(), `${id}-info.json`);
@@ -105,6 +114,24 @@ export async function readRecordingJobFile(cacheKey: string): Promise<RecordingJ
     return await readJsonFile<RecordingJob>(filePath);
 }
 
+export async function readDownloadJobFile(cacheKey: string): Promise<DownloadJob> {
+
+    const dir = getDownloadJobsDir();
+    const filePath = path.join(dir, `${cacheKey}.json`);
+    return await readJsonFile<DownloadJob>(filePath);
+}
+
+export async function writeDownloadingJobFile(job: DownloadJob): Promise<void> {
+    const dir = getDownloadJobsDir();
+    await fs.mkdir(dir, { recursive: true });
+    const filePath = path.join(dir, `${job.cacheKey}.json`);
+    await writeJsonFile(filePath, job);
+}
+
+
+
+
+
 export async function readFile(filePath: string): Promise<string> {
     return fs.readFile(filePath, "utf-8");
 }
@@ -134,7 +161,7 @@ export async function isFileFresh(filePath: string, maxAgeMs: number): Promise<b
 
 export async function readStatusFile(filePath: string): Promise<Record<string, string>> {
     try {
-        const raw = await readFile(filePath, "utf-8");
+        const raw = await readFile(filePath);
         const lines = raw.split("\n");
         const obj: Record<string, string> = {};
         for (const line of lines) {
@@ -151,3 +178,5 @@ export async function readStatusFile(filePath: string): Promise<Record<string, s
         return {}; // <– instead of throwing error, we return empty object
     }
 }
+
+

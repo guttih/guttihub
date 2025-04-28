@@ -103,7 +103,7 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
                                         </a>
                                     )}
                                     {(canStopRecording || (canStopStream && job.format === "hls-live")) &&
-                                        (job.status === "recording" || job.status === "live") && (
+                                        (job.status === "recording" || job.status === "live" || job.status === "downloading") && (
                                             <button
                                                 className="text-red-500 hover:text-red-400"
                                                 onClick={async () => {
@@ -114,14 +114,14 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
                                                             body: JSON.stringify({ cacheKey: job.cacheKey }),
                                                         });
 
-                                                        if (!res.ok) throw new Error("Failed to stop stream");
+                                                        if (!res.ok) throw new Error("Failed to stop job");
 
                                                         setJobs((prev) => prev.filter((j) => j.recordingId !== job.recordingId));
                                                     } catch (err) {
                                                         showMessageBox({
                                                             variant: "error",
                                                             title: "Error",
-                                                            message: `Failed to stop stream: ${err}`,
+                                                            message: `Failed to stop job: ${err}`,
                                                         });
                                                     }
                                                 }}

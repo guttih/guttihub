@@ -1,4 +1,4 @@
-import { fileExists, getCacheDir, getRecordingJobsDir, readJsonFile, readFile  } from "@/utils/fileHandler";
+import { fileExists, getCacheDir, getRecordingJobsDir, readJsonFile  } from "@/utils/fileHandler";
 import { RecordingJob } from "@/types/RecordingJob";
 import { parseLatestStatus } from "@/utils/resolverUtils";
 import path from "path";
