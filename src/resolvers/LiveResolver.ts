@@ -8,27 +8,27 @@ import { readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler
 import { buildRecordingId, cleanupStreamingJobs } from "@/utils/resolverUtils";
 
 export class LiveResolver {
-    static recordScript = path.resolve("src/scripts/live.sh");
-    static stopRecordScript = path.resolve("src/scripts/stop-record.sh");
+    static startStreamScript = path.resolve("src/scripts/live.sh");
+    static stopStreamScript = path.resolve("src/scripts/stop-record.sh");
 
-    static async stopRecording(cacheKey: string): Promise<{ success: boolean; message?: string; error?: string }> {
-        
-        const job = await readRecordingJobFile(cacheKey);
-        // const jobPath = path.join(getRecordingJobsDir(), `${cacheKey}.json`);
-        // const job = await readJsonFile<RecordingJob>(jobPath);
-         const args = ["--outputFile", job.outputFile];
-
-        spawn("bash", [LiveResolver.stopRecordScript, ...args], {
+    static async stopStream(cacheKey: string): Promise<{ success: boolean; message?: string; error?: string }> {
+        try {
+          const job = await readRecordingJobFile(cacheKey);
+          if (!job) throw new Error("Live job not found");
+    
+          const args = ["--outputFile", job.outputFile];
+    
+          spawn("bash", [LiveResolver.stopStreamScript, ...args], {
             detached: true,
-            stdio: "ignore", // Don't wait on stdout/stderr
-        }).unref();
-
-        cleanupStreamingJobs();
-        return {
-            success: true,
-            message: `Recording ${job.recordingId} stopped.`,
-        };
-    }
+            stdio: "ignore",
+          }).unref();
+    
+          return { success: true };
+        } catch (err) {
+          console.error("❌ LiveResolver.stopStream failed", err);
+          return { success: false, error: (err as Error).message };
+        }
+      }
 
     static makeStreamFilePath(prefix: string, cashe: string): string {
         return `${prefix}/${cashe}`;
@@ -64,9 +64,9 @@ export class LiveResolver {
 
         console.log("📝 Writing recording job metadata:", job);
         await writeRecordingJobFile(job);
-        console.log("Entire command:", LiveResolver.recordScript, ...args); 
+        console.log("Entire command:", LiveResolver.startStreamScript, ...args); 
             // 🚀 Spawn the bash script in background (non-blocking)
-            spawn("bash", [LiveResolver.recordScript, ...args], {
+            spawn("bash", [LiveResolver.startStreamScript, ...args], {
                 detached: true,
                 stdio: "ignore", // Don't wait on stdout/stderr
             }).unref();

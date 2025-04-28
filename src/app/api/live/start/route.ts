@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const entry = await readCashedEntryFile(cacheKey, "live-");
+        const entry = await readCashedEntryFile(cacheKey);
         if (!entry) {
             return new Response(JSON.stringify({ error: "Invalid or expired cache key" }), { status: 404 });
         }

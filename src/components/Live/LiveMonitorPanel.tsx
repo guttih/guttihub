@@ -111,7 +111,7 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
                                                         const res = await fetch("/api/live/stop", {
                                                             method: "POST",
                                                             headers: { "Content-Type": "application/json" },
-                                                            body: JSON.stringify({ recordingId: job.cacheKey }),
+                                                            body: JSON.stringify({ cacheKey: job.cacheKey }),
                                                         });
 
                                                         if (!res.ok) throw new Error("Failed to stop stream");

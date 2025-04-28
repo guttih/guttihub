@@ -100,7 +100,7 @@ export function StreamCard({
         if (canLiveStream) {
             try {
                 setIsStartingStreaming(true);
-                const res = await fetch("/api/cache/entry", {
+                const res = await fetch("/api/cache", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(entry),

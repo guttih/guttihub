@@ -5,9 +5,9 @@ import path from "path";
 import fs from "fs/promises";
 import { M3UEntry } from "@/types/M3UEntry";
 
-export async function readCashedEntryFile(cacheKey: string, postfix: string = "recording-"): Promise<M3UEntry | null> {
+export async function readCashedEntryFile(cacheKey: string): Promise<M3UEntry | null> {
     const dir = getCacheDir();
-    const recordingPath = `${dir}/${postfix}${cacheKey}.json`;
+    const recordingPath = `${dir}/${cacheKey}.json`;
     const entryPath = `${dir}/${cacheKey}.json`;
 
     try {

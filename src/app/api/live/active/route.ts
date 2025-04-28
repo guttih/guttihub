@@ -1,12 +1,11 @@
 // src/app/api/live/active/route.ts
 
-// src/app/api/live/active/route.ts
-
 import { NextResponse } from "next/server";
-import { getActiveLiveJobs} from "@/utils/record/recordingJobUtils";
+import { getActiveLiveJobs, readCashedEntryFile} from "@/utils/record/recordingJobUtils";
 import { readStatusFile } from "@/utils/fileHandler";
 import { RecordingJob } from "@/types/RecordingJob";
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
+import { isProcessAlive } from "@/utils/process";
 
 export async function GET() {
   try {
@@ -15,34 +14,40 @@ export async function GET() {
 
     const enriched = await Promise.all(
       jobs.map(async (job: RecordingJob) => {
-        const server = StreamingServiceResolver.extractServerFromUrl(job.entry.url);
-        const service = server ? resolver.findByServer(server) : null;
+        const entry = await readCashedEntryFile(job.cacheKey);
+        const status = await readStatusFile(job.statusFile);
 
-        // 🧠 Try to fetch the real status from the .status file
-        let status = "live"; // default fallback
-        try {
-          const parsed = await readStatusFile(job.statusFile);
-          status = parsed?.STATUS?.toLowerCase() || "live";
-        } catch (e) {
-          console.warn(`⚠️ Could not parse status file for ${job.cacheKey}`);
+        let pid = null;
+        if (status?.PID) {
+          pid = parseInt(status.PID, 10);
+        }
+
+        const alive = pid ? await isProcessAlive(pid) : false;
+        const service = entry ? resolver.findByServer(entry.url) : null;
+
+        let finalStatus = status?.STATUS || "unknown";
+
+        if (finalStatus === "recording" && !alive) {
+          console.warn(`🧟 Zombie detected: job ${job.recordingId} is dead but status=recording`);
+          finalStatus = "error";
         }
 
         return {
           recordingId: job.recordingId,
           cacheKey: job.cacheKey,
           format: job.format,
-          name: job.entry?.name ?? "Unknown",
-          groupTitle: job.entry?.groupTitle ?? null,
+          name: entry?.name ?? "Unknown",
+          groupTitle: entry?.groupTitle ?? null,
           startedAt: job.startTime,
-          serviceName: service?.name ?? "Unknown Service",
-          status,
+          status: finalStatus,
+          serviceName: service?.name ?? null,
         };
       })
     );
 
     return NextResponse.json(enriched);
   } catch (err) {
-    console.error("❌ Failed to list active live jobs", err);
+    console.error("❌ Failed to list active live jobs:", err);
     return NextResponse.json({ error: "Could not load live jobs" }, { status: 500 });
   }
 }
