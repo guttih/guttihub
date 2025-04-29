@@ -92,7 +92,7 @@ export class ScheduleResolver {
     
         console.log("📝 Writing recording job metadata:", job);
         
-        await writeRecordingJobFile(job);
+        await writeRecordingJobFile(job, true);
     
         if (params.recordNow) {
             console.log("Entire command:", ScheduleResolver.scriptStartRecording, ...args);
@@ -114,9 +114,10 @@ export class ScheduleResolver {
                 cacheKey: job.cacheKey
             };
         }
-    
+        
+        // Schedule the job using jobctl 
         const cmd = `bash ${ScheduleResolver.scriptStartRecording} ${args.map((a) => `"${a}"`).join(" ")}`;
-        const desc = `Recording ${params.entry.name} for ${params.durationSec}s [${job.recordingId}]`;
+        const desc = `Recording ${params.entry.name} for ${params.durationSec}s [${job.cacheKey}]`;
     
         try {
             const result = await runJobctl("add", job.startTime, desc, cmd)

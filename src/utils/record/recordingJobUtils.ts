@@ -127,7 +127,7 @@ export async function getActiveLiveJobs(): Promise<RecordingJob[]> {
  * Enrich a RecordingJob (for live/scheduled recordings)
  */
 export async function enrichRecordingJob(job: RecordingJob) {
-    const entry = await readCashedEntryFile(job.cacheKey);
+    const entry = job.entry? job.entry : await readCashedEntryFile( job.cacheKey);  //In the beginning there was only entry, on disk, then god came and populated the RecordingJob with the entry
     const status = await readStatusFile(job.statusFile);
 
     let pid = null;

@@ -40,7 +40,7 @@ export class DownloadResolver {
                 url: entry.url,
             };
 
-            await writeDownloadingJobFile(job);
+            await writeDownloadingJobFile(job, true);
 
             const args = ["--url", entry.url, "--outputFile", outputFile, "--user", user, "--loglevel", "info"];
 

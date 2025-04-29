@@ -10,7 +10,8 @@ export interface BaseButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
 
 export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
   ({ children, variant = "default", size = "md", className, ...props }, ref) => {
-    const base = "rounded px-3 py-1 font-medium focus:outline-none transition";
+    const base = "rounded px-3 py-1 font-medium focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed";
+
 
     const sizeMap = {
       sm: "text-xs",

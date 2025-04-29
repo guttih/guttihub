@@ -63,7 +63,10 @@ export class LiveResolver {
         ];
 
         console.log("📝 Writing recording job metadata:", job);
-        await writeRecordingJobFile(job);
+        await writeRecordingJobFile(job, true);
+        //Now when we have created the a cashe?.json file with RecodingJob data added instead of only the entry data, we can remove the the old one, if it exists
+        
+
         console.log("Entire command:", LiveResolver.startStreamScript, ...args); 
             // 🚀 Spawn the bash script in background (non-blocking)
             spawn("bash", [LiveResolver.startStreamScript, ...args], {

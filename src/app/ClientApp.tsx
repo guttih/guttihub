@@ -97,15 +97,6 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     const pageSize = Number(appConfig.defaultPageSize);
 
-    // function normalizeStreamUrl(playUrl: string): string {
-    //     const parsed = new URL(playUrl, window.location.origin);
-    //     const isMixedContent = window.location.protocol === "https:" && parsed.protocol === "http:";
-    //     const isCrossOrigin = parsed.origin !== window.location.origin;
-    //     const proxyNeeded = isMixedContent || isCrossOrigin;
-
-    //     return proxyNeeded ? `/api/stream-proxy?url=${encodeURIComponent(playUrl)}` : playUrl;
-    // }
-
     function handlePlay(url: string) {
         console.log("handlePlay called, input URL:", url);
 
@@ -139,12 +130,37 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }
     }
 
+    function isValidRegex(pattern: string): boolean {
+        try {
+          new RegExp(pattern);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      
     const buttonBaseClasses = "bg-gray-700 text-white px-4 py-2 rounded transition-colors duration-150 hover:bg-gray-600 disabled:opacity-50";
 
     async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown") {
         if (!service) return;
         console.log(`handleFetch called by : ${source}`);
-
+        // Validate each regex-enabled input
+        if (
+            (inputModes.searchName.isRegex && !isValidRegex(searchName)) ||
+            (inputModes.searchGroup.isRegex && !isValidRegex(searchGroup)) ||
+            (inputModes.searchTvgId.isRegex && !isValidRegex(searchTvgId))
+        ) {
+            return showMessageBox({
+            variant: "warning",
+            blocking: false,
+            title: "Invalid Regex",
+            message: "Please fix your regex pattern(s) before searching.",
+            toast: true,
+            position: "bottom-right",
+            displayTime: 3000,
+            });
+        }
+  
         setActiveService(service);
         setLoading(true);
 
@@ -264,10 +280,10 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     }
 
     const EraserIcon = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path d="M19 19H5m7-14l7 7-8 8-7-7 8-8z" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path d="M19 19H5m7-14l7 7-8 8-7-7 8-8z" />
         </svg>
-    );
+      );
 
     return (
         <main className="p-4 max-w-full mx-auto">
@@ -391,7 +407,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 <fieldset className="relative border border-gray-700 rounded p-4">
                     <legend className="text-sm text-gray-400 px-2">Filters</legend>
                     <button
-                        className="absolute right-1 -top-7 z-10 bg-gray-800 hover:bg-red-600 text-white p-2 rounded-full shadow transition"
+                         className="absolute right-1 -top-7 z-10 w-9 h-9 flex items-center justify-center bg-gray-800 hover:bg-red-600 text-white rounded-full shadow transition"
                         onClick={handleClearFilters}
                         title="Clear all filters"
                     >
@@ -481,7 +497,9 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 </fieldset>
             </div>
             <div className="flex flex-wrap items-end gap-4 mb-6">
-                <LiveMonitorPanel userRole={userRole} />
+                <LiveMonitorPanel userRole={userRole} 
+                    // onInlinePlay={handlePlay} 
+                    />
             </div>
             {player.visible && player.mode === "inline" && (
                 <InlinePlayer

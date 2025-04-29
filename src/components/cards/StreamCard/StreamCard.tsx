@@ -7,6 +7,15 @@ import { getExtension } from "@/utils/ui/getExtension";
 import { makeImageProxyUrl } from "@/utils/ui/makeImageProxyUrl";
 import { hasRole, UserRole } from "@/types/UserRole";
 import { showMessageBox } from "@/components/ui/MessageBox";
+import {
+    MediaStreamButton,
+    MediaPlayButton,
+    MediaDownloadButton,
+    MediaRecordButton,
+    MediaDeleteButton
+  } from "@/components/ui/MediaButtons";
+  
+  
 
 interface Props {
     userName?: string;
@@ -87,6 +96,8 @@ export function StreamCard({
 
             const { cacheKey } = await res.json();
             window.open(`/record?cacheKey=${cacheKey}`, "_blank");
+            await new Promise((resolve) => setTimeout(resolve, 10000));
+            setIsStartingRecording(false);
         } catch (err) {
             console.error("Error caching entry for recording:", err);
             setIsStartingRecording(false);
@@ -123,9 +134,12 @@ export function StreamCard({
                 if (!startRes.ok) throw new Error("Failed to start live stream");
 
                 const { recordingId } = await startRes.json();
-                const playlistUrl = `/api/hls-stream/${recordingId}/playlist`;
 
+                const playlistUrl = `/api/hls-stream/${recordingId}/playlist`;
+                
                 onPlay(playlistUrl);
+                await new Promise((resolve) => setTimeout(resolve, 10000));
+                setIsStartingStreaming(false);
             } catch (err) {
                 setIsStartingStreaming(false);
                 console.error("Live stream error:", err);
@@ -174,6 +188,24 @@ export function StreamCard({
             setIsStartingDownloading(false);  // 🛠 You had `setIsStartingRecording(false)` typo before
         }
     };
+
+    const handleDelete = async () => {
+        setIsStartingDelete(true); // Disable button immediately
+        try {
+            const res = await fetch(new URL(entry.url).pathname, { method: "DELETE" });
+            if (res.ok) {
+                onDelete?.(entry);
+            } else {
+                const { error } = await res.json();
+                showMessageBox({ variant: "error", title: "Error", message: error || "Failed to delete entry" });
+            }
+        } catch (err) {
+            console.error("Delete failed:", err);
+            showMessageBox({ variant: "error", title: "Error", message: "Something went wrong while deleting." });
+        } finally {
+            setIsStartingDelete(false); // Re-enable button
+        }
+    }
     
 
     return (
@@ -230,93 +262,21 @@ export function StreamCard({
                 {/* Grouped control buttons */}
                 <div className="absolute bottom-4 right-4 flex gap-2">
                     {showPlay && (
-                        <button
-                            onClick={handlePlay}
-                            disabled={isStartingPlaying}
-                            title="Play Now"
-                            className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-green-600 text-white hover:shadow-lg ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-6 h-6"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
-                                />
-                            </svg>
-                        </button>
+                        <MediaPlayButton onClick={handlePlay} disabled={isStartingPlaying} title="Play Now" />
                     )}
-
                     {allowedToStreamLive && showStreamButton && (
-                        <button
-                            onClick={handlePlay}
-                            disabled={isStartingStreaming}
-                            title="Go Live"
-                            className="w-11 h-11 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xl ring-2 ring-blue-300 transition-all duration-300 text-2xl"
-                        >
-                            📡
-                        </button>
+                        <MediaStreamButton onClick={handlePlay} disabled={isStartingStreaming} title="Watch, and start streaming" />
                     )}
 
                     {isRecordable && allowedToRecordStream && (
-                        <button
-                            onClick={handleRecord}
-                            disabled={isStartingRecording}
-                            title="Schedule Recording"
-                            className="w-11 h-11 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-700 text-white shadow-md ring-2 ring-red-300 transition-all duration-300 text-xl"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
-                                <path
-                                    fillRule="evenodd"
-                                    d="M3 3.75A.75.75 0 0 1 3.75 3h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 3.75zM4.5 6h15a.75.75 0 0 1 .75.75v12a.75.75 0 0 1-.75.75h-15a.75.75 0 0 1-.75-.75v-12A.75.75 0 0 1 4.5 6zM12 9.75a.75.75 0 0 1 .75.75v3.19l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 1.06-1.06l1.22 1.22V10.5a.75.75 0 0 1 .75-.75z"
-                                    clipRule="evenodd"
-                                />
-                            </svg>
-                        </button>
+                        <MediaRecordButton onClick={handleRecord} disabled={isStartingRecording} title="Watch, and start streaming" />
                     )}
-
                     {allowedToDownload && extensionIsSupported && (extension === "mp4" || extension === "mkv") && (
-                        <button
-                            onClick={handleDownload}
-                            disabled={isStartingdownloading}
-                            title="Queue Download"
-                            className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-purple-600 text-white shadow-md ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300 text-xl"
-                        >
-                            💾
-                        </button>
+                        <MediaDownloadButton onClick={handleDownload} disabled={isStartingdownloading} title="Download to disk" />
                     )}
 
                     {allowedToDelete && (
-                        <button
-                            onClick={async () => {
-                                setIsStartingDelete(true); // Disable button immediately
-                                try {
-                                    const res = await fetch(new URL(entry.url).pathname, { method: "DELETE" });
-                                    if (res.ok) {
-                                        onDelete?.(entry);
-                                    } else {
-                                        const { error } = await res.json();
-                                        showMessageBox({ variant: "error", title: "Error", message: error || "Failed to delete entry" });
-                                    }
-                                } catch (err) {
-                                    console.error("Delete failed:", err);
-                                    showMessageBox({ variant: "error", title: "Error", message: "Something went wrong while deleting." });
-                                } finally {
-                                    setIsStartingDelete(false); // Re-enable button
-                                }
-                            }}
-                            title="Delete Recording"
-                            className="w-11 h-11 flex items-center justify-center rounded-full bg-red-800 hover:bg-red-700 text-white shadow ring-2 ring-red-400 transition text-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isStartingDelete}
-                        >
-                            🗑️
-                        </button>
+                        <MediaDeleteButton onClick={handleDelete} disabled={isStartingDelete} title="Delete file from disk" />
                     )}
                 </div>
 

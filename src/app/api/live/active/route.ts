@@ -19,7 +19,6 @@ export async function GET() {
 
     // 3. Combine
     const combined = [...enrichedLive, ...enrichedDownloads];
-
     return NextResponse.json(combined);
   } catch (err) {
     console.error("❌ Failed to list active jobs:", err);
