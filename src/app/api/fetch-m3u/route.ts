@@ -13,10 +13,21 @@ import { FetchM3URequest } from "@/types/FetchM3URequest";
 import { StreamFormat, getStreamFormatByExt } from "@/types/StreamFormat";
 import { filterEntries } from "@/utils/filterEntries";
 import { extractYears } from "@/utils/ui/extractYears";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/authOptions";	
+import { getUserRole } from "@/config";
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
     {
         const { url, snapshotId, pagination, filters }: FetchM3URequest = await req.json();
+        const force = req.nextUrl.searchParams.get("force") === "true";
+        if (force) {
+            const session = await getServerSession({ req, ...authOptions });
+            const role = getUserRole(session?.user?.email);
+            if (role !== "admin") {
+                return makeErrorResponse("Unauthorized: Only admins can force refresh", 403);
+            }
+        }
 
         try {
             // Infer server origin with fallback port
@@ -57,7 +68,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
                 const json = await res.json();
                 chasedData = json.data as CashedEntries;
             } else {
-                chasedData = await getCachedOrFreshData(url, service.username, service.name);
+                chasedData = await getCachedOrFreshData(url, service.username, service.name, force);
             }
 
             if (pagination?.offset && snapshotId && snapshotId !== chasedData.snapshotId) {
@@ -114,10 +125,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         }
     }
 
-    async function getCachedOrFreshData(url: string, username: string, serviceName: string): Promise<CashedEntries> {
+    async function getCachedOrFreshData(url: string, username: string, serviceName: string, force:boolean ): Promise<CashedEntries> {
+
         const filePathCashed = getCacheFilePath(username, serviceName, "cashedEntries");
 
-        if (await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs)) {
+        if (!force && await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs) ) {
             console.log("[CACHE] Using cached file:", filePathCashed);
             return await readJsonFile<CashedEntries>(filePathCashed);
         }
@@ -125,7 +137,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         // Fetch fresh .m3u, parse it, and write cashed entries to disk
 
         const cacheFilePathM3U = getCacheFilePath(username, serviceName, "m3u");
-        const rawM3U = await getCachedOrFreshM3U(url, cacheFilePathM3U);
+        const rawM3U = await getCachedOrFreshM3U(url, cacheFilePathM3U, force);
 
         const entries = parseM3U(rawM3U);
 
@@ -155,8 +167,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         return cashed;
     }
 
-    async function getCachedOrFreshM3U(url: string, filePath: string): Promise<string> {
-        if (await isFileFresh(filePath, appConfig.playlistCacheTTLInMs)) {
+    async function getCachedOrFreshM3U(url: string, filePath: string, force: boolean = false): Promise<string> {
+        if (!force && await isFileFresh(filePath, appConfig.playlistCacheTTLInMs)) {
             console.log("[CACHE] Using cached file:", filePath);
             return await readFile(filePath);
         }

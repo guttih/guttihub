@@ -181,6 +181,7 @@ scp -r \
   "$REPO_ROOT/package.json" \
   "$REPO_ROOT/next.config.ts" \
   "$REPO_ROOT/src" \
+  "$REPO_ROOT/ecosystem.config.js" \
   "$DEPLOY_TARGET"
 
 # Copy the .env.production file to the server

@@ -63,7 +63,7 @@ export function showMessageBox(rawOptions: MessageBoxOptions): Promise<void> {
           }, displayTime);
           return () => clearTimeout(autoClose);
         }
-      }, [displayTime]);
+      }, []);
 
       const handleClose = () => {
         setIsClosing(true);

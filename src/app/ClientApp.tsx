@@ -19,12 +19,13 @@ import { FilterInput } from "@/components/FilterInput/FilterInput";
 import { PaginationControls } from "@/components/PaginationControls/PaginationControls";
 import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect";
 import { Spinner } from "@/components/Spinner/Spinner";
-import { useSession } from "next-auth/react";
-import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
+
 import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel";
 
 import { hasRole, UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
 import { showMessageBox } from "@/components/ui/MessageBox";
+import { Button } from "@/components/ui/Button/Button";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -132,16 +133,17 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     function isValidRegex(pattern: string): boolean {
         try {
-          new RegExp(pattern);
-          return true;
+            new RegExp(pattern);
+            return true;
         } catch {
-          return false;
+            return false;
         }
-      }
-      
+    }
+
     const buttonBaseClasses = "bg-gray-700 text-white px-4 py-2 rounded transition-colors duration-150 hover:bg-gray-600 disabled:opacity-50";
 
-    async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown") {
+    async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) {
+        console.log("asdfasdfasdf");
         if (!service) return;
         console.log(`handleFetch called by : ${source}`);
         // Validate each regex-enabled input
@@ -151,16 +153,16 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             (inputModes.searchTvgId.isRegex && !isValidRegex(searchTvgId))
         ) {
             return showMessageBox({
-            variant: "warning",
-            blocking: false,
-            title: "Invalid Regex",
-            message: "Please fix your regex pattern(s) before searching.",
-            toast: true,
-            position: "bottom-right",
-            displayTime: 3000,
+                variant: "warning",
+                blocking: false,
+                title: "Invalid Regex",
+                message: "Please fix your regex pattern(s) before searching.",
+                toast: true,
+                position: "bottom-right",
+                displayTime: 3000,
             });
         }
-  
+
         setActiveService(service);
         setLoading(true);
 
@@ -174,7 +176,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 },
                 filters: debouncedFilters,
             };
-            const res = await fetch("/api/fetch-m3u", {
+            const res = await fetch(`/api/fetch-m3u${force ? "?force=true" : ""}`, {
                 method: "POST",
                 body: JSON.stringify(requestBody),
             });
@@ -182,7 +184,27 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             const json: ApiResponse<M3UResponse> = await res.json();
 
             if (!json.success) {
-                return showMessageBox({ variant: "warning", title: "No items found", message: json.error, toast:true, blocking:false, position:"bottom-right", displayTime: 5000 });
+                return showMessageBox({
+                    variant: "warning",
+                    title: "No items found",
+                    message: json.error,
+                    toast: true,
+                    blocking: false,
+                    position: "bottom-right",
+                    displayTime: 5000,
+                });
+            } else if (force) {
+                if (force) {
+                    showMessageBox({
+                        variant: "success",
+                        title: `${service?.name ?? "Unknown"}`,
+                        message: `Playlist refreshed successfully!`,
+                        toast: true,
+                        blocking: false,
+                        position: "bottom-right",
+                        displayTime: 5000,
+                    });
+                }
             }
 
             setSnapshotId(json.data.snapshotId);
@@ -233,7 +255,6 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }
     }, [loading, focusedInput]);
 
-    
     useEffect(() => {
         if (!activeService) return;
         handleFetch(activeService, "useEffect:... [currentPage, activeService, debouncedFilters, handleFetch])");
@@ -281,9 +302,9 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     const EraserIcon = () => (
         <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path d="M19 19H5m7-14l7 7-8 8-7-7 8-8z" />
+            <path d="M19 19H5m7-14l7 7-8 8-7-7 8-8z" />
         </svg>
-      );
+    );
 
     return (
         <main className="p-4 max-w-full mx-auto">
@@ -293,20 +314,39 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
                 {/* Displays only once session resolved */}
                 {hasRole(userRole, "moderator") && (
-                    <Link
-                        href="/schedule"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 whitespace-nowrap"
-                    >
-                        Scheduler
-                    </Link>
+                    <Button variant="default" onClick={() => window.open("/schedule", "_blank")}>
+                        Schedule
+                    </Button>
                 )}
 
                 {/* existing user name */}
-                <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
-                        {session?.user?.name ?? "unknown"} {userRole}
-                </h3>
+                <div className="flex items-center gap-4 relative">
+                    <h3 className="text-sm sm:text-base font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                        {session?.user?.name ?? "unknown"} ({userRole})
+                    </h3>
+
+                    {userRole === "admin" && (
+                        <div className="relative group">
+                            <Button variant="secondary" className="px-4 py-2 rounded text-sm">
+                                Admin
+                            </Button>
+
+                            {/* Dropdown stays attached to the button */}
+                            <div className="absolute hidden group-hover:flex flex-col right-0 top-full bg-gray-800 rounded shadow-lg overflow-hidden z-50 min-w-[160px]">
+                                <button
+                                    onClick={() => handleFetch(undefined, "Admin Force Refresh", true)}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-700"
+                                >
+                                    🔄 Force Update
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <Button variant="default" onClick={() => signOut({ callbackUrl: "/" })} className="px-3 py-2 rounded text-sm">
+                        Logout
+                    </Button>
+                </div>
             </div>
 
             <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
@@ -407,7 +447,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 <fieldset className="relative border border-gray-700 rounded p-4">
                     <legend className="text-sm text-gray-400 px-2">Filters</legend>
                     <button
-                         className="absolute right-1 -top-7 z-10 w-9 h-9 flex items-center justify-center bg-gray-800 hover:bg-red-600 text-white rounded-full shadow transition"
+                        className="absolute right-1 -top-7 z-10 w-9 h-9 flex items-center justify-center bg-gray-800 hover:bg-red-600 text-white rounded-full shadow transition"
                         onClick={handleClearFilters}
                         title="Clear all filters"
                     >
@@ -497,9 +537,10 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 </fieldset>
             </div>
             <div className="flex flex-wrap items-end gap-4 mb-6">
-                <LiveMonitorPanel userRole={userRole} 
-                    // onInlinePlay={handlePlay} 
-                    />
+                <LiveMonitorPanel
+                    userRole={userRole}
+                    // onInlinePlay={handlePlay}
+                />
             </div>
             {player.visible && player.mode === "inline" && (
                 <InlinePlayer
@@ -541,35 +582,36 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             />
 
             <div className="grid grid-cols-1 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-x-6 gap-y-8">
-                {activeService && entries.map((entry) => {
-                    const ext = entry.url.split(".").pop()?.toLowerCase() ?? "";
-                    const isMovie = ["mp4", "mkv"].includes(ext);
-                    const viewslots = (activeService?.maxConcurrentViewers ?? 0) - liveCount;
-                    const canPlay = viewslots > 0;
-                    const showRecord = canPlay && !isMovie;
-                    const showStreaming = canPlay && !isMovie;
-                    const showPlayButton = canPlay && isMovie;
-                    return useInteractiveCard ? (
-                        <StreamCardInteractive key={entry.url} serviceId={activeService.id} entry={entry} />
-                    ) : (
-                        // The card figures out if user is allowed to see the buttons based on userRole, app only thinks about the count of cuncurrent viewers
-                        <StreamCard
-                            key={entry.url}
-                            userName={session?.user?.name ?? "unknown"}
-                            serviceId={activeService?.id ?? ""}
-                            entry={entry}
-                            userRole={userRole}
-                            showCopy={!appConfig.hideCredentialsInUrl}
-                            showRecordButton={showRecord}
-                            showPlayButton={showPlayButton}
-                            showStreamButton={showStreaming}
-                            showDeleteButton={activeService?.hasFileAccess}
-                            showDownloadButton={canPlay && !activeService?.hasFileAccess}
-                            onPlay={(url) => handlePlay(url)}
-                            onDelete={(deletedEntry) => setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))}
-                        />
-                    );
-                })}
+                {activeService &&
+                    entries.map((entry) => {
+                        const ext = entry.url.split(".").pop()?.toLowerCase() ?? "";
+                        const isMovie = ["mp4", "mkv"].includes(ext);
+                        const viewslots = (activeService?.maxConcurrentViewers ?? 0) - liveCount;
+                        const canPlay = viewslots > 0;
+                        const showRecord = canPlay && !isMovie;
+                        const showStreaming = canPlay && !isMovie;
+                        const showPlayButton = canPlay && isMovie;
+                        return useInteractiveCard ? (
+                            <StreamCardInteractive key={entry.url} serviceId={activeService.id} entry={entry} />
+                        ) : (
+                            // The card figures out if user is allowed to see the buttons based on userRole, app only thinks about the count of cuncurrent viewers
+                            <StreamCard
+                                key={entry.url}
+                                userName={session?.user?.name ?? "unknown"}
+                                serviceId={activeService?.id ?? ""}
+                                entry={entry}
+                                userRole={userRole}
+                                showCopy={!appConfig.hideCredentialsInUrl}
+                                showRecordButton={showRecord}
+                                showPlayButton={showPlayButton}
+                                showStreamButton={showStreaming}
+                                showDeleteButton={activeService?.hasFileAccess}
+                                showDownloadButton={canPlay && !activeService?.hasFileAccess}
+                                onPlay={(url) => handlePlay(url)}
+                                onDelete={(deletedEntry) => setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))}
+                            />
+                        );
+                    })}
             </div>
 
             {entries && entries.length > 6 && (
