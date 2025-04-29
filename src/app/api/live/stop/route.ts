@@ -27,12 +27,12 @@ export async function POST(req: NextRequest) {
 
     let stopResult;
 
-    if (job.format === "hls-live") {
+    if (job.recordingType  === "download") {
+        stopResult = await DownloadResolver.stopDownload(cacheKey); // 🟢 Downloading
+    } else if (job.format === "mp4" && job.recordingType ===  'hls' ) {
+        stopResult = await ScheduleResolver.stopRecording(cacheKey); // 🟠 Recording
+      } else if (job.format === "hls-live") {
       stopResult = await LiveResolver.stopStream(cacheKey); // 🔵 Streaming
-    } else if (job.format === "recording") {
-      stopResult = await ScheduleResolver.stopRecording(cacheKey); // 🟠 Recording
-    } else if (job.format === "download") {
-      stopResult = await DownloadResolver.stopDownload(cacheKey); // 🟢 Downloading
     } else {
       return new Response(JSON.stringify({ error: "Unsupported job format" }), {
         status: 400,

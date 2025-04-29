@@ -140,37 +140,41 @@ export function StreamCard({
     const handleDownload = async () => {
         try {
             setIsStartingDownloading(true);
+    
             const res = await fetch("/api/cache", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(entry),
             });
-
+    
             if (!res.ok) {
                 throw new Error("Failed to cache entry");
             }
-
-            const { cacheKey } = await res.json();
+    
+            const { cacheKey } = await res.json();  // ✅ first res.json()
+    
             const startRes = await fetch("/api/download/start", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ cacheKey, entry, user: userName }),
             });
-
+    
             if (!startRes.ok) {
                 console.error("Failed to start download");
                 setIsStartingDownloading(false);
                 return;
             }
-
-            const { recordingId } = await res.json();
+    
+            const { recordingId } = await startRes.json();  // 🛠 Correct: startRes.json() not res.json()!
+    
             console.log("✅ Started download job:", recordingId);
         } catch (err) {
             console.error("❌ Error starting download:", err);
         } finally {
-            setIsStartingRecording(false);
+            setIsStartingDownloading(false);  // 🛠 You had `setIsStartingRecording(false)` typo before
         }
     };
+    
 
     return (
         <div

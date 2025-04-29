@@ -20,7 +20,7 @@ export class DownloadResolver {
         try {
             const { entry, user, cacheKey } = params;
             const ext = getExtensionFromUrl(entry.url);
-            const recordingId = buildRecordingId("download-", new Date(), entry.url, ext);
+            const recordingId = buildRecordingId("download-", new Date(), entry.url, null);
             const outputFile = `${outDirectories.find((d) => d.label === "Recordings")?.path ?? outDirectories[0].path}/${recordingId}`;
 
             console.log(`🚀 Starting download job: ${recordingId}`);
@@ -33,7 +33,7 @@ export class DownloadResolver {
                 logFile: `${outputFile}.log`,
                 statusFile: `${outputFile}.status`,
                 format: ext,
-                recordingType: "hls", // 🧠 Pretend it's HLS for compatibility
+                recordingType: "download", // 🧠 Pretend it's HLS for compatibility
                 startTime: new Date().toISOString(),
                 createdAt: new Date().toISOString(),
                 entry,

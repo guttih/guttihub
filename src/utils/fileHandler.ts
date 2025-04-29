@@ -76,7 +76,8 @@ export function getRecordingJobsDir(): string {
 }
 
 export function getDownloadJobsDir(): string {
-    return path.join(getCacheDir(), "downloading-jobs");
+     return getRecordingJobsDir();
+    //return path.join(getCacheDir(), "downloading-jobs");
 }
 
   // Build the path to the bundle
