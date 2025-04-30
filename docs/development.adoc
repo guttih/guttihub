@@ -191,10 +191,13 @@ npm install -g pm2
 [source,sh]
 ----
 cd /var/www/guttihub
-npm install --omit=dev
+#npm install --omit=dev
+npm ci --omit=dev
 pm2 start ecosystem.config.js --env production
 pm2 save
 ----
+* We had to use `npm ci --omit=dev --legacy-peer-deps` instead of `npm install --omit=dev` because of the /react-hls-player dependency.  
+
 
 .Check logs and status
 [source,sh]

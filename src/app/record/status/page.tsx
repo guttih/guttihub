@@ -5,16 +5,38 @@ import { useSearchParams } from "next/navigation";
 import StatusClient from "./StatusClient";
 import { useEffect, useState } from "react";
 import { RecordingJob } from "@/types/RecordingJob";
+import { showMessageBox } from "@/components/ui/MessageBox";
 
 function StatusPageContent() {
     const searchParams = useSearchParams();
     const [cacheKey, setCacheKey] = useState<string | null>(null);
+    const [hasShownError, setHasShownError] = useState(false);
 
     useEffect(() => {
-        // force update when the URL param changes
-        const key = searchParams.get("cacheKey");
+        const key = searchParams?.get("cacheKey") ?? null;
+
+        if (!key && !hasShownError) {
+            showMessageBox({
+                title: "Missing cacheKey",
+                message: "No recording found — check the link and try again.",
+                variant: "error",
+                displayTime: null,
+                blocking: true,
+                toast: false,
+                position: "center",
+                buttonText: "OK"
+            }).then(() => {
+                // Optional: Redirect the user to a safe fallback page
+                // router.push("/schedule");
+            });
+    
+            setHasShownError(true);
+            return;
+        }
+    
         setCacheKey(key);
-    }, [searchParams]);
+    }, [searchParams, hasShownError]);
+    
 
     const [job, setJob] = useState<RecordingJob | null>(null);
     const [error, setError] = useState<string | null>(null);

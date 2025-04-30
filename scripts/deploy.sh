@@ -63,6 +63,48 @@ echo "📄 created .env.production ready for server"
 echo "➕ Added PORT=6301 and redirection url to .env.production"
 }
 
+# Function: setup_system_dependencies_on_server()
+#
+# Brief: Ensures required system tools (ffmpeg, curl, at, jq) are installed on the deployment server.
+#        If any are missing, it performs an apt update and installs the missing ones.
+#        Also ensures the 'atd' service is enabled and running.
+#
+# Parameters:
+#   $1: The server to connect to (e.g., user@server)
+#
+# Usage: setup_system_dependencies_on_server <server>
+# Example: setup_system_dependencies_on_server "user@server"
+#
+# Note: This is intended to be run prior to app deployment/restart, especially on a fresh server.
+setup_system_dependencies_on_server() {
+  local DEPLOY_SERVER="$1"
+
+  echo "🔍 Ensuring system dependencies (ffmpeg, curl, at, jq) are installed on $DEPLOY_SERVER..."
+
+  ssh -o LogLevel=ERROR "$DEPLOY_SERVER" /bin/bash <<'EOF'
+set -e
+missing=0
+for bin in ffmpeg curl at jq; do
+  if ! command -v "$bin" >/dev/null 2>&1; then
+    echo "❌ Missing: $bin"
+    missing=1
+  fi
+done
+
+if [ $missing -eq 1 ]; then
+  echo "📦 Installing missing dependencies..."
+  sudo apt update -y
+  sudo apt install -y ffmpeg curl at jq
+  sudo systemctl enable --now atd
+  echo "✅ System dependencies installed and atd running."
+else
+  echo "✅ All required system dependencies already present."
+fi
+exit 0
+EOF
+}
+
+
 
 # Function: restart_pm2_app_on_server()
 #
@@ -77,6 +119,7 @@ echo "➕ Added PORT=6301 and redirection url to .env.production"
 # Usage: restart_pm2_app_on_server <server> <app_name>
 # Example: restart_pm2_app_on_server "user@server" "my_app"
 # Note: This function assumes that PM2 is already installed and configured on the server.
+# We had to use `npm ci --omit=dev --legacy-peer-deps` instead of `npm install --omit=dev` because of the /react-hls-player dependency.  
 restart_pm2_app_on_server() {
   local DEPLOY_SERVER="$1"
   local APP_NAME="$2"
@@ -88,13 +131,18 @@ restart_pm2_app_on_server() {
     cd "$DEPLOY_DIR"
 
     echo "📦 Installing production deps..."
-    npm install --omit=dev
+    #npm install --omit=dev
+    npm ci --omit=dev --legacy-peer-deps
 
     echo "🔁 Reloading app with PM2..."
     pm2 reload ecosystem.config.js --env production || \
     pm2 start ecosystem.config.js --env production
 
     pm2 save
+
+    echo "🧪 PM2 process list:"
+    pm2 list
+
 EOF
 }
 
@@ -124,8 +172,8 @@ cd "$REPO_ROOT"
 ASSET_PATH="$REPO_ROOT/scripts/deployAssets/services.json"
 TARGET_PATH="$REPO_ROOT/src/config/services.json"
 
-echo "📁 Using asset path : $ASSET_PATH "
-echo "📁 Using target path: $TARGET_PATH"
+echo "📁 Using asset path   : $ASSET_PATH "
+echo "📁 Using target path  : $TARGET_PATH"
 
 # Check if services.json exists
 if [ ! -f "$ASSET_PATH" ]; then
@@ -191,9 +239,13 @@ scp "$REPO_ROOT/.env.production" "$DEPLOY_TARGET"
 find "$REPO_ROOT/public" -maxdepth 1 -type f -exec scp {} "$DEPLOY_TARGET/public/" \;
 
 # install npm if not installed without dev
-echo "🎉 Updated version hase been copied to deployment dir"
+echo "🎉 Updated version has been copied to deployment dir"
 
-# Restart the PM2 app on the server
+# 🛠️ Ensures required system tools (ffmpeg, curl, at, jq) are installed
+setup_system_dependencies_on_server "$DEPLOY_SERVER"
+
+# 🔁 Restart the PM2 app on the server
 echo "🔁 Restarting PM2 app on server..."
 restart_pm2_app_on_server "$DEPLOY_SERVER" "$APP_NAME"
-# ✅ Done
+
+echo -e "\n✅ Deployment complete. App '$APP_NAME' should now be running."

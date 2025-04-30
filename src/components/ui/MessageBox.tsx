@@ -13,6 +13,8 @@ interface MessageBoxOptions {
   blocking?: boolean;
   withAnimation?: boolean;
   buttonText?: string;
+  preserveLineBreaks?: boolean;
+
 }
 
 export function showMessageBox(rawOptions: MessageBoxOptions): Promise<void> {
@@ -24,10 +26,11 @@ export function showMessageBox(rawOptions: MessageBoxOptions): Promise<void> {
     blocking: true,
     withAnimation: true,
     buttonText: "OK",
+    preserveLineBreaks: false,
     ...rawOptions,
   };
 
-  const { title, message, variant, displayTime, position, toast, blocking, withAnimation, buttonText } = options;
+  const { title, message, variant, displayTime, position, toast, blocking, withAnimation, buttonText, preserveLineBreaks } = options;
 
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -136,7 +139,7 @@ export function showMessageBox(rawOptions: MessageBoxOptions): Promise<void> {
             `}
           >
             <h2 className="text-lg font-semibold">{title}</h2>
-            <p>{message}</p>
+            <p className={preserveLineBreaks ? "whitespace-pre-line" : ""}>{message}</p>
       
             {/* Button */}
             {buttonText && (

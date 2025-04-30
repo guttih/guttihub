@@ -7,7 +7,7 @@ import { M3UEntry } from "@/types/M3UEntry";
 
 export default function RecordClient() {
   const searchParams = useSearchParams();
-  const cacheKey = searchParams.get("cacheKey");
+  const cacheKey = searchParams?.get("cacheKey") ?? "";
   const [entry, setEntry] = useState<M3UEntry | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState("unknown");

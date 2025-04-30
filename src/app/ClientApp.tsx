@@ -337,12 +337,61 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                             </Button>
 
                             {/* Dropdown stays attached to the button */}
-                            <div className="absolute hidden group-hover:flex flex-col right-0 top-full bg-gray-800 rounded shadow-lg overflow-hidden z-50 min-w-[160px]">
+                            <div className="absolute hidden group-hover:flex flex-col right-0 top-full bg-gray-800 rounded shadow-lg overflow-hidden z-50 min-w-[320px]">
                                 <button
                                     onClick={() => handleFetch(undefined, "Admin Force Refresh", true)}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-700"
                                 >
                                     🔄 Force Update
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                          const res = await fetch("/api/system-check");
+                                          const json = await res.json();
+                                      
+                                          const output = json.results?.output || {};
+                                          const success = json.results?.success ?? false;
+                                          const longestToolName = Math.max(...Object.keys(output).map(t => t.length));
+                                      
+                                          const reportLines = Object.entries(output).map(([tool, path]) => {
+                                            const paddedTool = tool.padEnd(longestToolName);
+                                            const icon = path ? "✅" : "❌";
+                                            const value = path || "NOT FOUND";
+                                            return `${icon} ${paddedTool}: ${value}`;
+                                          });
+                                      
+                                          const message = `${
+                                            success
+                                              ? "✅ All system dependencies are installed."
+                                              : "❌ Some dependencies are missing."
+                                          }\n\n${reportLines.join("\n")}`;
+                                      
+                                          showMessageBox({
+                                            variant: success ? "success" : "error",
+                                            title: "System Check",
+                                            message,
+                                            toast: true,
+                                            blocking: false,
+                                            position: "top-right",
+                                            preserveLineBreaks: true,
+                                          });
+                                        } catch (err) {
+                                          showMessageBox({
+                                            variant: "error",
+                                            title: "System Check Error",
+                                            message: "💥 Something went wrong while communicating with the backend.",
+                                            toast: true,
+                                            blocking: true,
+                                            preserveLineBreaks: true,
+                                          });
+                                          console.error("System check error:", err);
+                                        }
+                                      }}
+                                      
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-700"
+                                >
+                                    🧪 System Environment Check
                                 </button>
                             </div>
                         </div>
@@ -548,13 +597,13 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 />
             </div>
             {player.visible && player.mode === "inline" && (
-                 <InlineHlsPlayer
-                 key={player.url}
-                 url={player.url}
-                 title={player.title ?? ""}
-                 onClose={handleClosePlayer}
-                 className="rounded shadow w-full max-w-3xl mx-auto"
-             />
+                <InlineHlsPlayer
+                    key={player.url}
+                    url={player.url}
+                    title={player.title ?? ""}
+                    onClose={handleClosePlayer}
+                    className="rounded shadow w-full max-w-3xl mx-auto"
+                />
                 // <InlinePlayer
                 // key={player.url}
                 //     url={player.url}
