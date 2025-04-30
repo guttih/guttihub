@@ -1,15 +1,14 @@
 // src/resolvers/LiveResolver.ts
 
 import { spawn } from "child_process";
-import path from "path";
 import { LiveParams } from "@/types/LiveParams";
 import { RecordingJob } from "@/types/RecordingJob";
-import { readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
+import { getScriptPath, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
 import { buildRecordingId } from "@/utils/resolverUtils";
 
 export class LiveResolver {
-    static startStreamScript = path.resolve("src/scripts/live.sh");
-    static stopStreamScript = path.resolve("src/scripts/stop-record.sh");
+    static startStreamScript = getScriptPath("live.sh");
+    static stopStreamScript = getScriptPath("stop-record.sh");
 
     static async stopStream(cacheKey: string): Promise<{ success: boolean; message?: string; error?: string }> {
         try {

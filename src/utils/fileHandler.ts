@@ -5,6 +5,16 @@ import { DownloadJob } from "@/types/DownloadJob";
 import { RecordingJob } from "@/types/RecordingJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 
+/**
+ * Resolves an absolute path to a script inside src/scripts/
+ * Works even in PM2 or production environments
+ */
+export function getScriptPath(scriptName: string): string {
+    // Find root directory relative to the compiled dist (likely in .next or out)
+    const rootDir = path.resolve(process.cwd());
+    return path.join(rootDir, "src/scripts", scriptName);
+}
+
 const CACHE_DIR = path.resolve(process.cwd(), ".cache");
 
 export function getCacheDir(): string {

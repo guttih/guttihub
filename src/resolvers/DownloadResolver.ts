@@ -1,16 +1,15 @@
 // src/resolvers/DownloadResolver.ts
 
 import { spawn } from "child_process";
-import path from "path";
 import { buildRecordingId, getExtensionFromUrl } from "@/utils/resolverUtils";
-import { readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
+import { getScriptPath, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
 import { M3UEntry } from "@/types/M3UEntry";
 import { outDirectories } from "@/config";
 import { DownloadJob } from "@/types/DownloadJob";
 
 export class DownloadResolver {
-    static scriptDownload = path.resolve("src/scripts/download.sh");
-    static stopDownloadScript = path.resolve("src/scripts/stop-record.sh"); // ✅ Same as live/record
+    static scriptDownload = getScriptPath("download.sh");
+    static stopDownloadScript = getScriptPath("stop-record.sh");
 
     static async startDownload(params: {
         entry: M3UEntry;

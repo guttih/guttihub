@@ -258,7 +258,7 @@ export function StreamCard({
                 <p className="text-sm text-gray-400 truncate" title={`${M3UEntryFieldLabel.groupTitle}='${entry.groupTitle}'`}>
                     {entry.groupTitle}
                 </p>
-
+                
                 {/* Grouped control buttons */}
                 <div className="absolute bottom-4 right-4 flex gap-2">
                     {showPlay && (

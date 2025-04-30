@@ -1,18 +1,17 @@
 // src/resolvers/ScheduleResolver.ts
 
 import { spawn } from "child_process";
-import path from "path";
 import { ScheduleRecordingParams } from "@/types/ScheduleRecordingParams";
 import { RecordingJob } from "@/types/RecordingJob";
-import { readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
+import { getScriptPath, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
 import { runJobctl } from "@/utils/jobctl";
 import { buildRecordingId, cleanupStreamingJobs } from "@/utils/resolverUtils";
 import { M3UEntry } from "@/types/M3UEntry";
 import { Job, JobctlAddSuccess } from "@/types/Jobctl";
 
 export class ScheduleResolver {
-    static scriptStartRecording = path.resolve("src/scripts/record.sh");
-    static scriptStopRecording = path.resolve("src/scripts/stop-record.sh");
+    static scriptStartRecording = getScriptPath("record.sh");
+    static scriptStopRecording = getScriptPath("stop-record.sh");
 
     static async stopRecording(cacheKey : string): Promise<{ success: boolean; message?: string; error?: string }> {
         const job = await readRecordingJobFile(cacheKey);

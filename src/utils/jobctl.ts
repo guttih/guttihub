@@ -2,9 +2,10 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { JobctlError, JobctlGetSuccess, JobctlListSuccess, JobctlResult } from "@/types/Jobctl";
+import { getScriptPath } from "./fileHandler";
 
 const exec = promisify(execFile);
-const JOBCTL = process.env.JOBCTL_PATH ?? "src/scripts/jobctl.sh";
+const JOBCTL = getScriptPath("jobctl.sh");
 
 /**
  * Runs the `jobctl` bash script to manage scheduled recording jobs.

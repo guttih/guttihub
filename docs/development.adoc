@@ -290,3 +290,30 @@ You can also restart it manually with:
 ----
 pm2 restart guttihub
 ----
+
+
+== System Requirements
+
+This app uses scheduled jobs via the `at` command. It must be installed and the `atd` service must be running.
+
+.Installing `at`
+[source,sh]
+----
+# Debian/Ubuntu
+sudo apt update && sudo apt install -y at && sudo systemctl enable --now atd
+
+# Fedora/RHEL/CentOS
+sudo dnf install -y at && sudo systemctl enable --now atd
+
+# Arch Linux
+sudo pacman -S at && sudo systemctl enable --now atd
+----
+
+You can verify installation with:
+
+[source,sh]
+----
+atq
+----
+
+If this command fails, scheduling recordings will not work.

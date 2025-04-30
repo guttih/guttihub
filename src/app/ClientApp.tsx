@@ -26,6 +26,7 @@ import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel";
 import { hasRole, UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
 import { showMessageBox } from "@/components/ui/MessageBox";
 import { Button } from "@/components/ui/Button/Button";
+import { InlineHlsPlayer } from "@/components/InlineHlsPlayer";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -37,6 +38,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const [selectedYears, setSelectedYears] = useState<string[]>([]);
     const [player, setPlayer] = useState<{
         url: string;
+        title?: string;
         mode: "popup" | "inline";
         visible: boolean;
         waitForPlaylist?: boolean;
@@ -103,9 +105,12 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
         const isOwnLiveStream = url.startsWith("/api/hls-stream/") && url.endsWith("/playlist");
         const absoluteUrl = new URL(url, window.location.origin).toString();
+        const matchingEntry = entries.find((entry) => entry.url === url);
         console.log("ClientApp::handlePlay using URL:", isOwnLiveStream ? absoluteUrl : url);
+        console.log(`Title: ${matchingEntry?.name ?? "Unknown"}`);
         setPlayer({
             url: isOwnLiveStream ? absoluteUrl : url,
+            title: matchingEntry?.name ?? "",
             mode: playerMode,
             visible: true,
             waitForPlaylist: isOwnLiveStream, // We'll pass this down to InlinePlayer
@@ -543,20 +548,29 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 />
             </div>
             {player.visible && player.mode === "inline" && (
-                <InlinePlayer
-                    url={player.url}
-                    serviceId={activeService?.id ?? ""}
-                    waitForPlaylist={player.waitForPlaylist}
-                    onClose={handleClosePlayer}
-                    className="rounded shadow w-full max-w-3xl mx-auto"
-                    showCloseButton={true}
-                />
+                 <InlineHlsPlayer
+                 key={player.url}
+                 url={player.url}
+                 title={player.title ?? ""}
+                 onClose={handleClosePlayer}
+                 className="rounded shadow w-full max-w-3xl mx-auto"
+             />
+                // <InlinePlayer
+                // key={player.url}
+                //     url={player.url}
+                //     serviceId={activeService?.id ?? ""}
+                //     waitForPlaylist={player.waitForPlaylist}
+                //     onClose={handleClosePlayer}
+                //     className="rounded shadow w-full max-w-3xl mx-auto"
+                //     showCloseButton={true}
+                // />
             )}
 
             {player.visible && player.mode === "popup" && (
                 <InlinePlayer
                     url={player.url}
                     autoPlay={true}
+                    movieTitle={player.title ?? ""}
                     serviceId={activeService?.id ?? ""}
                     waitForPlaylist={player.waitForPlaylist}
                     onClose={handleClosePlayer}
