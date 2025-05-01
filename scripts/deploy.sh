@@ -34,6 +34,7 @@ verify_and_copy_env_file() {
   echo "NEXTAUTH_URL=https://tv.guttih.com"
   echo "NEXTAUTH_SECRET=$(grep '^NEXTAUTH_SECRET=' "$source_env" | cut -d '=' -f2)"
   echo "PORT=6301"
+  grep "BASE_URL=https://tv.guttih.com"
 } > "$target_env"
 
   local required_vars=("GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "NEXTAUTH_SECRET" "NEXTAUTH_URL")

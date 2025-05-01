@@ -17,6 +17,8 @@ RECORDING_TYPE="ts"
 # --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --baseUrl) BASE_URL="$2"; shift 2 ;;
+    --cacheKey)   CACHE_KEY="$2"; shift 2 ;;
     --url) STREAM_URL="$2"; shift 2 ;;
     --duration) DURATION="$2"; shift 2 ;;
     --user) USER="$2"; shift 2 ;;
@@ -29,6 +31,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Validation ---
+[[ -z "${BASE_URL:-}" ]] && echo "❌ Missing --url" >&2 && exit 1
+[[ -z "${CACHE_KEY:-}" ]] && echo "❌ Missing --url" >&2 && exit 1
 [[ -z "${STREAM_URL:-}" ]] && echo "❌ Missing --url" && exit 1
 [[ -z "${DURATION:-}" ]] && echo "❌ Missing --duration" && exit 1
 [[ -z "${USER:-}" ]] && echo "❌ Missing --user" && exit 1
@@ -190,3 +194,8 @@ finalize_recording() {
 
 # Always finalize if normal exit
 finalize_recording
+
+# Trigger system cleanup non-blocking if BASE_URL is set
+if [[ -n "${BASE_URL:-}" ]]; then
+    curl -s -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1 &
+fi

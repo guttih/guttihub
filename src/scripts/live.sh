@@ -3,6 +3,8 @@
 # --- Parse named arguments ---
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --baseUrl) BASE_URL="$2"; shift 2 ;;
+        --cacheKey)   CACHE_KEY="$2"; shift 2 ;;
         --url)        STREAM_URL="$2"; shift 2 ;;
         --user)       USER="$2"; shift 2 ;;
         --outputFile) OUTPUT_FILE="$2"; shift 2 ;;
@@ -12,9 +14,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Validate required values ---
-[[ -z "$STREAM_URL" ]] && echo "Missing stream URL" >&2 && exit 1
-[[ -z "$USER" ]] && echo "Missing user name" >&2 && exit 1
-[[ -z "$OUTPUT_FILE" ]] && echo "Missing output file name" >&2 && exit 1
+[[ -z "${BASE_URL:-}"  ]] && echo "❌ Missing --url" >&2 && exit 1
+[[ -z "${CACHE_KEY:-}" ]] && echo "❌ Missing --url" >&2 && exit 1
+[[ -z "${STREAM_URL}"  ]] && echo "Missing --url" >&2 && exit 1
+[[ -z "${STREAM_URL}"  ]] && echo "Missing stream URL" >&2 && exit 1
+[[ -z "${USER}"        ]] && echo "Missing user name" >&2 && exit 1
+[[ -z "${OUTPUT_FILE}" ]] && echo "Missing output file name" >&2 && exit 1
 LOGLEVEL="${LOGLEVEL:-error}"
 
 HLS_PLAYLIST="${OUTPUT_FILE}.m3u8"
@@ -43,6 +48,7 @@ cleanup() {
 
     [[ -f "$HLS_PLAYLIST" ]] && rm "$HLS_PLAYLIST"
     [[ -d "$HLS_DIR" ]] && rm -rf "$HLS_DIR"
+
 }
 
 trap cleanup SIGINT SIGTERM
@@ -70,4 +76,11 @@ wait $PID
 EXIT_CODE=$?
 
 cleanup
-exit $EXIT_CODE
+
+# Trigger system cleanup non-blocking if BASE_URL is set
+if [[ -n "${BASE_URL:-}" ]]; then
+    curl -s -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1 &
+fi
+
+exit "$EXIT_CODE"
+

@@ -7,6 +7,7 @@ export interface DownloadJob {
   cacheKey: string;            // Original cacheKey (might be OUTPUT_FILE or true cache key)
   user: string;                // User who triggered
   outputFile: string;          // Full path to the .mp4 (.part during download)
+  finalOutputFile: string;    // full path to the final .mp4 or .mkv or whatever after download
   logFile: string;             // Full path to the .log
   statusFile: string;          // Full path to the .status
   startTime: string;           // When the download started

@@ -4,8 +4,6 @@ import { StreamingService } from "@/types/StreamingService";
 import { OutputDirectory } from "@/types/OutputDirectory";
 import servicesJson from "./services.json";
 import outputDirs from "./output-dirs.json";
-import { UserRole } from "@/types/UserRole";
-import authorizedUsersJson from "./authorizedUsers.json";
 
 // --- Static config: always safe to export ---
 const services: StreamingService[] = servicesJson;
@@ -30,16 +28,6 @@ export const appConfig: AppConfigType = {
   maxRecordingDuration: 60 * 60 * 6, // 6 hours
   playlistCacheTTLInMs: 1000 * 60 * 60 * 6, // 6 hours
 };
-
-// --- Authorized users lookup ---
-const authorizedUsers: Record<string, string> = authorizedUsersJson;
-
-// --- Public runtime helpers ---
-export function getUserRole(email?: string|null): UserRole | null {
-    if (!email) return null;
-    const role = authorizedUsers[email];
-    return role as UserRole || null;
-  }
 
 export { services };
 export { outDirectories };

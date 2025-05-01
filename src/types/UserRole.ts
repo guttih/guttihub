@@ -1,19 +1,34 @@
-// src/types/UserRole.ts
+
 export type UserRole = "viewer" | "streamer" | "moderator" | "admin";
 
-/** numeric weight lets you do simple `>=` checks */
+/** Numeric level used for hierarchy comparison */
 export const ROLE_LEVEL: Record<UserRole, number> = {
-  viewer:    1,  // Can view streams and movies
-  streamer:  2,  // Can stream live
-  moderator: 3,  // Can record streams
-  admin:     4,  // Can manage the app and do everything else
+  viewer: 1,
+  streamer: 2,
+  moderator: 3,
+  admin: 4,
 };
 
-/** helper to see if `user` meets `required` */
-export function hasRole(
-  userRole: UserRole | null,
-  required: UserRole
-): boolean {
+/**
+ * Check if user meets required level (admin counts as moderator, etc.)
+ */
+export function hasRole(userRole: UserRole | null, required: UserRole): boolean {
   if (!userRole) return false;
   return ROLE_LEVEL[userRole] >= ROLE_LEVEL[required];
+}
+
+/**
+ * Exact role checks (no hierarchy)
+ */
+export function isAdmin(role: UserRole | null): boolean {
+  return role === "admin";
+}
+export function isModerator(role: UserRole | null): boolean {
+  return role === "moderator";
+}
+export function isStreamer(role: UserRole | null): boolean {
+  return role === "streamer";
+}
+export function isViewer(role: UserRole | null): boolean {
+  return role === "viewer";
 }

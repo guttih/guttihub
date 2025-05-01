@@ -4,6 +4,7 @@ import React from "react";
 export function StatusBadge({ status }: { status: string }) {
   function getBadgeStyle(status: string) {
     switch (status.toLowerCase()) {
+      case "downloading":
       case "recording":
         return "bg-yellow-400 text-black animate-pulse";
       case "packaging":

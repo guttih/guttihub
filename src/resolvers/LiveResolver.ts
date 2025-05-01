@@ -4,7 +4,7 @@ import { spawn } from "child_process";
 import { LiveParams } from "@/types/LiveParams";
 import { RecordingJob } from "@/types/RecordingJob";
 import { getScriptPath, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
-import { buildRecordingId } from "@/utils/resolverUtils";
+import { buildRecordingId, getBaseUrl } from "@/utils/resolverUtils";
 
 export class LiveResolver {
     static startStreamScript = getScriptPath("live.sh");
@@ -37,12 +37,14 @@ export class LiveResolver {
         const startTime = new Date().toISOString();
         const fileName= buildRecordingId("live-", new Date(), entry.url);
         const outputFile = LiveResolver.makeStreamFilePath(location, fileName);
+        
         console.log("📦 Spaning live stream at ", outputFile);
         const job: RecordingJob = {
             recordingId: fileName,
             cacheKey,
             user: "live-session",
             outputFile,
+            finalOutputFile: "",
             logFile: `${outputFile}.log`,
             statusFile: `${outputFile}.status`,
             duration: 60*60*6,
@@ -55,10 +57,12 @@ export class LiveResolver {
         };
 
         const args = [  
-            "--url", entry.url, 
-            "--user", job.user,
+            "--url",        entry.url, 
+            "--user",       job.user,
             "--outputFile", job.outputFile, 
-            "--loglevel", "info"
+            "--baseUrl",    getBaseUrl(),  
+            "--cacheKey",   cacheKey,
+            "--loglevel",   "info",
         ];
 
         console.log("📝 Writing recording job metadata:", job);
@@ -68,13 +72,15 @@ export class LiveResolver {
 
         console.log("Entire command:", LiveResolver.startStreamScript, ...args); 
             // 🚀 Spawn the bash script in background (non-blocking)
-            spawn("bash", [LiveResolver.startStreamScript, ...args], {
-                detached: true,
-                stdio: "ignore", // Don't wait on stdout/stderr
-            }).unref();
+        spawn("bash", [LiveResolver.startStreamScript, ...args], {
+            detached: true,
+            stdio: "ignore", // Don't wait on stdout/stderr
+        }).unref();
 
-            return {
-                recordingId: job.recordingId,
-            };
+        console.log(" -------------      Command given      -------------");
+        console.log("bash", LiveResolver.startStreamScript, ...args);
+        console.log("----------------------------------------------------");
+        
+        return { recordingId: job.recordingId };
     }
 }

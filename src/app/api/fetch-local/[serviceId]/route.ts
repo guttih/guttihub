@@ -7,7 +7,7 @@ import { CashedEntries } from "@/types/CashedEntries";
 import {  getStreamFormatByExt } from "@/types/StreamFormat";
 import { ContentCategoryFieldLabel, inferContentCategory } from "@/types/ContentCategoryFieldLabel";
 import { makeSuccessResponse, makeErrorResponse } from "@/types/ApiResponse";
-import { getRecordingJobsDir, readJsonFile } from "@/utils/fileHandler";
+import { getJobsDir, readJsonFile } from "@/utils/fileHandler";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 import { StreamingService } from "@/types/StreamingService";
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 async function loadValidJobEntries(): Promise<M3UEntry[]> {
     const entries: M3UEntry[] = [];
     const usedUrls = new Set<string>();
-    const dir = getRecordingJobsDir();
+    const dir = getJobsDir();
     const files = await fs.readdir(dir);
 
     for (const file of files) {

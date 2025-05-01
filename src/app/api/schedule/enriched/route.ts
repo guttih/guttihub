@@ -76,12 +76,12 @@ export async function POST(req: Request): Promise<NextResponse<SystemScheduledEn
 
     const params: ScheduleRecordingParams = {
         cacheKey: body.cacheKey,
-        location: directoryExtracted,
-        entry: newEntryValues,
+        startTime: body.updatedFields.datetime,
         durationSec:body.updatedFields.duration,
         user: oldJobExpandedResults.user ? oldJobExpandedResults.user : "unknown",
         recordNow: false,
-        startTime: body.updatedFields.datetime,
+        location: directoryExtracted,
+        entry: newEntryValues,
     };
     
    

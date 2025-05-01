@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/Button/Button";
 import { MonitorCardBase } from "./MonitorCardBase";
 import { useState } from "react";
+import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
 
 interface MonitorCardRecordingProps {
     name: string;
@@ -12,8 +13,8 @@ interface MonitorCardRecordingProps {
     startedAt: string;
     status: string;
     cacheKey: string;
-    recordingId: string;
     watchUrl: string;
+    duration?: number;
     onKill?: (cacheKey: string) => void;
 }
 
@@ -25,14 +26,15 @@ export function MonitorCardRecording({
     startedAt,
     status,
     cacheKey,
-    recordingId,
     watchUrl,
+    duration,
     onKill,
 }: MonitorCardRecordingProps) {
     const [isKilling, setIsKilling] = useState(false);
     const [isLaunchingMonitor, setLaunchingMonitor] = useState(false);
     const [isShowing, setIsShowing] = useState(false);
-    
+    const expectedStop = duration ? new Date(new Date(startedAt).getTime() + duration * 1000).toISOString() : null;
+
     const handleKillClick = async () => {
         if (!onKill || isKilling) return;
         try {
@@ -48,7 +50,7 @@ export function MonitorCardRecording({
         if (!onKill || isKilling) return;
         try {
             setLaunchingMonitor(true);
-            await window.open(`/record/status?recordingId=${encodeURIComponent(recordingId)}`, "_blank");
+            await window.open(`/record/status?cacheKey=${encodeURIComponent(cacheKey)}`, "_blank");
             await new Promise((resolve) => setTimeout(resolve, 5000));
         } finally {
             setLaunchingMonitor(false);
@@ -65,8 +67,6 @@ export function MonitorCardRecording({
             setIsShowing(false);
         }
     };
-
-    
 
     return (
         <MonitorCardBase
@@ -89,7 +89,6 @@ export function MonitorCardRecording({
                     onClick={HandleShowing}
                     title="Whatch while recording"
                 >
-                    
                     {isShowing ? "⏳ Launching player..." : "▶️ Watch"}
                 </Button>
                 <Button
@@ -99,8 +98,7 @@ export function MonitorCardRecording({
                     onClick={HandleLaunchMonitor}
                     title="Open the recording monitor for this recording"
                 >
-                     {isLaunchingMonitor ? "⏳ Launching monitor..." : "🖥️ Monitor"}
-                    
+                    {isLaunchingMonitor ? "⏳ Launching monitor..." : "🖥️ Monitor"}
                 </Button>
 
                 {onKill && cacheKey && (
@@ -112,8 +110,13 @@ export function MonitorCardRecording({
                         disabled={isKilling}
                         title="Stop this recording"
                     >
-                         {isKilling ? "⏳ Killing..." : "🔴 Kill"}
+                        {isKilling ? "⏳ Killing..." : "🔴 Kill "}
                     </Button>
+                )}
+                {expectedStop && (
+                    <div className="w-full mt-1">
+                        <ProgressBarTime start={startedAt} end={expectedStop} now={new Date().toISOString()} showTime display="end" />
+                    </div>
                 )}
             </div>
         </MonitorCardBase>

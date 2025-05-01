@@ -67,6 +67,16 @@ BASE_URL=https://tv.guttih.com
 
 If not set in production, scheduled recordings will fail.
 
+Although `BASE_URL` is required in production, it should also be set in `.env.local` during development to avoid system check errors.
+
+[source,.env]
+----
+BASE_URL=http://localhost:3000
+----
+
+This value is used to generate stream URLs and perform system-level actions like cleanup. If it's missing, the system check will report a failure.
+
+
 
 == Naming Conventions
 

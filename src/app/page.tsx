@@ -1,8 +1,9 @@
 // src/app/page.tsx
+// src/app/page.tsx
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/authOptions";
 import { redirect } from "next/navigation";
-import { getUserRole } from "@/config";
+import { getUserRoleServerOnly } from "@/utils/serverOnly/hasUserAccessLevel"; 
+import { authOptions } from "@/app/api/auth/authOptions";
 import ClientApp from "./ClientApp";
 import Link from "next/link";
 
@@ -23,7 +24,7 @@ export default async function ProtectedPage() {
     );
   }
 
-  const role = getUserRole(session.user?.email);
+  const role = getUserRoleServerOnly(session.user?.email); 
 
   if (!role) {
     console.warn("Unauthorized access attempt:", session.user?.email);

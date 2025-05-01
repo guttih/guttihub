@@ -1,7 +1,7 @@
 // src/resolvers/DownloadResolver.ts
 
 import { spawn } from "child_process";
-import { buildRecordingId, getExtensionFromUrl } from "@/utils/resolverUtils";
+import { buildRecordingId, getBaseUrl, getExtensionFromUrl, getFinalOutputFilename } from "@/utils/resolverUtils";
 import { getScriptPath, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
 import { M3UEntry } from "@/types/M3UEntry";
 import { outDirectories } from "@/config";
@@ -15,13 +15,15 @@ export class DownloadResolver {
         entry: M3UEntry;
         user: string;
         cacheKey: string;
+        destinationDir: string;
     }): Promise<{ success: boolean; message?: string; cacheKey?: string; recordingId?: string; error?: string }> {
         try {
             const { entry, user, cacheKey } = params;
             const ext = getExtensionFromUrl(entry.url);
             const recordingId = buildRecordingId("download-", new Date(), entry.url, null);
-            const outputFile = `${outDirectories.find((d) => d.label === "Recordings")?.path ?? outDirectories[0].path}/${recordingId}`;
-
+            const workDir = `${outDirectories.find((d) => d.label === "Recordings")?.path ?? outDirectories[0].path}/${recordingId}`;
+            const outputFile = `${workDir}/${recordingId}`;
+            const finalOutputFile = `${params.destinationDir}/${ getFinalOutputFilename(params.entry, "ts", true)}`;
             console.log(`🚀 Starting download job: ${recordingId}`);
 
             const job: DownloadJob = {
@@ -29,6 +31,7 @@ export class DownloadResolver {
                 cacheKey,
                 user,
                 outputFile,
+                finalOutputFile,
                 logFile: `${outputFile}.log`,
                 statusFile: `${outputFile}.status`,
                 format: ext,
@@ -41,7 +44,14 @@ export class DownloadResolver {
 
             await writeDownloadingJobFile(job, true);
 
-            const args = ["--url", entry.url, "--outputFile", outputFile, "--user", user, "--loglevel", "info"];
+            const args = [
+                "--url"       , entry.url, 
+                "--outputFile", outputFile, 
+                "--user"      , user, 
+                "--baseUrl"   , getBaseUrl(),  
+                "--cacheKey"  , cacheKey,
+                "--loglevel"  , "info",
+            ];
 
             spawn("bash", [DownloadResolver.scriptDownload, ...args], {
                 detached: true,

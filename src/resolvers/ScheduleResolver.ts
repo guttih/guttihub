@@ -5,9 +5,10 @@ import { ScheduleRecordingParams } from "@/types/ScheduleRecordingParams";
 import { RecordingJob } from "@/types/RecordingJob";
 import { getScriptPath, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
 import { runJobctl } from "@/utils/jobctl";
-import { buildRecordingId, cleanupStreamingJobs } from "@/utils/resolverUtils";
+import { buildRecordingId, cleanupStreamingJobs, getBaseUrl, getFinalOutputFilename } from "@/utils/resolverUtils";
 import { M3UEntry } from "@/types/M3UEntry";
 import { Job, JobctlAddSuccess } from "@/types/Jobctl";
+import { outDirectories } from "@/config";
 
 export class ScheduleResolver {
     static scriptStartRecording = getScriptPath("record.sh");
@@ -29,17 +30,6 @@ export class ScheduleResolver {
         };
     }
 
-    
-    static buildRecordingArgs(url: string, user: string, durationSec: number, outputFile: string): string[] {
-        return [
-            "--url", url,
-            "--duration", durationSec.toString(),
-            "--user", user,
-            "--outputFile", outputFile,
-            "--recordingType", "hls",
-            "--format", "mp4",
-        ];
-    }
 
       static buildRecordingJob(params: {
         
@@ -51,18 +41,20 @@ export class ScheduleResolver {
         entry: M3UEntry;
         location: string;
     }): RecordingJob {
-        // const timestamp = getHumanReadableTimestamp();
-        // const recordingId = `recording-${params.cacheKey}`;
+
         const fileName= buildRecordingId("recording-", new Date(), params.entry.url, "mp4");
-        const outputFile = `${params.location}/${fileName}`
+        const workDir = `${outDirectories.find((d) => d.label === "Recordings")?.path ?? outDirectories[0].path}`;
+        const outputFile = `${workDir}/${fileName}`
         const createdAt = new Date().toISOString();
         const effectiveStartTime = params.recordNow ? createdAt : params.startTime ?? createdAt;
-    
+        const finalOutputFile = `${params.location}/${ getFinalOutputFilename(params.entry, "mp4", false)}`;
+        
         return {
             recordingId: fileName,
             cacheKey: params.cacheKey,
             user: params.user,
             outputFile:outputFile,
+            finalOutputFile: finalOutputFile,
             logFile: `${outputFile}.log`,
             statusFile: `${outputFile}.status`,
             duration: params.durationSec,
@@ -70,7 +62,7 @@ export class ScheduleResolver {
             recordingType: "hls",
             createdAt,
             startTime: effectiveStartTime,
-            entry: params.entry
+            entry: params.entry,
 
         };
     }
@@ -87,7 +79,19 @@ export class ScheduleResolver {
 
         
         const job = ScheduleResolver.buildRecordingJob(params);
-        const args = ScheduleResolver.buildRecordingArgs(params.entry.url, params.user, params.durationSec, job.outputFile);
+
+
+        const args = [
+                "--url",           params.entry.url,
+                "--duration",      params.durationSec.toString(),
+                "--user",          params.user,
+                "--outputFile",    job.outputFile,
+                "--recordingType", "hls",
+                "--format",        "mp4",
+                "--baseUrl" ,      getBaseUrl(),
+                "--cacheKey",      params.cacheKey,
+            ];
+        
     
         console.log("📝 Writing recording job metadata:", job);
         

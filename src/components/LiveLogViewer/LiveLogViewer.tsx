@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { getLatestStatus } from "@/utils/ui/statusHelpers";
+import { getLatestStatus } from "@/utils/statusHelpers";
 
 interface Props {
     recordingId: string;

@@ -46,11 +46,11 @@ export async function POST(req: Request) {
     // const oldDiskContent = await readRecordingJobFile(entryPath);
     const result = await ScheduleResolver.scheduleRecording({
         cacheKey,
-        location,
+        startTime: recordNow ? new Date().toISOString() : new Date(startTime).toISOString(),
         durationSec: parseInt(duration, 10),
         user: session.user?.email ?? "unknown",
         recordNow: form.get("recordNow") === "true",
-        startTime: recordNow ? new Date().toISOString() : new Date(startTime).toISOString(),
+        location,
         entry: entry
         
     });

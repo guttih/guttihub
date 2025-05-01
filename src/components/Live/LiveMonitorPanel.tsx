@@ -1,5 +1,5 @@
 "use client";
-import { UserRole } from "@/types/UserRole";
+import { hasRole, UserRole } from "@/utils/auth/accessControl";
 import { useEffect, useState } from "react";
 import { showMessageBox } from "../ui/MessageBox";
 import { MonitorCardDownload, MonitorCardRecording, MonitorCardStream } from "../cards/MonitorCard";
@@ -14,12 +14,13 @@ interface LiveJob {
     format: string;
     serviceName?: string;
     tvgLogo?: string;
+    duration?: number;
 }
 
 interface LiveMonitorPanelProps {
     hideIfNone?: boolean;
     title?: string;
-    userRole?: UserRole;
+    userRole: UserRole;
     onInlinePlay?: (url: string) => void;
 }
 
@@ -28,8 +29,8 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const canStopStream = userRole === "admin" || userRole === "moderator" || userRole === "streamer";
-    const canStopRecording = userRole === "admin" || userRole === "moderator";
+    const canStopStream = hasRole(userRole, "streamer");
+    const canStopRecording = hasRole(userRole, "moderator");
 
     useEffect(() => {
         async function fetchLiveJobs() {
@@ -127,8 +128,8 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
                             <MonitorCardRecording
                                 key={job.recordingId}
                                 cacheKey={job.cacheKey}
-                                recordingId={job.recordingId}
                                 watchUrl={makeWhachableRecordingUrl(job.recordingId)}
+                                duration={job.duration}
                                 onKill={canStopRecording ? () => handleKill(job.cacheKey) : undefined}
                                 {...commonProps}
                             />

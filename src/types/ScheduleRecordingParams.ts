@@ -8,6 +8,6 @@ export interface ScheduleRecordingParams {
   durationSec: number;
   user: string;
   recordNow: boolean;
-  entry: M3UEntry;
   location: string;
+  entry: M3UEntry;
 }

@@ -3,7 +3,7 @@
 import { RecordingJob } from "@/types/RecordingJob";
 import { DownloadStatus } from "@/types/DownloadStatus";
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
-import { fileExists, getCacheDir, getRecordingJobsDir, readFileRaw, readJsonFile, readStatusFile, readDownloadJobFile } from "@/utils/fileHandler";
+import { fileExists, getCacheDir, getJobsDir, readFileRaw, readJsonFile, readStatusFile, readDownloadJobFile } from "@/utils/fileHandler";
 import { isProcessAlive } from "@/utils/process";
 import path from "path";
 import fs from "fs/promises";
@@ -43,7 +43,7 @@ export async function isPidRunningFromStatus(statusFilePath: string): Promise<bo
  * Return active LIVE recording jobs (recording or live + pid alive).
  */
 export async function getActiveLiveJobs(): Promise<RecordingJob[]> {
-    const dir = getRecordingJobsDir();
+    const dir = getJobsDir();
     let files: string[];
     try {
         files = (await fs.readdir(dir)).filter((f) => f.endsWith(".json"));
@@ -90,7 +90,7 @@ export async function getActiveLiveJobs(): Promise<RecordingJob[]> {
 //  * Return active download jobs (reading status files).
 //  */
 // export async function getActiveDownloadJobs(): Promise<DownloadJob[]> {
-//     const dir = getRecordingJobsDir();
+//     const dir = getJobsDir();
 //     let files: string[];
 //     try {
 //         files = (await fs.readdir(dir)).filter((f) => f.endsWith(".json"));
@@ -157,6 +157,7 @@ export async function enrichRecordingJob(job: RecordingJob) {
         status: finalStatus,
         serviceName: name,
         tvgLogo: entry?.tvgLogo ?? "/fallback.png",
+        duration: job.duration,
     };
 }
 

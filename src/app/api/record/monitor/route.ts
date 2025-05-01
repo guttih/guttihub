@@ -3,7 +3,7 @@
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { infoJsonExists, readRecordingJobInfo, readRecordingJobFile } from "@/utils/fileHandler";
-import { readRecordingLogFile, readRecordingStatusFile } from "@/utils/resolverUtils";
+import { readJobLogFile, readJobStatusFile } from "@/utils/resolverUtils";
 import { isPidRunningFromStatus } from "@/utils/record/recordingJobUtils";
 
 export async function GET(req: NextRequest) {
@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
     // --- Otherwise live recording ---
     const job = await readRecordingJobFile(cacheKey!);
 
-    const statusLinesRaw = await readRecordingStatusFile(job.statusFile);
-    const logLinesRaw = await readRecordingLogFile(job.logFile);
+    const statusLinesRaw = await readJobStatusFile(job.statusFile);
+    const logLinesRaw = await readJobLogFile(job.logFile);
 
     let latestStatus = Array.isArray(statusLinesRaw.STATUS)
       ? statusLinesRaw.STATUS[statusLinesRaw.STATUS.length - 1]

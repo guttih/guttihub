@@ -5,7 +5,8 @@ import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { supportedFormats, getStreamFormatByExt, StreamFormat } from "@/types/StreamFormat";
 import { getExtension } from "@/utils/ui/getExtension";
 import { makeImageProxyUrl } from "@/utils/ui/makeImageProxyUrl";
-import { hasRole, UserRole } from "@/types/UserRole";
+import { hasRole } from "@/utils/auth/accessControl";
+import { UserRole } from "@/types/UserRole";
 import { showMessageBox } from "@/components/ui/MessageBox";
 import {
     MediaStreamButton,

@@ -1,3 +1,4 @@
+// src/app/api/fetch-m3u/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { parseM3U } from "@/utils/parseM3U";
 import { ensureCacheDir, getCacheFilePath, isFileFresh, readFile, readJsonFile, writeFile, writeJsonFile } from "@/utils/fileHandler";
@@ -15,7 +16,8 @@ import { filterEntries } from "@/utils/filterEntries";
 import { extractYears } from "@/utils/ui/extractYears";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";	
-import { getUserRole } from "@/config";
+import { getUserRoleServerOnly } from "@/utils/serverOnly/hasUserAccessLevel";
+import { isAdmin } from "@/types/UserRole";
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
     {
@@ -23,8 +25,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         const force = req.nextUrl.searchParams.get("force") === "true";
         if (force) {
             const session = await getServerSession({ req, ...authOptions });
-            const role = getUserRole(session?.user?.email);
-            if (role !== "admin") {
+            const role = getUserRoleServerOnly(session?.user?.email);
+            if (isAdmin(role)) {
                 return makeErrorResponse("Unauthorized: Only admins can force refresh", 403);
             }
         }

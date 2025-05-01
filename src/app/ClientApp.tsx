@@ -22,11 +22,12 @@ import { Spinner } from "@/components/Spinner/Spinner";
 import { useSession, signOut } from "next-auth/react";
 
 import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel";
-
-import { hasRole, UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
+import { hasRole, UserRole } from "@/utils/auth/accessControl"; 
 import { showMessageBox } from "@/components/ui/MessageBox";
 import { Button } from "@/components/ui/Button/Button";
 import { InlineHlsPlayer } from "@/components/InlineHlsPlayer";
+import { UserMenu } from "@/components/UserMenu";
+
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -324,6 +325,56 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     </Button>
                 )}
 
+
+
+"use client";
+
+import { Button } from "@/components/ui/Button/Button";
+import { signOut } from "next-auth/react";
+
+type Props = {
+  userName?: string;
+  userRole: string;
+  // onForceRefresh: () => void;
+};
+
+export const UserMenu = ({ userName, userRole /*, onForceRefresh */ }: Props) => {
+  return (
+    <div className="flex items-center gap-4 relative">
+      <h3 className="text-sm sm:text-base font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+        {userName ?? "unknown"} ({userRole})
+      </h3>
+
+      {/* 
+      {userRole === "admin" && (
+        <div className="relative group">
+          <Button variant="secondary" className="px-4 py-2 rounded text-sm">
+            Admin
+          </Button>
+          <div className="absolute hidden group-hover:flex flex-col right-0 top-full bg-gray-800 rounded shadow-lg z-50 min-w-[320px]">
+            <ForceRefreshButton onForceRefresh={onForceRefresh} />
+            <SystemCheckButton />
+            <RunCleanupButton />
+          </div>
+        </div>
+      )} 
+      */}
+
+      <Button
+        variant="default"
+        onClick={() => signOut({ callbackUrl: "/" })}
+        className="px-3 py-2 rounded text-sm"
+      >
+        Logout
+      </Button>
+    </div>
+  );
+};
+
+
+
+
+
                 {/* existing user name */}
                 <div className="flex items-center gap-4 relative">
                     <h3 className="text-sm sm:text-base font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
@@ -347,51 +398,81 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                                 <button
                                     onClick={async () => {
                                         try {
-                                          const res = await fetch("/api/system-check");
-                                          const json = await res.json();
-                                      
-                                          const output = json.results?.output || {};
-                                          const success = json.results?.success ?? false;
-                                          const longestToolName = Math.max(...Object.keys(output).map(t => t.length));
-                                      
-                                          const reportLines = Object.entries(output).map(([tool, path]) => {
-                                            const paddedTool = tool.padEnd(longestToolName);
-                                            const icon = path ? "✅" : "❌";
-                                            const value = path || "NOT FOUND";
-                                            return `${icon} ${paddedTool}: ${value}`;
-                                          });
-                                      
-                                          const message = `${
-                                            success
-                                              ? "✅ All system dependencies are installed."
-                                              : "❌ Some dependencies are missing."
-                                          }\n\n${reportLines.join("\n")}`;
-                                      
-                                          showMessageBox({
-                                            variant: success ? "success" : "error",
-                                            title: "System Check",
-                                            message,
-                                            toast: true,
-                                            blocking: false,
-                                            position: "top-right",
-                                            preserveLineBreaks: true,
-                                          });
+                                            const res = await fetch("/api/os/system/check");
+                                            const json = await res.json();
+
+                                            const output = json.results?.output || {};
+                                            const success = json.results?.success ?? false;
+                                            const longestToolName = Math.max(...Object.keys(output).map((t) => t.length));
+
+                                            const reportLines = Object.entries(output).map(([tool, path]) => {
+                                                const paddedTool = tool.padEnd(longestToolName);
+                                                const icon = path ? "✅" : "❌";
+                                                const value = path || "NOT FOUND";
+                                                return `${icon} ${paddedTool}: ${value}`;
+                                            });
+
+                                            const message = `${
+                                                success ? "✅ All system dependencies are installed." : "❌ Some dependencies are missing."
+                                            }\n\n${reportLines.join("\n")}`;
+
+                                            showMessageBox({
+                                                variant: success ? "success" : "error",
+                                                title: "System Check",
+                                                message,
+                                                toast: true,
+                                                blocking: false,
+                                                position: "top-right",
+                                                preserveLineBreaks: true,
+                                            });
                                         } catch (err) {
-                                          showMessageBox({
-                                            variant: "error",
-                                            title: "System Check Error",
-                                            message: "💥 Something went wrong while communicating with the backend.",
-                                            toast: true,
-                                            blocking: true,
-                                            preserveLineBreaks: true,
-                                          });
-                                          console.error("System check error:", err);
+                                            showMessageBox({
+                                                variant: "error",
+                                                title: "System Check Error",
+                                                message: "💥 Something went wrong while communicating with the backend.",
+                                                toast: true,
+                                                blocking: true,
+                                                preserveLineBreaks: true,
+                                            });
+                                            console.error("System check error:", err);
                                         }
-                                      }}
-                                      
+                                    }}
                                     className="w-full text-left px-4 py-2 hover:bg-gray-700"
                                 >
                                     🧪 System Environment Check
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const res = await fetch("/api/system/cleanup", {
+                                                method: "POST",
+                                                body: JSON.stringify({ force: true }),
+                                                headers: { "Content-Type": "application/json" },
+                                            });
+                                            const json = await res.json();
+
+                                            showMessageBox({
+                                                variant: json.success ? "success" : "warning",
+                                                title: "Cleanup",
+                                                message: json.message ?? json.error ?? "Unknown result.",
+                                                toast: true,
+                                                blocking: false,
+                                                position: "top-right",
+                                            });
+                                        } catch (err) {
+                                            showMessageBox({
+                                                variant: "error",
+                                                title: "Cleanup Error",
+                                                message: "💥 Something went wrong while triggering the cleanup.",
+                                                toast: true,
+                                                blocking: true,
+                                            });
+                                            console.error("Cleanup request error:", err);
+                                        }
+                                    }}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-700"
+                                >
+                                    🧹 Run Cleanup Now
                                 </button>
                             </div>
                         </div>
