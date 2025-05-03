@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { existsSync, readFileSync } from "fs";
 import path from "path";
-import { outDirectories } from "@/config";
 import { trackViewer } from "@/utils/liveViewers";
+import { getWorkDir } from "@/utils/fileHandler";
 
 export async function GET(req: NextRequest, context: unknown) {
     const { params } = context as { params: { recordingId: string } };
@@ -10,12 +10,12 @@ export async function GET(req: NextRequest, context: unknown) {
 
     trackViewer(recordingId, req.headers.get("x-forwarded-for") || "unknown");
 
-    const recordDir = outDirectories.find((d) => d.label === "Recordings");
-    if (!recordDir || !recordDir.path) {
+    const recordDir = getWorkDir();
+    if (!recordDir ) {
         return new Response("Recordings directory not found", { status: 404 });
     }
 
-    const playlistPath = path.resolve(recordDir.path, `${recordingId}.m3u8`);
+    const playlistPath = path.resolve(recordDir, `${recordingId}.m3u8`);
     if (!existsSync(playlistPath)) {
         return new Response("Playlist not found", { status: 404 });
     }

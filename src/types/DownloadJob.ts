@@ -13,7 +13,7 @@ export interface DownloadJob {
   startTime: string;           // When the download started
   createdAt: string;           // When the metadata was written
   url: string;                 // Original download URL
-  entry: M3UEntry;             // 🧠 Full M3UEntry for friendly names, thumbnails, group info etc
+  entry: M3UEntry;             //  Full M3UEntry for friendly names, thumbnails, group info etc
   format: string;              
   recordingType: string;       
 }

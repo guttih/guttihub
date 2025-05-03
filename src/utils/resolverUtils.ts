@@ -12,6 +12,7 @@ import {
     readDownloadJobFile,
     readDownloadJobInfo,
     deleteFileAndForget,
+    fileExists,
 } from "@/utils/fileHandler";
 import { getCacheDir, readJsonFile, writeJsonFile } from "@/utils/fileHandler";
 import { RecordingJob } from "@/types/RecordingJob";
@@ -23,13 +24,18 @@ import { DownloadJobInfo } from "@/types/DownloadJobInfo";
 import { isProcessAlive } from "./process";
 import { getLatestStatus } from "./statusHelpers";
 
-
 export function getBaseUrl(): string {
-    const baseUrl = process.env.BASE_URL; // Fetch the value of BASE_URL from environment variables
+    const baseUrl = process.env.BASE_URL;
+
     if (!baseUrl) {
-        throw new Error("BASE_URL environment variable is not set.");
+        throw new Error("BASE_URL is not set in the environment variables");
     }
     return baseUrl;
+}
+
+// Wraps a string with surrounding quotes to make it a valid shell argument
+export function quoteShellArg(arg: string): string {
+    return `"${arg.replace(/"/g, '\\"')}"`;
 }
 
 export function buildRecordingId(prefix: string, date: Date, url: string, extension: string | null = null): string {
@@ -59,12 +65,20 @@ export function getHumanReadableTimestamp(): string {
     return `${yy}${MM}${dd}T${HH}${mm}${ss}`;
 }
 
+function addTimestampBeforeExtension(filePath: string, timestamp: string): string {
+  const dir = path.dirname(filePath);
+  const ext = path.extname(filePath);
+  const base = path.basename(filePath, ext);
+  return path.join(dir, `${base}-${timestamp}${ext}`);
+}
+
+
 /**
  * Read a recording’s .log file and return an array of non‑empty lines.
  */
 export async function readJobLogFile(logPath: string): Promise<string[]> {
     try {
-        if (!logPath) return [];
+        if (!logPath || !(await fileExists(logPath))) return [];
         const text = await readFileRaw(logPath);
         return text.split(/\r?\n/).filter((l) => l.trim().length > 0);
     } catch (err) {
@@ -80,7 +94,7 @@ export async function readJobLogFile(logPath: string): Promise<string[]> {
 export async function readJobStatusFile(statusPath: string): Promise<Record<string, string | string[]>> {
     const result: Record<string, string | string[]> = {};
     try {
-        if (!statusPath) return result;
+        if (!statusPath || !(await fileExists(statusPath))) return result;
         const text = await readFileRaw(statusPath);
         for (const line of text.split(/\r?\n/).filter((l) => l.trim())) {
             const [key, ...rest] = line.split("=");
@@ -97,27 +111,6 @@ export async function readJobStatusFile(statusPath: string): Promise<Record<stri
         console.warn(`readRecordingStatusFile: failed to read ${statusPath}`, err);
     }
     return result;
-}
-
-/**
- * Perform the full “read, parse, bundle into info.json, cleanup” for one job.
- * Returns true if it was processed (i.e. not live).
- */
-export async function processFinishedRecording(job: RecordingJob): Promise<boolean> {
-    // you’ll still need getEntryByCacheKey and deleteRecordingJob imported where it lives
-    const logs = await readJobLogFile(job.logFile);
-    const status = await readJobStatusFile(job.statusFile);
-
-    // assemble and write the -info.json
-    const info = { job, logs, status };
-    const infoPath = path.join(getJobsDir(), `${job.recordingId}-info.json`);
-    await writeJsonFile(infoPath, info);
-
-    // now clean up
-    await deleteRecordingJob(job.recordingId, true);
-    // drop any leftover files quietly
-    await Promise.all([job.logFile, job.statusFile].map((p) => fs.unlink(p).catch(() => {})));
-    return true;
 }
 
 /** check whether a PID is still a live process */
@@ -294,7 +287,9 @@ export async function deleteRecordingJob(recordingId: string, removeCasheAlso: b
                 fsSync.unlinkSync(cacheFilePath);
             }
         }
-        fsSync.unlinkSync(jobFilePath);
+        if (fsSync.existsSync(jobFilePath)) {
+            fsSync.unlinkSync(jobFilePath);
+        }
     }
 }
 
@@ -309,7 +304,9 @@ export async function deleteDownloadJob(recordingId: string, removeCasheAlso: bo
                 fsSync.unlinkSync(cacheFilePath);
             }
         }
-        fsSync.unlinkSync(jobFilePath);
+        if (fsSync.existsSync(jobFilePath)) {
+            fsSync.unlinkSync(jobFilePath);
+        }
     }
 }
 
@@ -377,22 +374,122 @@ export async function processFinishedDownload(job: DownloadJob): Promise<boolean
     // now clean up
     await deleteDownloadJob(job.recordingId, true);
     // drop any leftover files quietly
-    await Promise.all([job.logFile, job.statusFile].map((p) => fs.unlink(p).catch(() => {})));
+    await Promise.all([deleteFileAndForget(job.logFile),deleteFileAndForget(job.statusFile),]);
+      
     return true;
+}
+
+export async function getJobByCacheKey(cacheKey: string): Promise<RecordingJob | DownloadJob | null> {
+    const jobPath = path.join(getJobsDir(), `${cacheKey}.json`);
+
+    if (!(await fileExists(jobPath))) {
+        return null;
+    }
+
+    try {
+        const job = await readJsonFile<RecordingJob | DownloadJob>(jobPath);
+        return job;
+    } catch (err) {
+        console.warn(`⚠️ Failed to parse job file for cacheKey ${cacheKey}:`, err);
+        return null;
+    }
+}
+
+// Perform any finalization steps for a job, like moving the destination to its final location
+// and cleaning up temporary files.
+// Function to move the file and finalize the job
+export async function finalizeJobStart(cacheKey: string): Promise<boolean> {
+    // Your existing logic here for finalizing the job, reading logs, and creating the info file
+
+    const job = await getJobByCacheKey(cacheKey);
+
+    if (!job) {
+        console.warn(`⚠️ finalizeJobStart: No job found for cacheKey ${cacheKey}`);
+        return false;
+    }
+
+    if (job.format === "hls-live" && !("url" in job)) {
+        const liveJob = await readRecordingJobFile(cacheKey);
+        processFinishedRecording(liveJob);
+        return true;
+    }
+
+    // Create the info.json and do final cleanup
+    const logs = await readJobLogFile(job.logFile);
+    const status = await readJobStatusFile(job.statusFile);
+
+    // Write the info.json file
+    // Move the file to the final location (e.g., renaming or moving)
+    // Now make sure the the finalOutputFile does not exit before renaming and if it does, we need change the finalOutputFile name and update the job
+    if (await fileExists(job.finalOutputFile)) {
+        const timestamp = getHumanReadableTimestamp();
+        job.finalOutputFile = addTimestampBeforeExtension(job.finalOutputFile, timestamp);
+    }
+    
+
+    await fs.rename(job.outputFile, job.finalOutputFile);
+
+    const info = { job, logs, status };
+    const infoFilePath = path.join(getJobsDir(), `${job.recordingId}-info.json`);
+    const infoFilePathForMedia = `${job.finalOutputFile}.json`;
+    await writeJsonFile(infoFilePath, info); // todo: make cleanupjob remove this file
+    await writeJsonFile(infoFilePathForMedia, info); // this file should always exist for all recordings or jobs
+
+    console.log(`✅ Moved ${job.outputFile} to ${job.finalOutputFile}`);
+
+    // Clean up the old files (logs, status, etc.)
+    await deleteJobFiles(job);
+
+    console.log(`✅ Job info saved in: ${infoFilePath}`);
+    return true; // Success
+}
+
+/**
+ * Perform the full “read, parse, bundle into info.json, cleanup” for one job.
+ * Returns true if it was processed (i.e. not live).
+ */
+export async function processFinishedRecording(job: RecordingJob): Promise<void> {
+    // you’ll still need getEntryByCacheKey and deleteRecordingJob imported where it lives
+    const logs = await readJobLogFile(job.logFile);
+    const status = await readJobStatusFile(job.statusFile);
+
+    // assemble and write the -info.json
+    const info = { job, logs, status };
+    const infoPath = path.join(getJobsDir(), `${job.recordingId}-info.json`);
+    await writeJsonFile(infoPath, info);
+
+    // now clean up
+    const removeCasheAlso = job.format === "hls-live";
+    await deleteRecordingJob(job.recordingId, removeCasheAlso);
+    // drop any leftover files quietly
+    await Promise.all([deleteFileAndForget(job.logFile),deleteFileAndForget(job.statusFile),]);
+}
+
+function deleteJobFiles(job: RecordingJob | DownloadJob): void {
+    if (!job) return;
+
+    if (
+        job.outputFile &&
+        job.outputFile !== job.finalOutputFile &&
+        fsSync.existsSync(job.outputFile)
+      ) {
+        deleteFileAndForget(job.outputFile);
+      }
+      
+    if (job.statusFile) deleteFileAndForget(job.statusFile);
+    if (job.logFile) deleteFileAndForget(job.logFile);
 }
 
 export async function cleanupFinishedJobs(options: { force?: boolean } = {}): Promise<void> {
     const { force = false } = options;
-
-    // Step 1: Clean orphaned .cache JSONs (ghost files)
-    await cleanupGhostCacheFiles(force);
-
     const jobDir = getJobsDir();
-    const files = await fs.readdir(jobDir);
     const now = Date.now();
+    const SEVEN_HOURS_MS = 7 * 60 * 60 * 1000; // 7 hours
+
+    const files = await fs.readdir(jobDir);
 
     for (const file of files) {
-        // Only consider job metadata JSONs, skip info bundles
+        // Skip info bundles, these are not job metadata JSONs
         if (!file.endsWith(".json") || file.includes("-info")) continue;
 
         const filePath = path.join(jobDir, file);
@@ -405,93 +502,90 @@ export async function cleanupFinishedJobs(options: { force?: boolean } = {}): Pr
             continue;
         }
 
-        // Read status and check process health
-        const status = await readJobStatusFile(job.statusFile);
-        const statusValue = normalizeStatus(getLatestStatus(status.STATUS));
+        const statusFile = job.statusFile;
+        const finalOutputFile = job.finalOutputFile;
+        const infoFilePath = path.join(jobDir, `${job.recordingId}-info.json`);
+
+        // If force is true, skip the linked files check and just clean up the job
+        if (!force) {
+            // If the job is linked (i.e., the info.json and finalOutputFile exist), skip it
+            if ((await fileExists(infoFilePath)) && (await fileExists(finalOutputFile))) {
+                console.log(`💼 Skipping job ${job.recordingId} — linked job files exist.`);
+                continue; // Skip cleanup for files that are linked
+            }
+        }
+
+        // We now check if the file is older than 7 hours before considering it for deletion
+        const fileAge = now - (await fs.stat(filePath)).mtimeMs;
+        if (fileAge < SEVEN_HOURS_MS) {
+            console.log(`⏳ Skipping file ${file} as it is younger than 7 hours.`);
+            continue; // Skip any files younger than 7 hours
+        }
+
+        // **Ghost Jobs**: If the job has no .info.json or .finalOutputFile, it's a ghost job
+        if (!(await fileExists(infoFilePath)) && !(await fileExists(finalOutputFile))) {
+            console.log(`💀 Deleting ghost job: ${job.recordingId} — no associated files.`);
+            await deleteJobFiles(job);
+            continue; // Skip further processing for this ghost job
+        }
+
+        // **Zombie Jobs**: If the status is not "done," "stopped," or "error," but the job is not running, it’s a zombie job
+        const status = await readJobStatusFile(statusFile);
+        const statusValue = getLatestStatus(status.STATUS);
         const pidRaw = getLatestStatus(status.PID);
         const pidAlive = pidRaw ? await isProcessAlive(parseInt(pidRaw, 10)) : false;
 
-        const isDone = statusValue === "done";
-
-        // We treat jobs as zombies if they claim to be in progress but no PID is alive
-        const isZombie = (statusValue === "recording" || statusValue === "downloading" || statusValue === "live") && !pidAlive;
-
-        // Add grace time of 10 minutes to maxExpected runtime
-        const jobStart = new Date(job.startTime).getTime();
-        const maxExpectedMs = "duration" in job ? (job.duration || 0) * 1000 : 0;
-        const isStale = now > jobStart + maxExpectedMs + 10 * 60 * 1000;
-
-        const isRecording = job.recordingType === "hls";
-
-        if (isDone) {
-            if (isRecording) {
-                await processFinishedRecording(job as RecordingJob);
-            } else {
-                await processFinishedDownload(job as DownloadJob);
-            }
-        } else if (isZombie || isStale) {
-            console.warn(`🧟 Deleting zombie/stale job: ${job.recordingId} (${statusValue})`);
-
-            // Extra cleanup if it's HLS (which creates directories and playlists)
-            if (job.recordingType === "hls") {
-                deleteFileAndForget(job.outputFile + ".m3u8");
-                await fs.rm(job.outputFile + "_hls", { recursive: true, force: true }).catch(() => {});
-            }
-
-            // Remove output, log, and status files
-            deleteFileAndForget(job.outputFile);
-            deleteFileAndForget(job.statusFile);
-            deleteFileAndForget(job.logFile);
-
-            if (isRecording) {
-                await deleteRecordingJob(job.recordingId, true);
-            } else {
-                await deleteDownloadJob(job.recordingId, true);
-            }
+        if (["done", "stopped", "error"].includes(statusValue)) {
+            // If the job is "done," proceed with the cleanup
+            console.log(`✅ Deleting completed job: ${job.recordingId}`);
+            await deleteJobFiles(job);
+        } else if (!pidAlive) {
+            // Zombie job, process is dead but marked as still active
+            console.log(`🧟 Deleting zombie job: ${job.recordingId} — process no longer alive.`);
+            await deleteJobFiles(job);
         } else {
-            console.log(`💤 Skipping active job: ${job.recordingId} (${statusValue})`);
+            console.log(`💤 Skipping active job: ${job.recordingId} — still running.`);
         }
     }
 }
 
-export async function cleanupGhostCacheFiles(force = false): Promise<void> {
-    const cacheDir = getCacheDir();
-    const jobDir = getJobsDir();
+// export async function cleanupGhostCacheFiles(force = false): Promise<void> {
+//     const cacheDir = getCacheDir();
+//     const jobDir = getJobsDir();
+//     const now = Date.now();
 
-    const allFiles = await fs.readdir(cacheDir);
-    const ghostCandidates = allFiles.filter((f) => f.startsWith("cache-") && f.endsWith(".json"));
+//     const allFiles = await fs.readdir(cacheDir);
+//     const ghostCandidates = allFiles.filter((f) => f.startsWith("cache-") && f.endsWith(".json"));
 
-    const activeJobFiles = await fs.readdir(jobDir);
-    const usedCacheKeys = new Set<string>();
-    for (const file of activeJobFiles) {
-        if (!file.endsWith(".json") || file.includes("-info")) continue;
-        const job = await readJsonFile<{ cacheKey: string }>(path.join(jobDir, file));
-        if (job.cacheKey) {
-            usedCacheKeys.add(job.cacheKey);
-        }
-    }
+//     const activeJobFiles = await fs.readdir(jobDir);
+//     const usedCacheKeys = new Set<string>();
+//     for (const file of activeJobFiles) {
+//         if (!file.endsWith(".json") || file.includes("-info")) continue;
+//         const job = await readJsonFile<{ cacheKey: string }>(path.join(jobDir, file));
+//         if (job.cacheKey) {
+//             usedCacheKeys.add(job.cacheKey);
+//         }
+//     }
 
-    const now = Date.now();
-    const GHOST_TTL_MS = 5 * 60 * 60 * 1000; // 5 hours
+//     for (const filename of ghostCandidates) {
+//         const fullPath = path.join(cacheDir, filename);
+//         try {
+//             const stat = await fs.stat(fullPath);
+//             const age = now - stat.mtimeMs;
 
-    for (const filename of ghostCandidates) {
-        const fullPath = path.join(cacheDir, filename);
-        try {
-            const stat = await fs.stat(fullPath);
-            const age = now - stat.mtimeMs;
+//             const data = await readJsonFile<{ cacheKey?: string }>(fullPath);
+//             const cacheKey = data.cacheKey || filename.replace(".json", "");
 
-            const data = await readJsonFile<{ cacheKey?: string }>(fullPath);
-            const cacheKey = data.cacheKey || filename.replace(".json", "");
-
-            if (force || (age > GHOST_TTL_MS && !usedCacheKeys.has(cacheKey))) {
-                console.warn(`👻 Deleting ghost cache file: ${filename} ${force ? "(forced)" : ""}`);
-                deleteFileAndForget(fullPath);
-            }
-        } catch (err) {
-            console.error(`❌ Failed to check or delete ghost: ${filename}`, err);
-        }
-    }
-}
+//             // If force is true, skip checking if it's linked to any job
+//             if (force || !usedCacheKeys.has(cacheKey)) {
+//                 console.warn(`👻 Deleting ghost cache file: ${filename} ${force ? "(forced)" : ""}`);
+//                 deleteFileAndForget(fullPath);
+//             }
+//         } catch (err) {
+//             console.error(`❌ Failed to check or delete ghost: ${filename}`, err);
+//         }
+//     }
+// }
 
 // 🔥 Create a safe filename from an M3UEntry
 export function makeSafeDiskName(entry: M3UEntry): string {

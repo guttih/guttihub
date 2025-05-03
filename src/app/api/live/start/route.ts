@@ -1,7 +1,6 @@
 // src/app/api/live/start/route.ts
 
 import { NextRequest } from "next/server";
-import { outDirectories } from "@/config";
 import { getRecordingIdByCacheKey } from "@/utils/resolverUtils";
 import { readCashedEntryFile } from "@/utils/record/recordingJobUtils";
 import { LiveResolver } from "@/resolvers/LiveResolver";
@@ -30,17 +29,11 @@ export async function POST(req: NextRequest) {
             return new Response(JSON.stringify({ error: "Invalid or expired cache key" }), { status: 404 });
         }
 
-        const location = outDirectories.find((d) => d.label === "Recordings");
-        if (!location) throw new Error("Recording output directory not found");
-
+    
         
 
         
-        const result = await LiveResolver.startStream({
-            cacheKey,
-            entry,
-            location: location.path
-        });
+        const result = await LiveResolver.startStream(cacheKey , entry);
         const recordingId = result.recordingId;
         return new Response(JSON.stringify({ recordingId, entry }), {
             status: 200,

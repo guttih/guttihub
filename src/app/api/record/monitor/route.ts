@@ -9,13 +9,22 @@ import { isPidRunningFromStatus } from "@/utils/record/recordingJobUtils";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const cacheKey = searchParams.get("cacheKey");
-  const recordingId = searchParams.get("recordingId");
+  let recordingId = searchParams.get("recordingId");
 
   if (!cacheKey && !recordingId) {
     return NextResponse.json({ error: "Missing cacheKey or recordingId" }, { status: 400 });
   }
-
   try {
+    if (cacheKey && !recordingId) {
+        const job = await readRecordingJobFile(cacheKey);
+        if (!job) {
+            return NextResponse.json({ error: "Recording job not found" }, { status: 404 });
+        }
+        recordingId = job.recordingId;   
+    }
+
+        
+
     // --- Finalized recordings first ---
     if (recordingId && infoJsonExists(recordingId)) {
       const info = await readRecordingJobInfo(recordingId);

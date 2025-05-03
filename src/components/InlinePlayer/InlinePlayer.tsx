@@ -297,7 +297,7 @@ function makeStreamProxyUrl(playUrl: string): string {
     if (playUrl.includes("/hls-stream") && playUrl.endsWith("/playlist")) {
         return playUrl;
     }
-    return `/api/stream-proxy?url=${encodeURIComponent(playUrl)}`;
+    return `/api/stream-proxy?url=${playUrl}`;
 }
 
 function normalizeUrl(playUrl: string): string {

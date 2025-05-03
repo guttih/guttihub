@@ -1,19 +1,11 @@
 [
     {
-        "label": "Recordings",
+        "label": "Work",
         "path": "public/videos/recordings"
     },
     {
-        "label": "Videos",
-        "path": "public/videos"
-    },
-    {
-        "label": "TV Series",
-        "path": "public/videos/tv-series"
-    },
-    {
-        "label": "Movies",
-        "path": "public/videos/movies"
+        "label": "Media",
+        "path": "public/videos/media"
     }
 
 ]

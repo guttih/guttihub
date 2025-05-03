@@ -94,7 +94,7 @@ export default function SchedulePage() {
     return (
         <div className="max-w-3xl mx-auto p-6 space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-white">Scheduled Jobs</h1>
+                <h1 className="text-3xl font-bold text-white">Scheduled recordings</h1>
                 <span className="font-mono text-sm bg-gray-800 text-gray-300 px-3 py-1 rounded shadow-sm ring-1 ring-gray-700">
                     {now.toLocaleString(undefined, { hour12: false })}
                 </span>

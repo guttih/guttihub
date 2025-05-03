@@ -5,6 +5,7 @@ import { DownloadJob } from "@/types/DownloadJob";
 import { RecordingJob } from "@/types/RecordingJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 import { DownloadJobInfo } from "@/types/DownloadJobInfo";
+import { outDirectories } from "@/config";
 
 /**
  * Resolves an absolute path to a script inside src/scripts/
@@ -32,7 +33,7 @@ export async function ensureCacheDir(): Promise<void> {
 }
 
 export async function ensureDownloadJobsDir(): Promise<void> {
-    await fs.mkdir(getDownloadJobsDir(), { recursive: true });
+    await fs.mkdir(getJobsDir(), { recursive: true });
 }
 
 export async function fileExists(filePath: string): Promise<boolean> {
@@ -85,9 +86,16 @@ export function getJobsDir(): string {
     return path.join(getCacheDir(), "recording-jobs");
 }
 
-export function getDownloadJobsDir(): string {
-    return getJobsDir();
-    //return path.join(getCacheDir(), "downloading-jobs");
+
+// returns the directory where recordings and downloads are stored
+// This directory could contain a lot of files, including files we did not create and have no info about
+export function getMediaDir(): string {
+    return outDirectories[1].path;
+}
+
+// returns the direcrtory ffmpeg uses to store its temporary files until the job is finished and the final file is moved to the media dir
+export function getWorkDir(): string {
+    return outDirectories[0].path;
 }
 
 // Build the path to the bundle
@@ -135,19 +143,17 @@ export async function writeRecordingJobFile(job: RecordingJob, deleteEntryCash: 
     }
 }
 export async function readRecordingJobFile(cacheKey: string): Promise<RecordingJob> {
-    const dir = getJobsDir();
-    const filePath = path.join(dir, `${cacheKey}.json`);
+    const filePath = path.join( getJobsDir(), `${cacheKey}.json`);
     return await readJsonFile<RecordingJob>(filePath);
 }
 
 export async function readDownloadJobFile(cacheKey: string): Promise<DownloadJob> {
-    const dir = getDownloadJobsDir();
-    const filePath = path.join(dir, `${cacheKey}.json`);
+    const filePath = path.join( getJobsDir(), `${cacheKey}.json`);
     return await readJsonFile<DownloadJob>(filePath);
 }
 
 export async function writeDownloadingJobFile(job: DownloadJob, deleteEntryCash: boolean ): Promise<void> {
-    const dir = getDownloadJobsDir();
+    const dir = getJobsDir();
     await fs.mkdir(dir, { recursive: true });
     const filePath = path.join(dir, `${job.cacheKey}.json`);
     await writeJsonFile(filePath, job);

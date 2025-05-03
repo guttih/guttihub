@@ -3,12 +3,11 @@
 import { spawn } from "child_process";
 import { ScheduleRecordingParams } from "@/types/ScheduleRecordingParams";
 import { RecordingJob } from "@/types/RecordingJob";
-import { getScriptPath, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
+import { getMediaDir, getScriptPath, getWorkDir, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
 import { runJobctl } from "@/utils/jobctl";
-import { buildRecordingId, cleanupStreamingJobs, getBaseUrl, getFinalOutputFilename } from "@/utils/resolverUtils";
+import { buildRecordingId, cleanupStreamingJobs, getBaseUrl, getFinalOutputFilename, quoteShellArg } from "@/utils/resolverUtils";
 import { M3UEntry } from "@/types/M3UEntry";
 import { Job, JobctlAddSuccess } from "@/types/Jobctl";
-import { outDirectories } from "@/config";
 
 export class ScheduleResolver {
     static scriptStartRecording = getScriptPath("record.sh");
@@ -39,15 +38,14 @@ export class ScheduleResolver {
         recordNow: boolean;
         startTime?: string;
         entry: M3UEntry;
-        location: string;
     }): RecordingJob {
 
         const fileName= buildRecordingId("recording-", new Date(), params.entry.url, "mp4");
-        const workDir = `${outDirectories.find((d) => d.label === "Recordings")?.path ?? outDirectories[0].path}`;
+        const workDir = getWorkDir();
         const outputFile = `${workDir}/${fileName}`
         const createdAt = new Date().toISOString();
         const effectiveStartTime = params.recordNow ? createdAt : params.startTime ?? createdAt;
-        const finalOutputFile = `${params.location}/${ getFinalOutputFilename(params.entry, "mp4", false)}`;
+        const finalOutputFile = `${getMediaDir()}/${ getFinalOutputFilename(params.entry, "mp4", false)}`;
         
         return {
             recordingId: fileName,
@@ -84,8 +82,8 @@ export class ScheduleResolver {
         const args = [
                 "--url",           params.entry.url,
                 "--duration",      params.durationSec.toString(),
-                "--user",          params.user,
-                "--outputFile",    job.outputFile,
+                "--user",          quoteShellArg(params.user),
+                "--outputFile",    quoteShellArg(job.outputFile),
                 "--recordingType", "hls",
                 "--format",        "mp4",
                 "--baseUrl" ,      getBaseUrl(),

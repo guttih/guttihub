@@ -2,7 +2,7 @@
 
 import { getActiveLiveJobs, readCashedEntryFile } from "@/utils/record/recordingJobUtils";
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
-import { getDownloadJobsDir, ensureDownloadJobsDir } from "@/utils/fileHandler";
+import { getJobsDir, ensureDownloadJobsDir } from "@/utils/fileHandler";
 import { DownloadStatus } from "@/types/DownloadStatus";
 import fs from "fs/promises";
 import path from "path";
@@ -68,7 +68,7 @@ export async function getCombinedActiveCount(serviceId: string): Promise<number>
 
 /** Reads all active downloading jobs */
 export async function getActiveDownloadJobs(): Promise<DownloadStatus[]> {
-    const DOWNLOAD_JOBS_DIR = getDownloadJobsDir();
+    const DOWNLOAD_JOBS_DIR = getJobsDir();
   
     try {
       await ensureDownloadJobsDir(); 

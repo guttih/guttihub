@@ -10,7 +10,7 @@ const services: StreamingService[] = servicesJson;
 const outDirectories: OutputDirectory[] = outputDirs; 
 interface AppConfigType {
   appName: string;
-  defaultPageSize: number | string;
+  defaultPageSize: number;
   fallbackImage: string;
   hideCredentialsInUrl: boolean;
   maxEntryExportCount: number;

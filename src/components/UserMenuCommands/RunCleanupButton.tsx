@@ -34,7 +34,10 @@ export const RunCleanupButton = () => {
   };
 
   return (
-    <button onClick={runCleanup} className="w-full text-left px-4 py-2 hover:bg-gray-700">
+    <button 
+        onClick={runCleanup} 
+        title="Scans the disk for gosts and zombies and nukes them."
+        className="w-full text-left px-4 py-2 hover:bg-gray-700">
       🧹 Run Cleanup Now
     </button>
   );

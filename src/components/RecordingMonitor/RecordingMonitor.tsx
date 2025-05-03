@@ -25,67 +25,68 @@ export interface MonitorData {
 
 interface RecordingMonitorProps {
     cacheKey?: string;
-    recordingId?: string;
     intervalMs?: number;
     onStopRecording?: () => void;
 }
 
-export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2000, onStopRecording }: RecordingMonitorProps) {
+export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRecording }: RecordingMonitorProps) {
     const [monitorData, setMonitorData] = useState<MonitorData | null>(null);
     const [error, setError] = useState<string | null>(null);
-
+    
     const [stopCountdown, setStopCountdown] = useState<number | null>(null);
-
+    
     useEffect(() => {
         let mounted = true;
-    
+        console.log("🎥 RecordingMonitor mounted", { cacheKey });
+        
         const fetchMonitorData = async () => {
-          try {
-            const params = new URLSearchParams();
-            if (cacheKey) params.set("cacheKey", cacheKey);
-            if (recordingId) params.set("recordingId", recordingId);
-    
-            const res = await fetch(`/api/record/monitor?${params.toString()}`);
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error || "Failed to fetch monitor data");
-    
-            if (mounted) {
-              setMonitorData(json);
-    
-              const lowerStatus = json.currentStatus?.toLowerCase();
-              if (["done", "stopped", "error"].includes(lowerStatus)) {
-                if (stopCountdown === null) {
-                  setStopCountdown(5); // start 5 pulls grace period
-                }
-              } else {
-                setStopCountdown(null); // reset countdown if recording again
-              }
-            }
-          } catch (err) {
-            console.error("❌ Monitor fetch failed:", err);
-            if (mounted) setError((err as Error).message);
-          }
-        };
-    
-        fetchMonitorData();
-    
-        const interval = setInterval(() => {
-          if (stopCountdown !== null && stopCountdown <= 0) {
-            clearInterval(interval);
-          } else {
-            fetchMonitorData();
-            if (stopCountdown !== null) {
-              setStopCountdown((prev) => (prev !== null ? prev - 1 : null));
-            }
-          }
-        }, intervalMs);
-    
-        return () => {
-          mounted = false;
-          clearInterval(interval);
-        };
-      }, [cacheKey, recordingId, intervalMs, stopCountdown]);
+            try {
 
+                console.log("fetchMonitorData is executing");
+                const params = new URLSearchParams();
+                if (cacheKey) params.set("cacheKey", cacheKey);
+                const res = await fetch(`/api/record/monitor?${params.toString()}`);
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || "Failed to fetch monitor data");
+
+                if (mounted) {
+                    setMonitorData(json);
+
+                    const lowerStatus = json.currentStatus?.toLowerCase();
+                    if (["done", "stopped", "error"].includes(lowerStatus)) {
+                        if (stopCountdown === null) {
+                            setStopCountdown(5); // start 5 pulls grace period
+                        }
+                    } else {
+                        setStopCountdown(null); // reset countdown if recording again
+                    }
+                }
+            } catch (err) {
+                console.error("❌ Monitor fetch failed:", err);
+                if (mounted) setError((err as Error).message);
+            }
+        };
+
+        fetchMonitorData();
+
+        const interval = setInterval(() => {
+            if (stopCountdown !== null && stopCountdown <= 0) {
+                console.log("Stopping monitor fetch due to countdown");
+                clearInterval(interval);
+            } else {
+                console.log("Fetching monitor data...");
+                fetchMonitorData();
+                if (stopCountdown !== null) {
+                    setStopCountdown((prev) => (prev !== null ? prev - 1 : null));
+                }
+            }
+        }, intervalMs);
+
+        return () => {
+            mounted = false;
+            clearInterval(interval);
+        };
+    }, [cacheKey, intervalMs, stopCountdown]);
 
     if (error) {
         return <div className="p-4 text-red-400">❌ {error}</div>;
@@ -99,15 +100,14 @@ export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2
         <div className="space-y-6 p-4">
             {/* Top status box */}
             <div className="bg-gray-900 p-4 rounded-xl shadow-md space-y-2">
-            <div className="flex items-center justify-between">
-    <h2 className="text-2xl font-bold">Recording Monitor</h2>
-    {monitorData?.currentStatus?.toLowerCase() === "recording" && onStopRecording && (
-        <BaseButton variant="secondary" size="sm" onClick={onStopRecording}>
-            🛑 Stop
-        </BaseButton>
-    )}
-</div>
-
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">Recording Monitor</h2>
+                    {monitorData?.currentStatus?.toLowerCase() === "recording" && onStopRecording && (
+                        <BaseButton variant="secondary" size="sm" onClick={onStopRecording}>
+                            🛑 Stop
+                        </BaseButton>
+                    )}
+                </div>
 
                 <div className="text-sm space-y-1 mb-4">
                     <div>
@@ -125,7 +125,6 @@ export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2
                     <div>
                         <b>createdAt:</b> {monitorData?.createdAt ?? "(unknown)"}
                     </div>
-                   
                 </div>
 
                 {/* Recording Status */}
@@ -139,7 +138,8 @@ export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2
                     monitorData.startedAt &&
                     monitorData.expectedStop &&
                     monitorData.serverTime &&
-                    !["done", "error", "stopped"].includes(monitorData?.currentStatus.toLowerCase()) && (
+                    "recording" === monitorData?.currentStatus.toLowerCase() && (
+                    // !["done", "error", "stopped"].includes(monitorData?.currentStatus.toLowerCase()) && (
                         <ProgressBarTime start={monitorData.startedAt} end={monitorData.expectedStop} now={monitorData.serverTime} showTime />
                     )}
 
@@ -166,6 +166,7 @@ export default function RecordingMonitor({ cacheKey, recordingId, intervalMs = 2
                 ) : (
                     <div className="text-gray-400 italic">📜 No status history yet...</div>
                 )}
+                
             </div>
 
             {/* Live Log */}

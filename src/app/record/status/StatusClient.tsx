@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { RecordingJob } from "@/types/RecordingJob";
-import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
 import RecordingMonitor from "@/components/RecordingMonitor/RecordingMonitor";
 
 interface Props {
@@ -34,10 +33,13 @@ export default function StatusClient({ job }: Props) {
         }
     }
 
-    function extractDirAndFileName(outputFile: string) {
+    function extractDirAndFileName(outputFile: string, removeExtension: boolean ): string {
         // Extract the directory and filename whice come after /videos/
         const i = outputFile.indexOf("/videos/");
-        return i !== -1 ? outputFile.substring(i + 8) : outputFile;
+        const outputFileDir =i !== -1 ? outputFile.substring(i + 8) : outputFile;
+        return removeExtension
+            ? outputFileDir.substring(0, outputFileDir.lastIndexOf("."))
+            : outputFileDir;
     }
 
     function extractFileName(outputFile: string): import("react").ReactNode {
@@ -57,14 +59,14 @@ export default function StatusClient({ job }: Props) {
                     <div className="mt-2">
                         <strong>Output:</strong>{" "}
                         <a
-                            href={`/player?streamUrl=/api/${job.recordingType}-stream/${encodeURIComponent(job.cacheKey)}${
+                            href={`/player?streamUrl=/api/${job.recordingType}-stream/${extractDirAndFileName(job.recordingId, true)}${
                                 job.recordingType === "hls" ? "/playlist" : ""
                             }`}
                             className="text-blue-400 underline break-all"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            ${`Live Stream ${job.recordingType === "hls" ? "playlist" : "(.ts)"}`}
+                            {`Live Stream ${job.recordingType === "hls" ? "playlist" : "(.ts)"}`}
                         </a>
                     </div>
                 )}
@@ -72,7 +74,7 @@ export default function StatusClient({ job }: Props) {
                     <div className="mt-2">
                         <strong>Recording:</strong>
                         <a
-                            href={`/player?streamUrl=/api/video/${extractDirAndFileName(job.outputFile)}`}
+                            href={`/player?streamUrl=/api/video/${extractDirAndFileName(job.outputFile, false)}`}
                             className="text-blue-400 underline break-all"
                             target="_blank"
                             rel="noopener noreferrer"
@@ -81,16 +83,7 @@ export default function StatusClient({ job }: Props) {
                         </a>
                     </div>
                 )}
-                {job.cacheKey && status === "recording" && (
-                    <div className="mt-2">
-                        <ProgressBarTime
-                            showTime={true}
-                            start={job.startTime}
-                            end={new Date(Date.now() + job.duration * 1000).toISOString()}
-                            now={new Date().toISOString()}
-                        />
-                    </div>
-                )}
+                
             </div>
             <RecordingMonitor cacheKey={job.cacheKey} onStopRecording={handleStopRecording} />
             {status === "done" && (

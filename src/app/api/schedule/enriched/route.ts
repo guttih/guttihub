@@ -72,15 +72,12 @@ export async function POST(req: Request): Promise<NextResponse<SystemScheduledEn
          await runJobctl("delete", body.systemJobId);
     }
 
-    const directoryExtracted = oldJobExpandedResults.outputFile.split("/").slice(0, -1).join("/");
-
     const params: ScheduleRecordingParams = {
         cacheKey: body.cacheKey,
         startTime: body.updatedFields.datetime,
         durationSec:body.updatedFields.duration,
         user: oldJobExpandedResults.user ? oldJobExpandedResults.user : "unknown",
         recordNow: false,
-        location: directoryExtracted,
         entry: newEntryValues,
     };
     

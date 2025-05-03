@@ -1,10 +1,10 @@
 // src/resolvers/LiveResolver.ts
 
 import { spawn } from "child_process";
-import { LiveParams } from "@/types/LiveParams";
 import { RecordingJob } from "@/types/RecordingJob";
-import { getScriptPath, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
-import { buildRecordingId, getBaseUrl } from "@/utils/resolverUtils";
+import { getScriptPath, getWorkDir, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
+import { buildRecordingId, getBaseUrl, quoteShellArg } from "@/utils/resolverUtils";
+import { M3UEntry } from "@/types/M3UEntry";
 
 export class LiveResolver {
     static startStreamScript = getScriptPath("live.sh");
@@ -33,10 +33,10 @@ export class LiveResolver {
         return `${prefix}/${cashe}`;
     }
 
-    static async startStream({ cacheKey, entry, location }: LiveParams): Promise<{ recordingId: string; }> {
+    static async startStream( cacheKey:string, entry:M3UEntry ): Promise<{ recordingId: string; }> {
         const startTime = new Date().toISOString();
         const fileName= buildRecordingId("live-", new Date(), entry.url);
-        const outputFile = LiveResolver.makeStreamFilePath(location, fileName);
+        const outputFile = LiveResolver.makeStreamFilePath(getWorkDir(), fileName);
         
         console.log("📦 Spaning live stream at ", outputFile);
         const job: RecordingJob = {
@@ -58,8 +58,8 @@ export class LiveResolver {
 
         const args = [  
             "--url",        entry.url, 
-            "--user",       job.user,
-            "--outputFile", job.outputFile, 
+            "--user",       quoteShellArg(job.user),
+            "--outputFile", quoteShellArg(job.outputFile), 
             "--baseUrl",    getBaseUrl(),  
             "--cacheKey",   cacheKey,
             "--loglevel",   "info",

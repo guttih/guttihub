@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 📥 Download Script
+# 📅 Download Script
 # Download files reliably with status tracking and clean stop support.
 
 set -euo pipefail
@@ -22,14 +22,30 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Validation ---
-[[ -z "${BASE_URL:-}"    ]] && echo "❌ Missing --url" >&2 && exit 1
-[[ -z "${CACHE_KEY:-}"   ]] && echo "❌ Missing --url" >&2 && exit 1
+[[ -z "${BASE_URL:-}"    ]] && echo "❌ Missing --baseUrl" >&2 && exit 1
+[[ -z "${CACHE_KEY:-}"   ]] && echo "❌ Missing --cacheKey" >&2 && exit 1
 [[ -z "${URL:-}"         ]] && echo "❌ Missing --url" >&2 && exit 1
 [[ -z "${OUTPUT_FILE:-}" ]] && echo "❌ Missing --outputFile" >&2 && exit 1
 [[ -z "${USER:-}"        ]] && echo "❌ Missing --user" >&2 && exit 1
 
+sanitize_path_param() {
+  local val="$1"
+  val="${val#\"}"
+  val="${val%\"}"
+  echo "$(realpath "$val")"
+}
+
+strip_surrounding_quotes() {
+  local val="$1"
+  val="${val#\"}"
+  val="${val%\"}"
+  echo "$val"
+}
+
+USER="$(strip_surrounding_quotes "$USER")"
+OUTPUT_FILE="$(sanitize_path_param "$OUTPUT_FILE")"
+
 # --- Paths ---
-OUTPUT_FILE="$(realpath "$OUTPUT_FILE")"
 TMP_OUTPUT_FILE="${OUTPUT_FILE}.part"
 LOG_FILE="${OUTPUT_FILE}.log"
 STATUS_FILE="${OUTPUT_FILE}.status"
@@ -47,12 +63,11 @@ USER=$USER
 LOG_FILE=$LOG_FILE
 EOF
 
-
 # --- Fetch content length safely ---
 {
   echo "Fetching content length from $URL..." >> "$LOG_FILE"
   CONTENT_LENGTH=$(curl --max-time 5 --connect-timeout 5 -L -s -D - -o /dev/null -A "Mozilla/5.0" "$URL" \
-    | awk '/Content-Length/ { print $2 }' | tr -d '\r')
+    | awk '/Content-Length/ { print \$2 }' | tr -d '\r')
   CONTENT_LENGTH=${CONTENT_LENGTH:-0}
   echo "CONTENT_LENGTH=$CONTENT_LENGTH" >> "$STATUS_FILE"
   echo "Content length is $CONTENT_LENGTH bytes" >> "$LOG_FILE"
@@ -60,11 +75,18 @@ EOF
   echo "❌ Failed to fetch content length — continuing anyway" >> "$LOG_FILE"
 }
 
+send_cleanup_report() {
+  if [[ -n "${BASE_URL:-}" ]]; then
+    if ! curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
+         -H "Content-Type: application/json" \
+         -d "{\"cacheKey\":\"$CACHE_KEY\"}"; then
+      echo "Cleanup POST failed for $CACHE_KEY" >> "$LOG_FILE"
+    fi
+  fi
+}
 
-
-# shellcheck disable=SC2317  - Because of the use of `trap`
 # --- Cleanup Logic ---
-clreanup() {
+cleanup() {
     ACTUAL_STOP=$(date -Iseconds)
     echo "ACTUAL_STOP=$ACTUAL_STOP" >> "$STATUS_FILE"
 
@@ -75,6 +97,7 @@ clreanup() {
 
     echo "STATUS=error" >> "$STATUS_FILE"
     echo "Download interrupted or failed." >> "$LOG_FILE"
+    send_cleanup_report
 }
 
 trap cleanup SIGINT SIGTERM
@@ -86,8 +109,8 @@ echo "Starting download from $URL..." >> "$LOG_FILE"
 (
     curl --fail --location --progress-bar "$URL" --output "$TMP_OUTPUT_FILE"
 ) >> "$LOG_FILE" 2>&1 &
-PID=$!
 
+PID=$!
 echo "PID=$PID" >> "$STATUS_FILE"
 echo "Curl PID $PID started at $STARTED_AT" >> "$LOG_FILE"
 
@@ -109,12 +132,9 @@ else
     echo "STATUS=error" >> "$STATUS_FILE"
     echo "Download failed with exit code $EXIT_CODE." >> "$LOG_FILE"
     [[ -f "$TMP_OUTPUT_FILE" ]] && rm -f "$TMP_OUTPUT_FILE"
+    send_cleanup_report
     exit $EXIT_CODE
 fi
 
-# Trigger system cleanup non-blocking if BASE_URL is set
-if [[ -n "${BASE_URL:-}" ]]; then
-    curl -s -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1 &
-fi
-
+send_cleanup_report
 exit 0

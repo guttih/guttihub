@@ -5,6 +5,7 @@ import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 import { Readable } from "stream";
 import fs from "fs";
 import { promisify } from "util";
+import { deleteFileAndForget, fileExists } from "@/utils/fileHandler";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ serviceId: string; filename: string[] }> }): Promise<NextResponse> {
     const { serviceId, filename } = await params;
@@ -107,8 +108,10 @@ function getMimeType(ext: string): string {
 
 const unlink = promisify(fs.unlink);
 
-
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ serviceId: string; filename: string[] }> }): Promise<NextResponse> {
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ serviceId: string; filename: string[] }> }
+): Promise<NextResponse> {
     const { serviceId, filename } = await params;
 
     if (!serviceId || !filename || filename.length === 0) {
@@ -131,7 +134,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             return NextResponse.json({ error: "Only files can be deleted" }, { status: 400 });
         }
 
-        await unlink(filePath);
+        const infoPath = `${filePath}-info.json`;
+        if (await fileExists(infoPath)) deleteFileAndForget(infoPath); //always delete the info file
+        console.log("Media file deleting:", filePath);  
+        await unlink(filePath); //this could fail, but, hey, we at least removed the info file
+        console.log("Media file deleting done:");
         return NextResponse.json({ message: "File deleted successfully" });
     } catch {
         return NextResponse.json({ error: "Unable to delete File" }, { status: 404 });

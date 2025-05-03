@@ -158,6 +158,7 @@ export async function enrichRecordingJob(job: RecordingJob) {
         serviceName: name,
         tvgLogo: entry?.tvgLogo ?? "/fallback.png",
         duration: job.duration,
+        finalOutputFile: job.finalOutputFile,
     };
 }
 
@@ -186,5 +187,6 @@ export async function enrichDownloadJob(job: DownloadStatus) {
         status: status?.STATUS ?? "unknown",
         serviceName: service?.name ?? "Download Manager",
         tvgLogo: downloadJob.entry?.tvgLogo ?? "/download-icon.png",
+        finalOutputFile: downloadJob.finalOutputFile,
     };
 }

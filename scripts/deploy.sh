@@ -17,8 +17,8 @@ DEPLOY_TARGET="$DEPLOY_SERVER:$DEPLOY_DIR"
 #        If everything is fine, it copies the .env.local file to .env.production.
 #
 verify_and_copy_env_file() {
-  local source_env="$REPO_ROOT/.env.local"
-  local target_env="$REPO_ROOT/.env.production"
+  source_env="$REPO_ROOT/.env.local"
+  target_env="$REPO_ROOT/.env.production"
 
   echo "🔍 Verifying environment file: $source_env"
 
@@ -33,9 +33,10 @@ verify_and_copy_env_file() {
   grep "^GOOGLE_CLIENT_SECRET=" "$source_env"
   echo "NEXTAUTH_URL=https://tv.guttih.com"
   echo "NEXTAUTH_SECRET=$(grep '^NEXTAUTH_SECRET=' "$source_env" | cut -d '=' -f2)"
+  echo "BASE_URL=https://tv.guttih.com"
   echo "PORT=6301"
-  grep "BASE_URL=https://tv.guttih.com"
 } > "$target_env"
+
 
   local required_vars=("GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "NEXTAUTH_SECRET" "NEXTAUTH_URL")
   local missing_vars=()
@@ -220,7 +221,7 @@ echo "DEPLOY_TARGET: $DEPLOY_TARGET"
 
 
 # Create folder (in case it doesn't exist)
-ssh guttih@guttih.com "mkdir -p $DEPLOY_TARGET"
+ssh "$DEPLOY_SERVER" "mkdir -p $DEPLOY_DIR"
 
 # Upload files using scp
 

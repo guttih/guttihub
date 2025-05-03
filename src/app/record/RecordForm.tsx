@@ -27,8 +27,6 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
   const [startTime, setStartTime] = useState(formatDateTime(defaultStart));
   const [durationSeconds, setDurationSeconds] = useState(180);
   const [liveNow, setLiveNow] = useState(new Date());
-  const [location, setLocation] = useState("");
-  const [folders, setFolders] = useState<{ label: string; path: string }[]>([]);
   const [recordNow, setRecordNow] = useState(true);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,17 +45,6 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     return () => clearInterval(timer);
   }, [recordNow]);
 
-  useEffect(() => {
-    const fetchFolders = async () => {
-      const res = await fetch("/api/output-dirs");
-      const data = await res.json();
-      setFolders(data);
-      if (!location && data.length > 0) {
-        setLocation(data[0].path);
-      }
-    };
-    fetchFolders();
-  }, [location]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -74,7 +61,6 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     form.append("cacheKey", cacheKey );
     form.append("startTime", recordNow ? liveNow.toISOString() : startTime);
     form.append("duration", durationSeconds.toString());
-    form.append("location", location);
     form.append("email", userEmail);
     form.append("recordNow", recordNow ? "true" : "false");
     form.append("baseUrl", window.location.origin);
@@ -153,22 +139,6 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
           </p>
         </>
       )}
-
-      {/* Output folder */}
-      <div>
-        <label className="block mb-1 text-sm">Save to this directory</label>
-        <select
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="w-full bg-gray-800 p-2 rounded border border-gray-600"
-        >
-          {folders.map((f) => (
-            <option key={f.path} value={f.path}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-      </div>
 
       {/* Submit button */}
       <div

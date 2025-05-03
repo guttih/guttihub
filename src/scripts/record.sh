@@ -18,7 +18,7 @@ RECORDING_TYPE="ts"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --baseUrl) BASE_URL="$2"; shift 2 ;;
-    --cacheKey)   CACHE_KEY="$2"; shift 2 ;;
+    --cacheKey) CACHE_KEY="$2"; shift 2 ;;
     --url) STREAM_URL="$2"; shift 2 ;;
     --duration) DURATION="$2"; shift 2 ;;
     --user) USER="$2"; shift 2 ;;
@@ -37,6 +37,23 @@ done
 [[ -z "${DURATION:-}" ]] && echo "❌ Missing --duration" && exit 1
 [[ -z "${USER:-}" ]] && echo "❌ Missing --user" && exit 1
 [[ -z "${OUTPUT_FILE:-}" ]] && echo "❌ Missing --outputFile" && exit 1
+
+sanitize_path_param() {
+  local val="$1"
+  val="${val#\"}"
+  val="${val%\"}"
+  echo "$(realpath "$val")"
+}
+
+strip_surrounding_quotes() {
+  local val="$1"
+  val="${val#\"}"
+  val="${val%\"}"
+  echo "$val"
+}
+
+USER="$(strip_surrounding_quotes "$USER")"
+OUTPUT_FILE="$(sanitize_path_param "$OUTPUT_FILE")"
 
 # --- Paths ---
 OUTPUT_FILE="$(realpath "$OUTPUT_FILE")"
@@ -78,50 +95,6 @@ if [[ "$RECORDING_TYPE" == "hls" ]]; then
   ls -la "$HLS_DIR" >> "$LOG_FILE"
 fi
 
-# --- Signal Traps ---
-cleanup_and_exit() {
-  ACTUAL_STOP=$(date -Iseconds)
-  echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
-  echo "INTERRUPTED=1" >>"$STATUS_FILE"
-  finalize_recording
-  exit 0
-}
-trap cleanup_and_exit SIGINT SIGTERM
-
-# --- Start Recording ---
-if [[ "$RECORDING_TYPE" == "hls" ]]; then
-  timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" \
-    -i "$STREAM_URL" \
-    -t "$DURATION" \
-    -c:v libx264 -preset ultrafast -g 25 -sc_threshold 0 \
-    -c:a aac -b:a 128k -ac 2 -ar 44100 \
-    -f hls \
-    -hls_time 4 \
-    -hls_list_size 0 \
-    -hls_flags append_list \
-    -hls_segment_filename "${HLS_DIR}/segment_%03d.ts" \
-    -hls_base_url "$(basename "$HLS_DIR")/" \
-    "$HLS_PLAYLIST" >>"$LOG_FILE" 2>&1 &
-else
-  timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
-    -i "$STREAM_URL" -t "$DURATION" -c copy -f mpegts "$TS_FILE" >>"$LOG_FILE" 2>&1 &
-fi
-
-PID=$!
-echo "PID=$PID" >>"$STATUS_FILE"
-echo "🕓 Waiting for FFmpeg process (PID=$PID)..." >>"$LOG_FILE"
-
-wait $PID
-EXIT_CODE=$?
-
-ACTUAL_STOP=$(date -Iseconds)
-echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
-echo "FFMPEG_EXIT=$EXIT_CODE" >>"$STATUS_FILE"
-
-if [[ $EXIT_CODE -eq 124 || $EXIT_CODE -eq 130 || $EXIT_CODE -eq 255 ]]; then
-  echo "INTERRUPTED=1" >>"$STATUS_FILE"
-fi
-
 # --- Finalization ---
 finalize_recording() {
   INPUT_FILE=""
@@ -157,45 +130,98 @@ finalize_recording() {
   echo "STATUS=packaging" >>"$STATUS_FILE"
 
   if [[ "$RECORDING_TYPE" == "hls" ]]; then
-    (
+    if ! (
       cd "$(dirname "$HLS_PLAYLIST")" && \
       ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
         -i "$(basename "$HLS_PLAYLIST")" \
-        -c copy "$(realpath "$OUTPUT_FILE")" >>"$(basename "$LOG_FILE")" 2>&1
-    )
-  else
-    ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
-      -i "$INPUT_FILE" -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1
-  fi
-
-  if [[ $? -eq 0 ]]; then
-    echo "STATUS=optimizing" >>"$STATUS_FILE"
-
-    ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
-      -i "$OUTPUT_FILE" \
-      -c:v libx264 -preset veryfast -crf 23 \
-      -c:a aac -b:a 128k \
-      "${OUTPUT_FILE}.opt.mp4" >>"$LOG_FILE" 2>&1
-
-    if [[ $? -eq 0 ]]; then
-      mv "${OUTPUT_FILE}.opt.mp4" "$OUTPUT_FILE"
-      echo "STATUS=done" >>"$STATUS_FILE"
-      [[ "$RECORDING_TYPE" == "hls" ]] && rm -rf "$HLS_PLAYLIST" "$HLS_DIR"
-      [[ "$RECORDING_TYPE" == "ts" && -f "$TS_FILE" ]] && rm "$TS_FILE"
-    else
+        -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1
+    ); then
       echo "STATUS=error" >>"$STATUS_FILE"
-      echo "ERROR=Optimization failed" >>"$STATUS_FILE"
+      echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
+      return
     fi
   else
+    if ! ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
+      -i "$INPUT_FILE" -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1; then
+      echo "STATUS=error" >>"$STATUS_FILE"
+      echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
+      return
+    fi
+  fi
+
+  echo "STATUS=optimizing" >>"$STATUS_FILE"
+
+  if ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
+        -i "$OUTPUT_FILE" \
+        -c:v libx264 -preset veryfast -crf 23 \
+        -c:a aac -b:a 128k \
+        "${OUTPUT_FILE}.opt.mp4" >>"$LOG_FILE" 2>&1; then
+    mv "${OUTPUT_FILE}.opt.mp4" "$OUTPUT_FILE"
+    echo "STATUS=done" >>"$STATUS_FILE"
+    [[ "$RECORDING_TYPE" == "hls" ]] && rm -rf "$HLS_PLAYLIST" "$HLS_DIR"
+    [[ "$RECORDING_TYPE" == "ts" && -f "$TS_FILE" ]] && rm "$TS_FILE"
+  else
     echo "STATUS=error" >>"$STATUS_FILE"
-    echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
+    echo "ERROR=Optimization failed" >>"$STATUS_FILE"
   fi
 }
 
-# Always finalize if normal exit
-finalize_recording
+send_cleanup_report() {
+  if [[ -n "${BASE_URL:-}" ]]; then
+    if curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
+         -H "Content-Type: application/json" \
+         -d "{\"cacheKey\":\"$CACHE_KEY\"}" >/dev/null; then
+      echo "✅ Cleanup report sent."
+    else
+      echo "❌ Cleanup report failed (exit $?)"
+    fi
+  fi
+}
 
-# Trigger system cleanup non-blocking if BASE_URL is set
-if [[ -n "${BASE_URL:-}" ]]; then
-    curl -s -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1 &
+# --- Signal Traps ---
+cleanup_and_exit() {
+  ACTUAL_STOP=$(date -Iseconds)
+  echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
+  echo "INTERRUPTED=1" >>"$STATUS_FILE"
+  finalize_recording
+  send_cleanup_report
+  exit 0
+}
+
+trap cleanup_and_exit SIGINT SIGTERM
+
+# --- Start Recording ---
+if [[ "$RECORDING_TYPE" == "hls" ]]; then
+  timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" \
+    -i "$STREAM_URL" \
+    -t "$DURATION" \
+    -c:v libx264 -preset ultrafast -g 25 -sc_threshold 0 \
+    -c:a aac -b:a 128k -ac 2 -ar 44100 \
+    -f hls \
+    -hls_time 4 \
+    -hls_list_size 0 \
+    -hls_flags append_list \
+    -hls_segment_filename "${HLS_DIR}/segment_%03d.ts" \
+    -hls_base_url "$(basename "$HLS_DIR")/" \
+    "$HLS_PLAYLIST" >>"$LOG_FILE" 2>&1 &
+else
+  timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
+    -i "$STREAM_URL" -t "$DURATION" -c copy -f mpegts "$TS_FILE" >>"$LOG_FILE" 2>&1 &
 fi
+
+PID=$!
+echo "PID=$PID" >>"$STATUS_FILE"
+echo "🕓 Waiting for FFmpeg process (PID=$PID)..." >>"$LOG_FILE"
+
+wait $PID
+EXIT_CODE=$?
+ACTUAL_STOP=$(date -Iseconds)
+echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
+echo "FFMPEG_EXIT=$EXIT_CODE" >>"$STATUS_FILE"
+
+if [[ $EXIT_CODE -eq 124 || $EXIT_CODE -eq 130 || $EXIT_CODE -eq 255 ]]; then
+  echo "INTERRUPTED=1" >>"$STATUS_FILE"
+fi
+
+finalize_recording || echo "finalize_recording FAILED"
+send_cleanup_report

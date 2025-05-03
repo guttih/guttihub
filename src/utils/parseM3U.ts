@@ -5,37 +5,88 @@ import { M3UEntry } from "@/types/M3UEntry";
 /**
  * More robust parser — handles multiple commas in metadata by preserving the last part as the name.
  */
-export function parseM3U(content: string): M3UEntry[] {
-  const lines = content.split("\n").map((line) => line.trim());
-  const entries: M3UEntry[] = [];
+// export function parseM3U(content: string): M3UEntry[] {
+//   const lines = content.split("\n").map((line) => line.trim());
+//   const entries: M3UEntry[] = [];
 
-  for (let i = 0; i < lines.length - 1; i++) {
-    const line = lines[i];
-    if (line.startsWith("#EXTINF")) {
-      const url = lines[i + 1];
+//   for (let i = 0; i < lines.length - 1; i++) {
+//     const line = lines[i];
+//     if (line.startsWith("#EXTINF")) {
+//       const url = lines[i + 1];
 
-      const lastCommaIndex = line.lastIndexOf(",");
-      const infoLine = line.substring(0, lastCommaIndex);
-      const name = line.substring(lastCommaIndex + 1).trim();
+//       const lastCommaIndex = line.lastIndexOf(",");
+//       const infoLine = line.substring(0, lastCommaIndex);
+//       const name = line.substring(lastCommaIndex + 1).trim();
 
-      const tvgId = getAttribute(infoLine, "tvg-id");
-      const tvgName = getAttribute(infoLine, "tvg-name");
-      const tvgLogo = getAttribute(infoLine, "tvg-logo");
-      const groupTitle = getAttribute(infoLine, "group-title");
+//       const tvgId = getAttribute(infoLine, "tvg-id");
+//       const tvgName = getAttribute(infoLine, "tvg-name");
+//       const tvgLogo = getAttribute(infoLine, "tvg-logo");
+//       const groupTitle = getAttribute(infoLine, "group-title");
 
-      entries.push({
-        name,
-        url,
-        tvgId: tvgId || "",
-        tvgName: tvgName || "",
-        tvgLogo: tvgLogo || "",
-        groupTitle: groupTitle || "",
-      });
+//       entries.push({
+//         name,
+//         url,
+//         tvgId: tvgId || "",
+//         tvgName: tvgName || "",
+//         tvgLogo: tvgLogo || "",
+//         groupTitle: groupTitle || "",
+//       });
+//     }
+//   }
+
+//   return entries;
+// }
+
+function safeDecodeURIComponent(value: string): string {
+    try {
+      const decoded = decodeURIComponent(value);
+      // If decoding then re-encoding gives back the original → it was encoded
+      if (encodeURIComponent(decoded) === value) {
+        return decoded;
+      }
+    } catch {
+      // If decoding fails, treat as already decoded
     }
+    return value;
   }
 
-  return entries;
-}
+  
+
+export function parseM3U(content: string): M3UEntry[] {
+    const lines = content.split("\n").map((line) => line.trim());
+    const entries: M3UEntry[] = [];
+  
+    for (let i = 0; i < lines.length - 1; i++) {
+      const line = lines[i];
+      if (line.startsWith("#EXTINF")) {
+        const rawUrl = lines[i + 1].trim();
+  
+        const lastCommaIndex = line.lastIndexOf(",");
+        const infoLine = line.substring(0, lastCommaIndex);
+        const name = line.substring(lastCommaIndex + 1).trim();
+  
+        const tvgId = getAttribute(infoLine, "tvg-id") || "";
+        const tvgName = getAttribute(infoLine, "tvg-name") || "";
+        const tvgLogo = getAttribute(infoLine, "tvg-logo") || "";
+        const groupTitle = getAttribute(infoLine, "group-title") || "";
+  
+        const sanitizedUrl = safeDecodeURIComponent(rawUrl); // optional: use encodeURI if you re-encode later
+        const sanitizedLogo = safeDecodeURIComponent(tvgLogo); // same here
+  
+        entries.push({
+          name,
+          url: sanitizedUrl,
+          tvgId,
+          tvgName,
+          tvgLogo: sanitizedLogo,
+          groupTitle,
+        });
+      }
+    }
+  
+    return entries;
+  }
+  
 
 /**
  * Extracts an attribute from the #EXTINF metadata line.

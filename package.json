@@ -1,6 +1,6 @@
 {
     "name": "guttihub",
-    "version": "0.1.0",
+    "version": "0.3.2",
     "private": true,
     "scripts": {
         "dev": "next dev --turbopack",
@@ -64,10 +64,10 @@
         "url": "git+https://github.com/guttih/guttihub.git"
     },
     "keywords": [],
-    "author": "",
+    "author": "guttih <gudjonholm@gmail.com>",
     "license": "ISC",
     "bugs": {
         "url": "https://github.com/guttih/guttihub/issues"
     },
-    "homepage": "https://github.com/guttih/guttihub#readme"
+    "homepage": "https://guttih.com"
 }

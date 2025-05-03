@@ -17,12 +17,11 @@ export async function POST(req: Request) {
     const cacheKey = form.get("cacheKey") as string;
     const startTime = form.get("startTime") as string;
     const duration = form.get("duration") as string;
-    const location = form.get("location") as string;
     const recordNow = form.get("recordNow") as string === "true";
     // const baseUrl = form.get("baseUrl") as string;
 
-    if (!cacheKey || !duration || !location || (!recordNow && !startTime)) {
-        console.warn("❌ Missing form values:", { cacheKey, duration, location, recordNow, startTime });
+    if (!cacheKey || !duration  || (!recordNow && !startTime)) {
+        console.warn("❌ Missing form values:", { cacheKey, duration, recordNow, startTime });
         return NextResponse.json({ error: "Missing form values" }, { status: 400 });
     }
     
@@ -50,13 +49,13 @@ export async function POST(req: Request) {
         durationSec: parseInt(duration, 10),
         user: session.user?.email ?? "unknown",
         recordNow: form.get("recordNow") === "true",
-        location,
         entry: entry
         
     });
     
-    if (result.success)
+    if (result.success){
         deleteFileAndForget(entryPath);
+    }
     console.log("📦 schedule-recording response:", JSON.stringify(result, null, 4));
     return result.success 
         ? NextResponse.json({ message: result.message, cacheKey : result.cacheKey , recordingId: result.recordingId }, { status: 200 }) 

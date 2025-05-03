@@ -1,10 +1,9 @@
 // src/resolvers/DownloadResolver.ts
 
 import { spawn } from "child_process";
-import { buildRecordingId, getBaseUrl, getExtensionFromUrl, getFinalOutputFilename } from "@/utils/resolverUtils";
-import { getScriptPath, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
+import { buildRecordingId, getBaseUrl, getExtensionFromUrl, getFinalOutputFilename, quoteShellArg } from "@/utils/resolverUtils";
+import { getMediaDir, getScriptPath, getWorkDir, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
 import { M3UEntry } from "@/types/M3UEntry";
-import { outDirectories } from "@/config";
 import { DownloadJob } from "@/types/DownloadJob";
 
 export class DownloadResolver {
@@ -15,15 +14,14 @@ export class DownloadResolver {
         entry: M3UEntry;
         user: string;
         cacheKey: string;
-        destinationDir: string;
     }): Promise<{ success: boolean; message?: string; cacheKey?: string; recordingId?: string; error?: string }> {
         try {
             const { entry, user, cacheKey } = params;
             const ext = getExtensionFromUrl(entry.url);
             const recordingId = buildRecordingId("download-", new Date(), entry.url, null);
-            const workDir = `${outDirectories.find((d) => d.label === "Recordings")?.path ?? outDirectories[0].path}/${recordingId}`;
+            const workDir = `${getWorkDir()}`;
             const outputFile = `${workDir}/${recordingId}`;
-            const finalOutputFile = `${params.destinationDir}/${ getFinalOutputFilename(params.entry, "ts", true)}`;
+            const finalOutputFile = `${getMediaDir()}/${ getFinalOutputFilename(params.entry, "ts", true)}`;
             console.log(`🚀 Starting download job: ${recordingId}`);
 
             const job: DownloadJob = {
@@ -41,14 +39,13 @@ export class DownloadResolver {
                 entry,
                 url: entry.url,
             };
-
+            const baseUrl = getBaseUrl();
             await writeDownloadingJobFile(job, true);
-
             const args = [
                 "--url"       , entry.url, 
                 "--outputFile", outputFile, 
-                "--user"      , user, 
-                "--baseUrl"   , getBaseUrl(),  
+                "--user"      , quoteShellArg(user), 
+                "--baseUrl"   , baseUrl,
                 "--cacheKey"  , cacheKey,
                 "--loglevel"  , "info",
             ];

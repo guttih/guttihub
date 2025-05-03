@@ -19,15 +19,13 @@ import { FilterInput } from "@/components/FilterInput/FilterInput";
 import { PaginationControls } from "@/components/PaginationControls/PaginationControls";
 import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect";
 import { Spinner } from "@/components/Spinner/Spinner";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel";
-import { hasRole, UserRole } from "@/utils/auth/accessControl"; 
+import { UserRole } from "@/utils/auth/accessControl";
 import { showMessageBox } from "@/components/ui/MessageBox";
-import { Button } from "@/components/ui/Button/Button";
 import { InlineHlsPlayer } from "@/components/InlineHlsPlayer";
-import { UserMenu } from "@/components/UserMenu";
-
+import { UserMenu } from "@/components/UserMenu/UserMenu";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -149,7 +147,6 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const buttonBaseClasses = "bg-gray-700 text-white px-4 py-2 rounded transition-colors duration-150 hover:bg-gray-600 disabled:opacity-50";
 
     async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) {
-        console.log("asdfasdfasdf");
         if (!service) return;
         console.log(`handleFetch called by : ${source}`);
         // Validate each regex-enabled input
@@ -318,172 +315,20 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 {/* ←‑ existing heading */}
                 <h1 className="text-xl font-bold truncate max-w-[60%]">{appConfig.appName}</h1>
 
-                {/* Displays only once session resolved */}
-                {hasRole(userRole, "moderator") && (
-                    <Button variant="default" onClick={() => window.open("/schedule", "_blank")}>
-                        Schedule
-                    </Button>
-                )}
-
-
-
-"use client";
-
-import { Button } from "@/components/ui/Button/Button";
-import { signOut } from "next-auth/react";
-
-type Props = {
-  userName?: string;
-  userRole: string;
-  // onForceRefresh: () => void;
-};
-
-export const UserMenu = ({ userName, userRole /*, onForceRefresh */ }: Props) => {
-  return (
-    <div className="flex items-center gap-4 relative">
-      <h3 className="text-sm sm:text-base font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-        {userName ?? "unknown"} ({userRole})
-      </h3>
-
-      {/* 
-      {userRole === "admin" && (
-        <div className="relative group">
-          <Button variant="secondary" className="px-4 py-2 rounded text-sm">
-            Admin
-          </Button>
-          <div className="absolute hidden group-hover:flex flex-col right-0 top-full bg-gray-800 rounded shadow-lg z-50 min-w-[320px]">
-            <ForceRefreshButton onForceRefresh={onForceRefresh} />
-            <SystemCheckButton />
-            <RunCleanupButton />
-          </div>
-        </div>
-      )} 
-      */}
-
-      <Button
-        variant="default"
-        onClick={() => signOut({ callbackUrl: "/" })}
-        className="px-3 py-2 rounded text-sm"
-      >
-        Logout
-      </Button>
-    </div>
-  );
-};
-
-
-
-
-
                 {/* existing user name */}
                 <div className="flex items-center gap-4 relative">
-                    <h3 className="text-sm sm:text-base font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-                        {session?.user?.name ?? "unknown"} ({userRole})
-                    </h3>
-
-                    {userRole === "admin" && (
-                        <div className="relative group">
-                            <Button variant="secondary" className="px-4 py-2 rounded text-sm">
-                                Admin
-                            </Button>
-
-                            {/* Dropdown stays attached to the button */}
-                            <div className="absolute hidden group-hover:flex flex-col right-0 top-full bg-gray-800 rounded shadow-lg overflow-hidden z-50 min-w-[320px]">
-                                <button
-                                    onClick={() => handleFetch(undefined, "Admin Force Refresh", true)}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-700"
-                                >
-                                    🔄 Force Update
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const res = await fetch("/api/os/system/check");
-                                            const json = await res.json();
-
-                                            const output = json.results?.output || {};
-                                            const success = json.results?.success ?? false;
-                                            const longestToolName = Math.max(...Object.keys(output).map((t) => t.length));
-
-                                            const reportLines = Object.entries(output).map(([tool, path]) => {
-                                                const paddedTool = tool.padEnd(longestToolName);
-                                                const icon = path ? "✅" : "❌";
-                                                const value = path || "NOT FOUND";
-                                                return `${icon} ${paddedTool}: ${value}`;
-                                            });
-
-                                            const message = `${
-                                                success ? "✅ All system dependencies are installed." : "❌ Some dependencies are missing."
-                                            }\n\n${reportLines.join("\n")}`;
-
-                                            showMessageBox({
-                                                variant: success ? "success" : "error",
-                                                title: "System Check",
-                                                message,
-                                                toast: true,
-                                                blocking: false,
-                                                position: "top-right",
-                                                preserveLineBreaks: true,
-                                            });
-                                        } catch (err) {
-                                            showMessageBox({
-                                                variant: "error",
-                                                title: "System Check Error",
-                                                message: "💥 Something went wrong while communicating with the backend.",
-                                                toast: true,
-                                                blocking: true,
-                                                preserveLineBreaks: true,
-                                            });
-                                            console.error("System check error:", err);
-                                        }
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-700"
-                                >
-                                    🧪 System Environment Check
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const res = await fetch("/api/system/cleanup", {
-                                                method: "POST",
-                                                body: JSON.stringify({ force: true }),
-                                                headers: { "Content-Type": "application/json" },
-                                            });
-                                            const json = await res.json();
-
-                                            showMessageBox({
-                                                variant: json.success ? "success" : "warning",
-                                                title: "Cleanup",
-                                                message: json.message ?? json.error ?? "Unknown result.",
-                                                toast: true,
-                                                blocking: false,
-                                                position: "top-right",
-                                            });
-                                        } catch (err) {
-                                            showMessageBox({
-                                                variant: "error",
-                                                title: "Cleanup Error",
-                                                message: "💥 Something went wrong while triggering the cleanup.",
-                                                toast: true,
-                                                blocking: true,
-                                            });
-                                            console.error("Cleanup request error:", err);
-                                        }
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-700"
-                                >
-                                    🧹 Run Cleanup Now
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    <Button variant="default" onClick={() => signOut({ callbackUrl: "/" })} className="px-3 py-2 rounded text-sm">
-                        Logout
-                    </Button>
+                    <div className="flex items-center justify-between mb-4">
+                        <UserMenu
+                            userName={session?.user?.name ?? "unknown"}
+                            userRole={userRole}
+                            showForceRefresh={activeService?.id !== undefined && !activeService?.hasFileAccess}
+                            onForceRefresh={() => handleFetch(undefined, "Admin Force Refresh", true)}
+                            onExport={handleExport}
+                            canExport={entries.length > 0 && entries.length <= appConfig.maxEntryExportCount}
+                        />
+                    </div>
                 </div>
             </div>
-
             <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
                 {loading && <Spinner />}
 
@@ -517,31 +362,6 @@ export const UserMenu = ({ userName, userRole /*, onForceRefresh */ }: Props) =>
                             ))}
                         </select>
                     </label>
-
-                    {/* Export Button */}
-                    {entries.length > 0 && entries.length <= appConfig.maxEntryExportCount && (
-                        <button
-                            onClick={handleExport}
-                            className={`${buttonBaseClasses} flex items-center gap-2`}
-                            title="Download filtered entries as .m3u playlist"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-                                />
-                            </svg>
-                            <span>Export</span>
-                        </button>
-                    )}
                 </div>
                 {/* Right Group: Card Style + Player Mode */}
                 <div className="flex flex-wrap items-end gap-4">
@@ -576,7 +396,6 @@ export const UserMenu = ({ userName, userRole /*, onForceRefresh */ }: Props) =>
                     )}
                 </div>
             </div>
-
             {/* Filters */}
             <div className="w-full mb-6">
                 <fieldset className="relative border border-gray-700 rounded p-4">
@@ -695,7 +514,6 @@ export const UserMenu = ({ userName, userRole /*, onForceRefresh */ }: Props) =>
                 //     showCloseButton={true}
                 // />
             )}
-
             {player.visible && player.mode === "popup" && (
                 <InlinePlayer
                     url={player.url}
@@ -715,16 +533,17 @@ export const UserMenu = ({ userName, userRole /*, onForceRefresh */ }: Props) =>
                     className="w-[400px] aspect-video bg-black shadow-xl rounded"
                 />
             )}
+             {totalEntries > appConfig.defaultPageSize && (
 
-            <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalEntries={totalEntries}
-                onPageChange={handlePageChange}
-                buttonClassName={buttonBaseClasses}
-                className={`mt-6`}
-            />
-
+                <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalEntries={totalEntries}
+                    onPageChange={(page) => setCurrentPage(Math.max(1, Math.min(totalPages, page)))}
+                    buttonClassName={buttonBaseClasses}
+                    className="mt-6"
+                />
+            )}
             <div className="grid grid-cols-1 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-x-6 gap-y-8">
                 {activeService &&
                     entries.map((entry) => {
@@ -757,17 +576,16 @@ export const UserMenu = ({ userName, userRole /*, onForceRefresh */ }: Props) =>
                         );
                     })}
             </div>
-
-            {entries && entries.length > 6 && (
+            {totalEntries > appConfig.defaultPageSize && (
                 <PaginationControls
                     currentPage={currentPage}
                     totalPages={totalPages}
                     totalEntries={totalEntries}
-                    onPageChange={(delta) => setCurrentPage((prev) => Math.max(1, Math.min(totalPages, prev + delta)))}
+                    onPageChange={(page) => setCurrentPage(Math.max(1, Math.min(totalPages, page)))}
                     buttonClassName={buttonBaseClasses}
                     className="mt-6"
                 />
             )}
         </main>
-    );
+    )
 }
