@@ -9,7 +9,8 @@ import { StreamCard } from "@/components/cards/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
 import { ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
-import { useDebouncedState } from "./hooks/useDebouncedState";
+import { useDebouncedState } from "src/hooks/useDebouncedState";
+import { useInputFocusTracker } from "src/hooks/useInputFocusTracker";
 import { ApiResponse } from "@/types/ApiResponse";
 import { M3UResponse } from "@/types/M3UResponse";
 import StreamCardInteractive from "@/components/cards/StreamCardInteractive/StreamCardInteractive";
@@ -34,6 +35,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const [searchNameInput, setSearchNameInput] = useState("");
     const [searchGroupInput, setSearchGroupInput] = useState("");
     const [searchTvgIdInput, setSearchTvgIdInput] = useState("");
+
     const [selectedYears, setSelectedYears] = useState<string[]>([]);
     const [player, setPlayer] = useState<{
         url: string;
@@ -62,7 +64,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const [popupPosition, setPopupPosition] = useState({ x: 100, y: 100 });
     const [popupSize, setPopupSize] = useState({ width: 480, height: 270 });
     const [snapshotId, setSnapshotId] = useState("");
-    const [focusedInput, setFocusedInput] = useState<string | null>(null);
+    const { focusedInput, setFocusedInput, trackInput, restoreFocus } = useInputFocusTracker();
     const [activeService, setActiveService] = useState<StreamingService | null>(null);
     const [totalEntries, setTotalEntries] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
@@ -72,6 +74,12 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         searchGroup: { isRegex: false, isCaseSensitive: false },
         searchTvgId: { isRegex: false, isCaseSensitive: false },
     });
+
+    useEffect(() => {
+        if (!loading && focusedInput) {
+            restoreFocus(focusedInput);
+        }
+    }, [loading, focusedInput]);
 
     const debouncedFilters = useMemo(
         () => ({
@@ -96,6 +104,17 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }),
         [searchName, searchGroup, searchTvgId, searchFormat, searchCategory, inputModes, debouncedYears]
     );
+
+    const hasActiveFilters = useMemo(() => {
+        return (
+            !!debouncedFilters.name.value ||
+            !!debouncedFilters.groupTitle.value ||
+            !!debouncedFilters.tvgId.value ||
+            !!debouncedFilters.format ||
+            !!debouncedFilters.category ||
+            (debouncedFilters.years && debouncedFilters.years.length > 0)
+        );
+    }, [debouncedFilters]);
 
     const pageSize = Number(appConfig.defaultPageSize);
 
@@ -127,13 +146,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }));
     }
 
-    function handlePageChange(offset: number) {
-        if (offset > 0) {
-            setCurrentPage((p) => Math.min(totalPages, p + 1));
-        } else {
-            setCurrentPage((p) => Math.max(1, p - 1));
-        }
-    }
+
 
     function isValidRegex(pattern: string): boolean {
         try {
@@ -398,51 +411,89 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             </div>
             {/* Filters */}
             <div className="w-full mb-6">
-                <fieldset className="relative border border-gray-700 rounded p-4">
-                    <legend className="text-sm text-gray-400 px-2">Filters</legend>
-                    <button
-                        className="absolute right-1 -top-7 z-10 w-9 h-9 flex items-center justify-center bg-gray-800 hover:bg-red-600 text-white rounded-full shadow transition"
-                        onClick={handleClearFilters}
-                        title="Clear all filters"
-                    >
-                        <EraserIcon />
-                    </button>
+                <fieldset
+                    className={`relative rounded p-4 transition-colors duration-200 border ${
+                        hasActiveFilters
+  ? "border-gray-400 border-[1.5px]"
+  : "border-gray-700 border"
+                      
+                      
+                    }`}
+                >
+                    <legend
+  className={`text-sm px-2 transition-colors duration-200 ${
+    hasActiveFilters ? "text-gray-300 font-bold" : "text-gray-400 font-normal"
+  }`}
+>
+  Filters
+</legend>
+<button
+  className={`absolute right-1 -top-7 z-10 w-9 h-9 flex items-center justify-center rounded-full shadow transition
+    ${hasActiveFilters ? "bg-yellow-600 hover:bg-yellow-500 text-white" : "bg-gray-700 text-gray-400"}
+  `}
+  onClick={handleClearFilters}
+  title="Clear all filters"
+>
+  <EraserIcon />
+</button>
                     <legend className="text-sm text-gray-400 px-2">Filters</legend>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
                         <FilterInput
                             name="searchName"
                             label={M3UEntryFieldLabel.name}
                             value={searchNameInput}
-                            onChange={setSearchNameInput}
                             mode={inputModes.searchName}
                             onToggle={toggleInputMode}
                             loading={loading}
-                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                            onBlur={() => setFocusedInput(null)}
+                            onChange={(val) => {
+                                setSearchNameInput(val);
+                                const el = document.querySelector<HTMLInputElement>('input[name="searchName"]');
+                                if (el) trackInput("searchName", el.selectionStart, el.selectionEnd);
+                            }}
+                            onFocus={(e) => {
+                                const { name, selectionStart, selectionEnd } = e.currentTarget;
+                                setFocusedInput(name);
+                                trackInput(name, selectionStart, selectionEnd);
+                            }}
                         />
                         <FilterInput
                             name="searchGroup"
                             label={M3UEntryFieldLabel.groupTitle}
                             value={searchGroupInput}
-                            onChange={setSearchGroupInput}
+                            onChange={(val) => {
+                                setSearchGroupInput(val);
+                                const el = document.querySelector<HTMLInputElement>('input[name="searchGroup"]');
+                                if (el) trackInput("searchGroup", el.selectionStart, el.selectionEnd);
+                            }}
+                            onFocus={(e) => {
+                                const { name, selectionStart, selectionEnd } = e.currentTarget;
+                                setFocusedInput(name);
+                                trackInput(name, selectionStart, selectionEnd);
+                            }}
                             mode={inputModes.searchGroup}
                             onToggle={toggleInputMode}
                             loading={loading}
-                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                            onBlur={() => setFocusedInput(null)}
                         />
 
                         <FilterInput
                             name="searchTvgId"
                             label={M3UEntryFieldLabel.tvgId}
                             value={searchTvgIdInput}
-                            onChange={setSearchTvgIdInput}
+                            onChange={(val) => {
+                                setSearchTvgIdInput(val);
+                                const el = document.querySelector<HTMLInputElement>('input[name="searchTvgId"]');
+                                if (el) trackInput("searchTvgId", el.selectionStart, el.selectionEnd);
+                            }}
+                            onFocus={(e) => {
+                                const { name, selectionStart, selectionEnd } = e.currentTarget;
+                                setFocusedInput(name);
+                                trackInput(name, selectionStart, selectionEnd);
+                            }}
                             mode={inputModes.searchTvgId}
                             onToggle={toggleInputMode}
                             loading={loading}
-                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                            onBlur={() => setFocusedInput(null)}
                         />
+
                         <select
                             name="searchCategory"
                             onFocus={(e) => setFocusedInput(e.currentTarget.name)}
@@ -533,8 +584,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     className="w-[400px] aspect-video bg-black shadow-xl rounded"
                 />
             )}
-             {totalEntries > appConfig.defaultPageSize && (
-
+            {totalEntries > appConfig.defaultPageSize && (
                 <PaginationControls
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -587,5 +637,5 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 />
             )}
         </main>
-    )
+    );
 }

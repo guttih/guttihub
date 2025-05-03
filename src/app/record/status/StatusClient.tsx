@@ -33,13 +33,11 @@ export default function StatusClient({ job }: Props) {
         }
     }
 
-    function extractDirAndFileName(outputFile: string, removeExtension: boolean ): string {
+    function extractDirAndFileName(outputFile: string, removeExtension: boolean): string {
         // Extract the directory and filename whice come after /videos/
         const i = outputFile.indexOf("/videos/");
-        const outputFileDir =i !== -1 ? outputFile.substring(i + 8) : outputFile;
-        return removeExtension
-            ? outputFileDir.substring(0, outputFileDir.lastIndexOf("."))
-            : outputFileDir;
+        const outputFileDir = i !== -1 ? outputFile.substring(i + 8) : outputFile;
+        return removeExtension ? outputFileDir.substring(0, outputFileDir.lastIndexOf(".")) : outputFileDir;
     }
 
     function extractFileName(outputFile: string): import("react").ReactNode {
@@ -54,8 +52,7 @@ export default function StatusClient({ job }: Props) {
                 <h1 className="text-lg font-semibold">Recording</h1>
             </div>
             <div className="space-y-1 text-xs text-gray-400 border border-gray-700 rounded p-3 bg-gray-900">
-
-                {job.cacheKey && status !== "done" && (
+                {job.cacheKey && !isStopped && (
                     <div className="mt-2">
                         <strong>Output:</strong>{" "}
                         <a
@@ -70,9 +67,10 @@ export default function StatusClient({ job }: Props) {
                         </a>
                     </div>
                 )}
-                {job.cacheKey && status === "done" && (
+
+                {job.cacheKey && isStopped && (
                     <div className="mt-2">
-                        <strong>Recording:</strong>
+                        <strong>Recording:</strong>{" "}
                         <a
                             href={`/player?streamUrl=/api/video/${extractDirAndFileName(job.outputFile, false)}`}
                             className="text-blue-400 underline break-all"
@@ -83,7 +81,6 @@ export default function StatusClient({ job }: Props) {
                         </a>
                     </div>
                 )}
-                
             </div>
             <RecordingMonitor cacheKey={job.cacheKey} onStopRecording={handleStopRecording} />
             {status === "done" && (

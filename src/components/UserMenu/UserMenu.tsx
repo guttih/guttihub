@@ -26,7 +26,7 @@ export const UserMenu = ({ userName, userRole, onForceRefresh, onExport, canExpo
         <h1 className="text-sm font-medium text-white/50 whitespace-nowrap overflow-hidden text-ellipsis max-w-[250px]">{userName ?? "unknown"}</h1>
 
         <div className="relative group">
-            <Button variant="secondary" className="px-4 py-2 rounded text-sm">
+            <Button variant="darker">
                 Menu
             </Button>
             <div className="absolute hidden group-hover:flex flex-col right-0 top-full bg-gray-800 rounded shadow-lg z-50 min-w-[320px]">

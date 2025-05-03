@@ -1,7 +1,7 @@
 // src/components/RecordingMonitor/RecordingMonitor.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge/StatusBadge";
 import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
 import { BaseButton } from "@/components/ui/BaseButton/BaseButton";
@@ -27,18 +27,20 @@ interface RecordingMonitorProps {
     cacheKey?: string;
     intervalMs?: number;
     onStopRecording?: () => void;
+    onStatusChange?: (status: string) => void;
+
 }
 
-export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRecording }: RecordingMonitorProps) {
+export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRecording, onStatusChange }: RecordingMonitorProps) {
     const [monitorData, setMonitorData] = useState<MonitorData | null>(null);
     const [error, setError] = useState<string | null>(null);
-    
+    const lastStatus = useRef<string | null>(null);
+
     const [stopCountdown, setStopCountdown] = useState<number | null>(null);
     
     useEffect(() => {
         let mounted = true;
         console.log("🎥 RecordingMonitor mounted", { cacheKey });
-        
         const fetchMonitorData = async () => {
             try {
 
@@ -52,8 +54,13 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
                 if (mounted) {
                     setMonitorData(json);
 
-                    const lowerStatus = json.currentStatus?.toLowerCase();
-                    if (["done", "stopped", "error"].includes(lowerStatus)) {
+                    const newStatus = json.currentStatus?.toLowerCase();
+                    if (newStatus && newStatus !== lastStatus.current) {
+                      lastStatus.current = newStatus;
+                      onStatusChange?.(newStatus);
+                    }
+                    
+                    if (["done", "stopped", "error"].includes(newStatus )) {
                         if (stopCountdown === null) {
                             setStopCountdown(5); // start 5 pulls grace period
                         }

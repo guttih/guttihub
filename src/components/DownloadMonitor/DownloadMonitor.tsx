@@ -1,4 +1,3 @@
-// src/components/DownloadMonitor/DownloadMonitor.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -91,29 +90,24 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
                 </div>
 
                 <div className="text-sm space-y-1 mb-4">
-                    <div>
-                        <b>Download ID:</b> {monitorData.recordingId ?? "(unknown)"}
-                    </div>
-                    <div>
-                        <b>cacheKey:</b> {monitorData.cacheKey}
-                    </div>
-                    <div>
-                        <b>user:</b> {monitorData.user ?? "(unknown)"}
-                    </div>
-                    <div>
-                        <b>createdAt:</b> {monitorData.createdAt ?? "(unknown)"}
-                    </div>
-                    <div>
-                        <b>Total Size:</b> {monitorData?.contentLength ? formatBytes(Number(monitorData.contentLength)) : "Unknown"}
-                    </div>
+                    <div><b>Download ID:</b> {monitorData.recordingId ?? "(unknown)"}</div>
+                    <div><b>cacheKey:</b> {monitorData.cacheKey}</div>
+                    <div><b>user:</b> {monitorData.user ?? "(unknown)"}</div>
+                    <div><b>createdAt:</b> {monitorData.createdAt ?? "(unknown)"}</div>
+                    <div><b>Total Size:</b> {monitorData?.contentLength ? formatBytes(Number(monitorData.contentLength)) : "Unknown"}</div>
                 </div>
+
+                {typeof monitorData.progressPercent === "number" && (
+                    <>
+                        <div className="text-sm font-semibold mb-1">Progress:</div>
+                        <ProgressBarPercent percent={monitorData.progressPercent} variant="secondary" showLabel={true} />
+                    </>
+                )}
 
                 <div className="flex items-center gap-2 mb-2">
                     <span className="font-bold">Download Status:</span>
                     <StatusBadge status={monitorData?.currentStatus ?? "unknown"} />
                 </div>
-
-                {typeof monitorData.progressPercent === "number" && <ProgressBarPercent percent={monitorData.progressPercent} />}
 
                 <div className="text-xs text-gray-400 mt-2">
                     Last checked at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}

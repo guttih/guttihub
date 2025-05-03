@@ -32,6 +32,10 @@ export async function ensureCacheDir(): Promise<void> {
     await fs.mkdir(CACHE_DIR, { recursive: true });
 }
 
+export async function ensureMediaDir(): Promise<void> {
+    await fs.mkdir(getMediaDir(), { recursive: true });
+}
+
 export async function ensureDownloadJobsDir(): Promise<void> {
     await fs.mkdir(getJobsDir(), { recursive: true });
 }

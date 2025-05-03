@@ -3,7 +3,7 @@
 import { spawn } from "child_process";
 import { ScheduleRecordingParams } from "@/types/ScheduleRecordingParams";
 import { RecordingJob } from "@/types/RecordingJob";
-import { getMediaDir, getScriptPath, getWorkDir, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
+import { ensureMediaDir, getMediaDir, getScriptPath, getWorkDir, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
 import { runJobctl } from "@/utils/jobctl";
 import { buildRecordingId, cleanupStreamingJobs, getBaseUrl, getFinalOutputFilename, quoteShellArg } from "@/utils/resolverUtils";
 import { M3UEntry } from "@/types/M3UEntry";
@@ -92,7 +92,7 @@ export class ScheduleResolver {
         
     
         console.log("📝 Writing recording job metadata:", job);
-        
+        ensureMediaDir();
         await writeRecordingJobFile(job, true);
     
         if (params.recordNow) {

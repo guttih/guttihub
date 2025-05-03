@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
                 clearTimeout(timeout);
 
                 if (imageRes.statusCode && imageRes.statusCode >= 400) {
-                    resolve(new Response("Image fetch failed", { status: imageRes.statusCode }));
+                    resolve(Response.redirect(appConfig.fallbackImage, 302));
                     return;
                 }
 

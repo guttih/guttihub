@@ -2,7 +2,7 @@
 
 import { spawn } from "child_process";
 import { buildRecordingId, getBaseUrl, getExtensionFromUrl, getFinalOutputFilename, quoteShellArg } from "@/utils/resolverUtils";
-import { getMediaDir, getScriptPath, getWorkDir, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
+import { ensureMediaDir, getMediaDir, getScriptPath, getWorkDir, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
 import { M3UEntry } from "@/types/M3UEntry";
 import { DownloadJob } from "@/types/DownloadJob";
 
@@ -40,6 +40,10 @@ export class DownloadResolver {
                 url: entry.url,
             };
             const baseUrl = getBaseUrl();
+
+
+
+            ensureMediaDir();
             await writeDownloadingJobFile(job, true);
             const args = [
                 "--url"       , entry.url, 
