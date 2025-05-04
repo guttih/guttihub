@@ -153,7 +153,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     const buttonBaseClasses = "bg-gray-700 text-white px-4 py-2 rounded transition-colors duration-150 hover:bg-gray-600 disabled:opacity-50";
 
-    async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) {
+    async function handleFetch(service: StreamingService | null = activeService, force: boolean = false) {
         if (!service) return;
         // Validate each regex-enabled input
         if (

@@ -39,7 +39,7 @@ export default function HelpPage() {
                 <h3 className="mt-4 font-semibold">Match Common Genres</h3>
                 <RegexBlock title="Field: Title / Category">\b(Action|Comedy|Drama|Thriller)\b</RegexBlock>
 
-                <h3 className="mt-6 font-semibold">Only Include "Live" Channels</h3>
+                <h3 className="mt-6 font-semibold">Only Include {`"Live"`} Channels</h3>
                 {/* 👇 Uses case-insensitive manual match since "Live" is often inconsistently cased */}
                 <RegexBlock title="Field: Title">\b[Ll][Ii][Vv][Ee]\b</RegexBlock>
             </section>
