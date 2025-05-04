@@ -47,6 +47,11 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
                 if (mounted) {
                     setMonitorData(json);
                     const lowerStatus = json.currentStatus?.toLowerCase();
+                    const stillIncomplete =
+                        json.progressPercent === null ||
+                        json.progressPercent === undefined ||
+                        json.contentLength === null ||
+                        json.contentLength === 0;
                     if (["done", "error"].includes(lowerStatus)) {
                         if (stopCountdown === null) {
                             setStopCountdown(5);
@@ -90,11 +95,21 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
                 </div>
 
                 <div className="text-sm space-y-1 mb-4">
-                    <div><b>Download ID:</b> {monitorData.recordingId ?? "(unknown)"}</div>
-                    <div><b>cacheKey:</b> {monitorData.cacheKey}</div>
-                    <div><b>user:</b> {monitorData.user ?? "(unknown)"}</div>
-                    <div><b>createdAt:</b> {monitorData.createdAt ?? "(unknown)"}</div>
-                    <div><b>Total Size:</b> {monitorData?.contentLength ? formatBytes(Number(monitorData.contentLength)) : "Unknown"}</div>
+                    <div>
+                        <b>Download ID:</b> {monitorData.recordingId ?? "(unknown)"}
+                    </div>
+                    <div>
+                        <b>cacheKey:</b> {monitorData.cacheKey}
+                    </div>
+                    <div>
+                        <b>user:</b> {monitorData.user ?? "(unknown)"}
+                    </div>
+                    <div>
+                        <b>createdAt:</b> {monitorData.createdAt ?? "(unknown)"}
+                    </div>
+                    <div>
+                        <b>Total Size:</b> {monitorData?.contentLength ? formatBytes(Number(monitorData.contentLength)) : "Unknown"}
+                    </div>
                 </div>
 
                 {typeof monitorData.progressPercent === "number" && (
