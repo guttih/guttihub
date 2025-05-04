@@ -58,9 +58,7 @@ export default function HelpPage() {
                 <RegexBlock title="Field: Title">^(?!.*\d).*</RegexBlock>
 
                 <h3 className="mt-6 font-semibold">Match Time Patterns (HH:MM)</h3>
-                <RegexBlock title="Field: Title">
-                    \b\d{(1, 2)}:\d{2}\b
-                </RegexBlock>
+                <RegexBlock title="Field: Title">{String.raw`\b\d{1,2}:\d{2}\b`}</RegexBlock>
 
                 <h3 className="mt-6 font-semibold">Only Show MPEG-TS (.ts) URLs</h3>
                 <RegexBlock title="Field: URL">\.ts\b</RegexBlock>

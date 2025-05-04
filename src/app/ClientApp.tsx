@@ -122,6 +122,8 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         const isOwnLiveStream = url.startsWith("/api/hls-stream/") && url.endsWith("/playlist");
         const absoluteUrl = new URL(url, window.location.origin).toString();
         const matchingEntry = entries.find((entry) => entry.url === url);
+        console.log("ClientApp::handlePlay using URL:", isOwnLiveStream ? absoluteUrl : url);
+        console.log(`Title: ${matchingEntry?.name ?? "Unknown"}`);
         setPlayer({
             url: isOwnLiveStream ? absoluteUrl : url,
             title: matchingEntry?.name ?? "",
@@ -153,8 +155,9 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     const buttonBaseClasses = "bg-gray-700 text-white px-4 py-2 rounded transition-colors duration-150 hover:bg-gray-600 disabled:opacity-50";
 
-    async function handleFetch(service: StreamingService | null = activeService, force: boolean = false) {
+    async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) {
         if (!service) return;
+        console.log(`handleFetch called by : ${source}`);
         // Validate each regex-enabled input
         if (
             (inputModes.searchName.isRegex && !isValidRegex(searchName)) ||
