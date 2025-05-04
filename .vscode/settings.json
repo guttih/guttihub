@@ -1,4 +1,26 @@
 {
+    // Enforce LF endings (Unix-standard)
+    "files.eol": "\n",
+
+    // Use Bash in the integrated terminal
+    "terminal.integrated.defaultProfile.linux": "bash",
+
+    // Optional: prevent accidental CRLF from Windows line ending invaders
+    "files.autoGuessEncoding": false,
+
+    // Always use LF in new files too
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+
+    // Next.js / TS / ESLint friendliness
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+
+    // Git: don’t show diffs on EOL only
+    "diffEditor.ignoreTrimWhitespace": true,
+
     "todo-tree.tree.scanMode": "open files",
-    "typescript.tsdk": "node_modules\\typescript\\lib"
+    "typescript.tsdk": "node_modules/typescript/lib"
 }
