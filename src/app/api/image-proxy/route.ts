@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
                 clearTimeout(timeout);
                 const fallbackUrl = new URL(appConfig.fallbackImage, origin);
                 if (imageRes.statusCode && imageRes.statusCode >= 400) {
-                    resolve(Response.redirect(appConfig.fallbackImage, 302));
+                    resolve(Response.redirect(fallbackUrl, 302));
                     return;
                 }
 
