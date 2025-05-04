@@ -198,8 +198,8 @@ else
     # Build the production app
     echo "🏗 Building production app..."
     cd "$REPO_ROOT"
-
     npm run build
+    ssh "$DEPLOY_SERVER" "rm -rf $DEPLOY_DIR/.next $DEPLOY_DIR/src $DEPLOY_DIR/node_modules"
 fi
 
 echo "REPO_ROOT: $REPO_ROOT"
