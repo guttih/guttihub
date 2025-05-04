@@ -1,10 +1,13 @@
 import { appConfig } from "@/config";
+import { b } from "vitest/dist/chunks/suite.d.FvehnV49.js";
 
 /**
  * Returns a proxied image URL, or the fallback if input is empty, invalid, or already a fallback.
  */
 export function makeImageProxyUrl(imageUrl?: string | null): string {
-    const fallback = appConfig.fallbackImage;
+    const baseUrl = process.env.BASE_URL;
+    const fallbackImage = `${baseUrl}${appConfig.fallbackImage}`;
+    const fallback = fallbackImage || appConfig.fallbackImage;
 
     // Reject bad/empty input or fallback itself
     if (!imageUrl || imageUrl === "[]" || imageUrl === fallback) {
