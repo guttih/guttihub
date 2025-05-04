@@ -119,13 +119,9 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const pageSize = Number(appConfig.defaultPageSize);
 
     function handlePlay(url: string) {
-        console.log("handlePlay called, input URL:", url);
-
         const isOwnLiveStream = url.startsWith("/api/hls-stream/") && url.endsWith("/playlist");
         const absoluteUrl = new URL(url, window.location.origin).toString();
         const matchingEntry = entries.find((entry) => entry.url === url);
-        console.log("ClientApp::handlePlay using URL:", isOwnLiveStream ? absoluteUrl : url);
-        console.log(`Title: ${matchingEntry?.name ?? "Unknown"}`);
         setPlayer({
             url: isOwnLiveStream ? absoluteUrl : url,
             title: matchingEntry?.name ?? "",
@@ -146,8 +142,6 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }));
     }
 
-
-
     function isValidRegex(pattern: string): boolean {
         try {
             new RegExp(pattern);
@@ -161,7 +155,6 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) {
         if (!service) return;
-        console.log(`handleFetch called by : ${source}`);
         // Validate each regex-enabled input
         if (
             (inputModes.searchName.isRegex && !isValidRegex(searchName)) ||
@@ -358,7 +351,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                                 if (selected) {
                                     setActiveService(selected);
                                     setCurrentPage(1);
-                                    console.log("🌀 Switching to service:", selected);
+                                    // console.log("🌀 Switching to service:", selected);
                                     // handleFetch(selected, "onChange: serviceSelect");
                                 }
                             }}
@@ -413,29 +406,24 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             <div className="w-full mb-6">
                 <fieldset
                     className={`relative rounded p-4 transition-colors duration-200 border ${
-                        hasActiveFilters
-  ? "border-gray-400 border-[1.5px]"
-  : "border-gray-700 border"
-                      
-                      
+                        hasActiveFilters ? "border-gray-400 border-[1.5px]" : "border-gray-700 border"
                     }`}
                 >
                     <legend
-  className={`text-sm px-2 transition-colors duration-200 ${
-    hasActiveFilters ? "text-gray-300 font-bold" : "text-gray-400 font-normal"
-  }`}
->
-  Filters
-</legend>
-<button
-  className={`absolute right-1 -top-7 z-10 w-9 h-9 flex items-center justify-center rounded-full shadow transition
-    ${hasActiveFilters ? "bg-yellow-600 hover:bg-yellow-500 text-white" : "bg-gray-700 text-gray-400"}
-  `}
-  onClick={handleClearFilters}
-  title="Clear all filters"
->
-  <EraserIcon />
-</button>
+                        className={`text-sm px-2 transition-colors duration-200 ${
+                            hasActiveFilters ? "text-gray-300 font-bold" : "text-gray-400 font-normal"
+                        }`}
+                    >
+                        Filters
+                    </legend>
+                    <button
+                        className={`absolute right-1 -top-7 z-10 w-9 h-9 flex items-center justify-center rounded-full shadow transition
+                            ${hasActiveFilters ? "bg-yellow-600 hover:bg-yellow-500 text-white" : "bg-gray-700 text-gray-400"}`}
+                        onClick={handleClearFilters}
+                        title="Clear all filters"
+                    >
+                        <EraserIcon />
+                    </button>
                     <legend className="text-sm text-gray-400 px-2">Filters</legend>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
                         <FilterInput

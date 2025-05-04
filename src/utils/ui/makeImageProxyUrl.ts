@@ -1,5 +1,4 @@
 import { appConfig } from "@/config";
-import { b } from "vitest/dist/chunks/suite.d.FvehnV49.js";
 
 /**
  * Returns a proxied image URL, or the fallback if input is empty, invalid, or already a fallback.

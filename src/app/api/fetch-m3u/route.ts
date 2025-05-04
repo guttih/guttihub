@@ -1,16 +1,7 @@
 // src/app/api/fetch-m3u/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { parseM3U } from "@/utils/parseM3U";
-import {
-    ensureCacheDir,
-    getCacheFilePath,
-    getMediaDir,
-    isFileFresh,
-    readFile,
-    readJsonFile,
-    writeFile,
-    writeJsonFile,
-} from "@/utils/fileHandler";
+import { ensureCacheDir, getCacheFilePath, getMediaDir, isFileFresh, readFile, readJsonFile, writeFile, writeJsonFile } from "@/utils/fileHandler";
 import { inferContentCategory, ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
 import { M3UResponse } from "@/types/M3UResponse";
 import { sanitizeM3UUrls } from "@/utils/urlSanitizer";
@@ -83,9 +74,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
             //     chasedData = json.data as CashedEntries;
             // } else {
-                const chasedData = await getCachedOrFreshData(service, url, force);
+            const chasedData = await getCachedOrFreshData(service, url, force);
             // }
-            
 
             if (pagination?.offset && snapshotId && snapshotId !== chasedData.snapshotId) {
                 console.log("[CACHE] Snapshot ID mismatch. Fetching fresh data.");
@@ -141,13 +131,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         }
     }
 
-    async function getCachedOrFreshData(service:StreamingService,  url: string, force: boolean): Promise<CashedEntries> {
+    async function getCachedOrFreshData(service: StreamingService, url: string, force: boolean): Promise<CashedEntries> {
         const username = service.username;
         const serviceName = service.name;
         const filePathCashed = getCacheFilePath(username, serviceName, "cashedEntries");
 
-        const usingCache = !force && await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs);
-        
+        const usingCache = !force && (await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs));
+
         if (usingCache && !service.hasFileAccess) {
             console.log("[CACHE] Using cached file:", filePathCashed);
             return await readJsonFile<CashedEntries>(filePathCashed);
@@ -157,7 +147,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
         const cacheFilePathM3U = getCacheFilePath(username, serviceName, "m3u");
 
-        const rawM3U = service.hasFileAccess ? await getCachedOrFreshM3UFromLocal(service)  : await getCachedOrFreshM3U(url, cacheFilePathM3U, force);
+        const rawM3U = service.hasFileAccess ? await getCachedOrFreshM3UFromLocal(service) : await getCachedOrFreshM3U(url, cacheFilePathM3U, force);
 
         const entries = parseM3U(rawM3U);
 
@@ -189,7 +179,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
     async function getCachedOrFreshM3UFromLocal(service: StreamingService): Promise<string> {
         const filePath = getCacheFilePath(service.username, service.name, "m3u");
-       
+
         // for now there is no need to cache this, let's always create a new one to be sure we have the actual disk content
         // if (await isFileFresh(filePath, appConfig.playlistCacheTTLInMs)) {
         //     console.log("[CACHE] Using cached file:", filePath);
@@ -197,9 +187,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         // }
         console.log("[FETCH] Creating fresh .m3u");
         const text = await makeM3UList(service);
-        await writeFile(filePath, text);  //why await?  we have the text already
+        await writeFile(filePath, text); //why await?  we have the text already
         return text;
-    }               
+    }
 
     async function getCachedOrFreshM3U(url: string, filePath: string, force: boolean = false): Promise<string> {
         if (!force && (await isFileFresh(filePath, appConfig.playlistCacheTTLInMs))) {
@@ -212,7 +202,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             headers: { "User-Agent": "Mozilla/5.0" },
         });
         const text = await response.text();
-        await writeFile(filePath, text);  // why await?  we have the text already
+        await writeFile(filePath, text); // why await?  we have the text already
         return text;
     }
 
@@ -265,16 +255,14 @@ async function makeM3UList(service: StreamingService): Promise<string> {
         const fileStat = fs.statSync(filePath);
         if (fileStat.isFile()) {
             const jsonFilePath = path.join(mediaDir, file + ".json");
-            const jsonData = fs.existsSync(jsonFilePath)
-                ? await readJsonFile<RecordingJobInfo>(jsonFilePath)
-                : null;
+            const jsonData = fs.existsSync(jsonFilePath) ? await readJsonFile<RecordingJobInfo>(jsonFilePath) : null;
             let str: string;
             if (jsonData && jsonData?.job && jsonData?.job?.entry) {
                 // jsonData.entry.url = makeMediaUrl(service.id, filePath);
                 str = makeM3UListEntry(jsonData.job.entry, makeMediaUrl(service.id, filePath));
-             } else {
+            } else {
                 str = makeM3UListEntry(makeM3UEmptyEntry(service.id, filePath), makeMediaUrl(service.id, filePath));
-             }
+            }
 
             listM3U += `\n${str}`;
         }
@@ -285,13 +273,12 @@ async function makeM3UList(service: StreamingService): Promise<string> {
 
 // works  : http://localhost:3000/api/video/local-recordings/media/uk_bbc_1_hd.mp4
 // broken : http://localhost:3000/api/stream-proxy/%2Fmedia%2Fuk_bbc_1_hd.mp4
-function makeMediaUrl(serviceId:string, fullFilePath: string): string {
+function makeMediaUrl(serviceId: string, fullFilePath: string): string {
     const baseUrl = getBaseUrl();
     const strippedPath = fullFilePath.replace(/\\/g, "/").replace(/.*\/videos\//, "");
     const url = `${baseUrl}/api/video/${serviceId}/${strippedPath}`;
     return url;
 }
-
 
 function makeM3UListEntry(entry: M3UEntry, url: string): string {
     const { tvgId, tvgName, tvgLogo, groupTitle, name } = entry;
@@ -303,8 +290,7 @@ function makeM3UListEntry(entry: M3UEntry, url: string): string {
     return `${infoLine}\n${url}`;
 }
 
-
-function makeM3UEmptyEntry(serviceId:string, filePath: string): M3UEntry {
+function makeM3UEmptyEntry(serviceId: string, filePath: string): M3UEntry {
     const url = makeMediaUrl(serviceId, filePath);
     const fileName = path.basename(filePath, path.extname(filePath));
     const ext = path.extname(filePath).substring(1);
@@ -318,7 +304,6 @@ function makeM3UEmptyEntry(serviceId:string, filePath: string): M3UEntry {
         name: fileName,
         url: url,
     };
-    
+
     return entry;
 }
-

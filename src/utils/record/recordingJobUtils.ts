@@ -77,7 +77,7 @@ export async function getActiveLiveJobs(): Promise<RecordingJob[]> {
                 if (pidAlive) {
                     active.push(job);
                 } else {
-                    console.warn(`🧟 Zombie detected: job ${job.recordingId} is dead but status=${status}`);
+                    // console.warn(`🧟 Zombie detected: job ${job.recordingId} is dead but status=${status}`);
                 }
             }
         })
@@ -122,12 +122,11 @@ export async function getActiveLiveJobs(): Promise<RecordingJob[]> {
 //     return active;
 // }
 
-
 /**
  * Enrich a RecordingJob (for live/scheduled recordings)
  */
 export async function enrichRecordingJob(job: RecordingJob) {
-    const entry = job.entry? job.entry : await readCashedEntryFile( job.cacheKey);  //In the beginning there was only entry, on disk, then god came and populated the RecordingJob with the entry
+    const entry = job.entry ? job.entry : await readCashedEntryFile(job.cacheKey); //In the beginning there was only entry, on disk, then god came and populated the RecordingJob with the entry
     const status = await readStatusFile(job.statusFile);
 
     let pid = null;
@@ -138,11 +137,11 @@ export async function enrichRecordingJob(job: RecordingJob) {
     const alive = pid ? await isProcessAlive(pid) : false;
     const resolver = new StreamingServiceResolver();
     const service = entry ? StreamingServiceResolver.extractServerFromUrl(entry.url) : null;
-    const name= service ? resolver.findByServer(service)?.name : "Unknown Service";
+    const name = service ? resolver.findByServer(service)?.name : "Unknown Service";
 
     let finalStatus = status?.STATUS || "unknown";
     if (finalStatus === "recording" && !alive) {
-        console.warn(`🧟 Zombie detected: job ${job.recordingId} is dead but status=recording`);
+        // console.warn(`🧟 Zombie detected: job ${job.recordingId} is dead but status=recording`);
         finalStatus = "error";
     }
 
@@ -167,7 +166,9 @@ export async function enrichRecordingJob(job: RecordingJob) {
  */
 export async function enrichDownloadJob(job: DownloadStatus) {
     const cacheKey = job.OUTPUT_FILE
-        ? job.OUTPUT_FILE.split("/").pop()?.replace(/\.(mp4|mkv|ts)$/i, "") || "unknown-download"
+        ? job.OUTPUT_FILE.split("/")
+              .pop()
+              ?.replace(/\.(mp4|mkv|ts)$/i, "") || "unknown-download"
         : "unknown-download";
 
     const downloadJob = await readDownloadJobFile(cacheKey);

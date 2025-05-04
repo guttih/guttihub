@@ -10,8 +10,7 @@ import Hls, { ErrorData } from "hls.js";
 
 export interface InlinePlayerProps {
     url: string;
-    movieTitle?:string
-    /** Which service this playback belongs to */
+    movieTitle?: string;
     serviceId: string;
     autoPlay?: boolean;
     controls?: boolean;
@@ -44,7 +43,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     onMove,
     onResize,
     waitForPlaylist = false,
-    movieTitle
+    movieTitle,
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [canPlay, setCanPlay] = useState(false);
@@ -114,60 +113,59 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     }, [finalUrl]);
 
     // 3️⃣ Register/unregister only for unshared streams
-useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !finalUrl || !serviceId) return;
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !finalUrl || !serviceId) return;
 
-    const isUnshared = finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl);
-    let registered = false;
+        const isUnshared = finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl);
+        let registered = false;
 
-    const register = async () => {
-        if (!registered) {
-            registered = true;
-            try {
-                await fetch("/api/live/consumers", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ id: consumerId.current, serviceId }),
-                });
-            } catch (err) {
-                console.error("Failed to register InlinePlayer:", err);
+        const register = async () => {
+            if (!registered) {
+                registered = true;
+                try {
+                    await fetch("/api/live/consumers", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: consumerId.current, serviceId }),
+                    });
+                } catch (err) {
+                    console.error("Failed to register InlinePlayer:", err);
+                }
             }
-        }
-    };
+        };
 
-    const unregister = async () => {
-        if (registered) {
-            registered = false;
-            try {
-                await fetch("/api/live/consumers", {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ id: consumerId.current }),
-                });
-            } catch (err) {
-                console.error("Failed to unregister InlinePlayer:", err);
+        const unregister = async () => {
+            if (registered) {
+                registered = false;
+                try {
+                    await fetch("/api/live/consumers", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: consumerId.current }),
+                    });
+                } catch (err) {
+                    console.error("Failed to unregister InlinePlayer:", err);
+                }
             }
-        }
-    };
+        };
 
-    if (!isUnshared) return; // skip everything if stream is shared
+        if (!isUnshared) return; // skip everything if stream is shared
 
-    const handlePlay = () => register();
-    const handleStop = () => unregister();
+        const handlePlay = () => register();
+        const handleStop = () => unregister();
 
-    video.addEventListener("play", handlePlay);
-    video.addEventListener("pause", handleStop);
-    video.addEventListener("ended", handleStop);
+        video.addEventListener("play", handlePlay);
+        video.addEventListener("pause", handleStop);
+        video.addEventListener("ended", handleStop);
 
-    return () => {
-        video.removeEventListener("play", handlePlay);
-        video.removeEventListener("pause", handleStop);
-        video.removeEventListener("ended", handleStop);
-        unregister(); // final cleanup
-    };
-}, [finalUrl, serviceId]);
-
+        return () => {
+            video.removeEventListener("play", handlePlay);
+            video.removeEventListener("pause", handleStop);
+            video.removeEventListener("ended", handleStop);
+            unregister(); // final cleanup
+        };
+    }, [finalUrl, serviceId]);
 
     // Drag & resize handlers (unchanged)
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -249,13 +247,12 @@ useEffect(() => {
                 />
             )}
 
-{finalUrl && (
-    <div className="absolute top-1 left-1 text-xs bg-black bg-opacity-50 text-white px-2 py-1 rounded z-40">
-        mode: {finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl) ? "unshared" : "shared"}
-        {movieTitle && <span className="ml-2">{` - ${movieTitle}`}</span>}
-    </div>
-)}
-
+            {finalUrl && (
+                <div className="absolute top-1 left-1 text-xs bg-black bg-opacity-50 text-white px-2 py-1 rounded z-40">
+                    {/* mode: {finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl) ? "unshared" : "shared"} */}
+                    {movieTitle && <span className="ml-2">{movieTitle}</span>}
+                </div>
+            )}
 
             {draggable && onResize && (
                 <div
@@ -284,14 +281,11 @@ useEffect(() => {
 function isRawServiceUrl(url: string): boolean {
     try {
         const u = new URL(url);
-        return !u.host.includes("localhost") &&
-               !u.pathname.startsWith("/hls-stream") &&
-               !u.pathname.startsWith("/recordings");
+        return !u.host.includes("localhost") && !u.pathname.startsWith("/hls-stream") && !u.pathname.startsWith("/recordings");
     } catch {
         return false;
     }
 }
-
 
 function makeStreamProxyUrl(playUrl: string): string {
     if (playUrl.includes("/hls-stream") && playUrl.endsWith("/playlist")) {
