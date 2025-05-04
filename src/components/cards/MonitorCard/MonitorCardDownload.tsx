@@ -19,6 +19,7 @@ interface MonitorCardDownloadProps {
 export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, startedAt, status, cacheKey, onKill }: MonitorCardDownloadProps) {
     const [isLaunchingMonitor, setLaunchingMonitor] = useState(false);
     const [progressPercent, setProgressPercent] = useState<number | null>(null);
+    const [contentLength, setContentLength] = useState<number | null>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -27,8 +28,13 @@ export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, st
             try {
                 const res = await fetch(`/api/download/monitor?cacheKey=${encodeURIComponent(cacheKey)}`);
                 const json = await res.json();
-                if (res.ok && typeof json.progressPercent === "number" && isMounted) {
-                    setProgressPercent(json.progressPercent);
+                if (res.ok && isMounted) {
+                    if (typeof json.progressPercent === "number") {
+                        setProgressPercent(json.progressPercent);
+                    }
+                    if (typeof json.contentLength === "number") {
+                        setContentLength(json.contentLength);
+                    }
                 }
             } catch (err) {
                 console.warn("Failed to fetch download progress", err);
@@ -53,48 +59,44 @@ export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, st
         }
     };
 
+    const weHaveProgressInfo = progressPercent !== null && contentLength !== null && contentLength > 0;
+
     return (
         <MonitorCardBase
-        name={name}
-        groupTitle={groupTitle}
-        logoUrl={logoUrl}
-        serviceName={serviceName}
-        startedAt={startedAt}
-        status={status}
-        cacheKey={cacheKey}
-        onKill={onKill}
-        showKillButton={false}
-    >
-        <div className="flex flex-col items-start gap-2 text-left w-full">
-            <Button
-                variant="secondary"
-                size="sm"
-                disabled={isLaunchingMonitor}
-                onClick={handleLaunchMonitor}
-                title="Open the download monitor for this download"
-                className="w-full text-left"
-            >
-                {isLaunchingMonitor ? "⏳ Launching monitor..." : "🖥️ Monitor"}
-            </Button>
-    
-            {onKill && (
+            name={name}
+            groupTitle={groupTitle}
+            logoUrl={logoUrl}
+            serviceName={serviceName}
+            startedAt={startedAt}
+            status={status}
+            cacheKey={cacheKey}
+            onKill={onKill}
+            showKillButton={false}
+        >
+            <div className="flex flex-col items-start gap-2 text-left w-full">
                 <Button
-                    variant="danger"
+                    variant="secondary"
                     size="sm"
-                    onClick={() => onKill(cacheKey)}
+                    disabled={isLaunchingMonitor}
+                    onClick={handleLaunchMonitor}
+                    title="Open the download monitor for this download"
                     className="w-full text-left"
                 >
-                    🔴 Kill
+                    {isLaunchingMonitor ? "⏳ Launching monitor..." : "🖥️ Monitor"}
                 </Button>
-            )}
-    
-            {typeof progressPercent === "number" && (
-                <div className="w-full pt-1">
-                    <ProgressBarPercent percent={progressPercent} variant="default" />
-                </div>
-            )}
-        </div>
-    </MonitorCardBase>
-    
+
+                {onKill && (
+                    <Button variant="danger" size="sm" onClick={() => onKill(cacheKey)} className="w-full text-left">
+                        🔴 Kill
+                    </Button>
+                )}
+
+                {weHaveProgressInfo && typeof progressPercent === "number" && (
+                    <div className="w-full pt-1">
+                        <ProgressBarPercent percent={progressPercent} variant="default" />
+                    </div>
+                )}
+            </div>
+        </MonitorCardBase>
     );
 }

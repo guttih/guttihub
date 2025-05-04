@@ -5,6 +5,7 @@ import { appConfig } from "@/config";
 
 export async function GET(req: NextRequest) {
     const url = req.nextUrl.searchParams.get("url");
+    const origin = req.nextUrl.origin;
 
     if (!url || !/^https?:\/\/[^ ]+$/.test(url)) {
         return new Response("Invalid 'url' parameter", { status: 400 });
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
         return await new Promise<Response>((resolve, reject) => {
             const req = client.get(parsedUrl, { signal: controller.signal }, (imageRes) => {
                 clearTimeout(timeout);
-
+                const fallbackUrl = new URL(appConfig.fallbackImage, origin);
                 if (imageRes.statusCode && imageRes.statusCode >= 400) {
                     resolve(Response.redirect(appConfig.fallbackImage, 302));
                     return;

@@ -30,6 +30,13 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
     const [monitorData, setMonitorData] = useState<DownloadMonitorData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [stopCountdown, setStopCountdown] = useState<number | null>(null);
+    const [weHaveProgressInfo, setWeHaveProgressInfo] = useState(false);
+
+    useEffect(() => {
+        if (monitorData?.progressPercent != null && monitorData.contentLength && monitorData.contentLength > 0) {
+            setWeHaveProgressInfo(true);
+        }
+    }, [monitorData?.progressPercent, monitorData?.contentLength]);
 
     useEffect(() => {
         let mounted = true;
@@ -47,11 +54,7 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
                 if (mounted) {
                     setMonitorData(json);
                     const lowerStatus = json.currentStatus?.toLowerCase();
-                    const stillIncomplete =
-                        json.progressPercent === null ||
-                        json.progressPercent === undefined ||
-                        json.contentLength === null ||
-                        json.contentLength === 0;
+
                     if (["done", "error"].includes(lowerStatus)) {
                         if (stopCountdown === null) {
                             setStopCountdown(5);
@@ -93,7 +96,6 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold">Download Monitor</h2>
                 </div>
-
                 <div className="text-sm space-y-1 mb-4">
                     <div>
                         <b>Download ID:</b> {monitorData.recordingId ?? "(unknown)"}
@@ -112,22 +114,19 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
                     </div>
                 </div>
 
-                {typeof monitorData.progressPercent === "number" && (
+                {weHaveProgressInfo && typeof monitorData.progressPercent === "number" && (
                     <>
                         <div className="text-sm font-semibold mb-1">Progress:</div>
                         <ProgressBarPercent percent={monitorData.progressPercent} variant="secondary" showLabel={true} />
                     </>
                 )}
-
                 <div className="flex items-center gap-2 mb-2">
                     <span className="font-bold">Download Status:</span>
                     <StatusBadge status={monitorData?.currentStatus ?? "unknown"} />
                 </div>
-
                 <div className="text-xs text-gray-400 mt-2">
                     Last checked at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                 </div>
-
                 {monitorData?.currentStatus?.toLowerCase().includes("error") && (
                     <div className="text-red-400 font-mono text-xs mt-2">⚠️ Something went wrong during download</div>
                 )}
