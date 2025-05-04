@@ -47,7 +47,7 @@ export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, st
             isMounted = false;
             clearInterval(interval);
         };
-    }, [cacheKey]);
+    }, [cacheKey, contentLength]);
 
     const handleLaunchMonitor = async () => {
         try {

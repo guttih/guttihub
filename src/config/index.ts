@@ -21,7 +21,7 @@ interface AppConfigType {
 export const appConfig: AppConfigType = {
     appName: "Guttihub Stream",
     defaultPageSize: 60,
-    fallbackImage: `${process.env.BASE_URL}/fallback.png`,
+    fallbackImage: `/fallback.png`,
     hideCredentialsInUrl: false,
     maxEntryExportCount: 59,
     maxRecordingDuration: 60 * 60 * 6, // 6 hours
