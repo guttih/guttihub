@@ -7,14 +7,16 @@ import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 import { detectStreamFormat, StreamFormat } from "@/types/StreamFormat";
 
 import Hls, { ErrorData } from "hls.js";
+import { M3UEntry } from "@/types/M3UEntry";
 
 export interface InlinePlayerProps {
     url: string;
-    movieTitle?: string;
+    movieTitle: string;
     serviceId: string;
     autoPlay?: boolean;
     controls?: boolean;
     className?: string;
+    entry: M3UEntry;
     showCloseButton?: boolean;
     onClose?: () => void;
     draggable?: boolean;
@@ -33,6 +35,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     autoPlay = true,
     controls = true,
     className = "w-full aspect-video rounded shadow-md",
+    entry,
     showCloseButton = false,
     onClose,
     draggable = false,
@@ -127,7 +130,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
                     await fetch("/api/live/consumers", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ id: consumerId.current, serviceId }),
+                        body: JSON.stringify({ id: consumerId.current, serviceId, entry }),
                     });
                 } catch (err) {
                     console.error("Failed to register InlinePlayer:", err);
@@ -291,6 +294,7 @@ function makeStreamProxyUrl(playUrl: string): string {
     if (playUrl.includes("/hls-stream") && playUrl.endsWith("/playlist")) {
         return playUrl;
     }
+    console.warn("[InlinePlayer] Using stream proxy for URL:", playUrl);
     return `/api/stream-proxy?url=${playUrl}`;
 }
 

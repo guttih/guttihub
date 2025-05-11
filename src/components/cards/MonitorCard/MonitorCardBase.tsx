@@ -67,12 +67,14 @@ export function MonitorCardBase({
                     {children}
 
                     {showKillButton && onKill && cacheKey && (
-                        <Button className="w-full text-left"
-                                variant="danger" 
-                                size="sm" 
-                                title="Stop this job" 
-                                onClick={handleKillClick} 
-                                disabled={isKilling}>
+                        <Button
+                            className="w-full text-left"
+                            variant="danger"
+                            size="sm"
+                            title="Stop this job"
+                            onClick={handleKillClick}
+                            disabled={isKilling}
+                        >
                             {isKilling ? "⏳ Killing..." : "🔴 Kill"}
                         </Button>
                     )}

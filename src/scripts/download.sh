@@ -7,7 +7,7 @@ set -euo pipefail
 
 # --- Default ---
 LOGLEVEL="error"
-
+PARENT_PID=$$
 # --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -82,6 +82,7 @@ URL=$URL
 OUTPUT_FILE=$OUTPUT_FILE
 USER=$USER
 LOG_FILE=$LOG_FILE
+PID=$PARENT_PID
 EOF
 
 # --- Fetch content length safely ---
@@ -117,18 +118,27 @@ send_cleanup_report() {
 }
 
 # --- Cleanup Logic ---
+# shellcheck disable=SC2317  # Ignore SC2317: "trap 'cleanup' on exit" is not a good practice
 cleanup() {
     ACTUAL_STOP=$(date -Iseconds)
     echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
+    echo "INTERRUPTED=1" >>"$STATUS_FILE"
+    echo "STATUS=stopped" >>"$STATUS_FILE"
+
+    if [[ -n "${PID:-}" ]]; then
+        echo "Sending SIGINT to curl PID $PID" >>"$LOG_FILE"
+        kill -INT "$PID" 2>/dev/null || true
+        sleep 1
+        kill -TERM "$PID" 2>/dev/null || true
+    fi
 
     if [[ -f "$TMP_OUTPUT_FILE" ]]; then
         echo "Removing incomplete temp file..." >>"$LOG_FILE"
         rm -f "$TMP_OUTPUT_FILE"
     fi
 
-    echo "STATUS=error" >>"$STATUS_FILE"
-    echo "Download interrupted or failed." >>"$LOG_FILE"
     send_cleanup_report
+    exit 0
 }
 
 trap cleanup SIGINT SIGTERM

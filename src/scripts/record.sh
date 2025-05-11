@@ -13,21 +13,52 @@ set -euo pipefail
 LOGLEVEL="error"
 FORMAT="mp4"
 RECORDING_TYPE="ts"
+PARENT_PID="$$"
 
 # --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --baseUrl) BASE_URL="$2"; shift 2 ;;
-    --cacheKey) CACHE_KEY="$2"; shift 2 ;;
-    --url) STREAM_URL="$2"; shift 2 ;;
-    --duration) DURATION="$2"; shift 2 ;;
-    --user) USER="$2"; shift 2 ;;
-    --outputFile) OUTPUT_FILE="$2"; shift 2 ;;
-    --format) FORMAT="$2"; shift 2 ;;
-    --loglevel) LOGLEVEL="$2"; shift 2 ;;
-    --recordingType) RECORDING_TYPE="$2"; shift 2 ;;
-    *) echo "❌ Unknown parameter $1" >&2; exit 1 ;;
-  esac
+    case "$1" in
+    --baseUrl)
+        BASE_URL="$2"
+        shift 2
+        ;;
+    --cacheKey)
+        CACHE_KEY="$2"
+        shift 2
+        ;;
+    --url)
+        STREAM_URL="$2"
+        shift 2
+        ;;
+    --duration)
+        DURATION="$2"
+        shift 2
+        ;;
+    --user)
+        USER="$2"
+        shift 2
+        ;;
+    --outputFile)
+        OUTPUT_FILE="$2"
+        shift 2
+        ;;
+    --format)
+        FORMAT="$2"
+        shift 2
+        ;;
+    --loglevel)
+        LOGLEVEL="$2"
+        shift 2
+        ;;
+    --recordingType)
+        RECORDING_TYPE="$2"
+        shift 2
+        ;;
+    *)
+        echo "❌ Unknown parameter $1" >&2
+        exit 1
+        ;;
+    esac
 done
 
 # --- Validation ---
@@ -38,18 +69,25 @@ done
 [[ -z "${USER:-}" ]] && echo "❌ Missing --user" && exit 1
 [[ -z "${OUTPUT_FILE:-}" ]] && echo "❌ Missing --outputFile" && exit 1
 
+export BASE_URL="$BASE_URL"
+export CACHE_KEY="$CACHE_KEY"
+# after parsing args
+BASE_URL="${BASE_URL:-}"
+CACHE_KEY="${CACHE_KEY:-}"
+export BASE_URL CACHE_KEY
+
 sanitize_path_param() {
-  local val="$1"
-  val="${val#\"}"
-  val="${val%\"}"
-  echo "$(realpath "$val")"
+    local val="$1"
+    val="${val#\"}"
+    val="${val%\"}"
+    echo "$(realpath "$val")"
 }
 
 strip_surrounding_quotes() {
-  local val="$1"
-  val="${val#\"}"
-  val="${val%\"}"
-  echo "$val"
+    local val="$1"
+    val="${val#\"}"
+    val="${val%\"}"
+    echo "$val"
 }
 
 USER="$(strip_surrounding_quotes "$USER")"
@@ -78,6 +116,7 @@ cat >"$STATUS_FILE" <<EOF
 STATUS=recording
 STARTED_AT=$STARTED_AT
 EXPECTED_STOP=$ESTIMATED_STOP
+CACHE_KEY=$CACHE_KEY
 STREAM=$STREAM_URL
 USER=$USER
 DURATION=$DURATION
@@ -86,132 +125,168 @@ OUTPUT_FILE=$OUTPUT_FILE
 TS_FILE=$TS_FILE
 HLS_PLAYLIST=$HLS_PLAYLIST
 LOG_FILE=$LOG_FILE
+PID=$PARENT_PID
 EOF
 
 # --- Prepare HLS Folder if Needed ---
 if [[ "$RECORDING_TYPE" == "hls" ]]; then
-  echo "DEBUG: mkdir -p $HLS_DIR" >> "$LOG_FILE"
-  mkdir -p "$HLS_DIR"
-  ls -la "$HLS_DIR" >> "$LOG_FILE"
+    echo "DEBUG: mkdir -p $HLS_DIR" >>"$LOG_FILE"
+    mkdir -p "$HLS_DIR"
+    ls -la "$HLS_DIR" >>"$LOG_FILE"
 fi
 
 # --- Finalization ---
 finalize_recording() {
-  INPUT_FILE=""
+    INPUT_FILE=""
 
-  if [[ "$RECORDING_TYPE" == "hls" && -f "$HLS_PLAYLIST" ]]; then
-    echo "⏳ Waiting for HLS playlist to finalize..." >>"$LOG_FILE"
-    for i in {1..30}; do
-      if grep -q "#EXT-X-ENDLIST" "$HLS_PLAYLIST"; then
-        echo "✅ Playlist finalized after $i seconds." >>"$LOG_FILE"
-        break
-      fi
-      sleep 1
-    done
+    if [[ "$RECORDING_TYPE" == "hls" && -f "$HLS_PLAYLIST" ]]; then
+        echo "⏳ Waiting for HLS playlist to finalize..." >>"$LOG_FILE"
+        for i in {1..30}; do
+            if grep -q "#EXT-X-ENDLIST" "$HLS_PLAYLIST"; then
+                echo "✅ Playlist finalized after $i seconds." >>"$LOG_FILE"
+                break
+            fi
+            sleep 1
+        done
 
-    if ! grep -q "#EXT-X-ENDLIST" "$HLS_PLAYLIST"; then
-      echo "❌ Playlist never finalized." >>"$LOG_FILE"
-      echo "STATUS=error" >>"$STATUS_FILE"
-      echo "ERROR=Playlist did not finalize with #EXT-X-ENDLIST" >>"$STATUS_FILE"
-      return
+        if ! grep -q "#EXT-X-ENDLIST" "$HLS_PLAYLIST"; then
+            echo "⚠️ Playlist did not finalize cleanly." >>"$LOG_FILE"
+            if grep -q "INTERRUPTED=1" "$STATUS_FILE"; then
+                echo "🚧 Proceeding with packaging anyway due to interrupt." >>"$LOG_FILE"
+            else
+                echo "STATUS=error" >>"$STATUS_FILE"
+                echo "ERROR=Playlist did not finalize with #EXT-X-ENDLIST" >>"$STATUS_FILE"
+                return
+            fi
+        fi
+
+        INPUT_FILE="$HLS_PLAYLIST"
+    elif [[ -f "$TS_FILE" ]]; then
+        INPUT_FILE="$TS_FILE"
     fi
 
-    INPUT_FILE="$HLS_PLAYLIST"
-  elif [[ -f "$TS_FILE" ]]; then
-    INPUT_FILE="$TS_FILE"
-  fi
-
-  if [[ -z "$INPUT_FILE" ]]; then
-    echo "STATUS=error" >>"$STATUS_FILE"
-    echo "ERROR=No input file found for packaging" >>"$STATUS_FILE"
-    return
-  fi
-
-  echo "STATUS=packaging" >>"$STATUS_FILE"
-
-  if [[ "$RECORDING_TYPE" == "hls" ]]; then
-    if ! (
-      cd "$(dirname "$HLS_PLAYLIST")" && \
-      ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
-        -i "$(basename "$HLS_PLAYLIST")" \
-        -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1
-    ); then
-      echo "STATUS=error" >>"$STATUS_FILE"
-      echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
-      return
+    if [[ -z "$INPUT_FILE" ]]; then
+        echo "STATUS=error" >>"$STATUS_FILE"
+        echo "ERROR=No input file found for packaging" >>"$STATUS_FILE"
+        return
     fi
-  else
-    if ! ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
-      -i "$INPUT_FILE" -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1; then
-      echo "STATUS=error" >>"$STATUS_FILE"
-      echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
-      return
+
+    echo "STATUS=packaging" >>"$STATUS_FILE"
+
+    if [[ "$RECORDING_TYPE" == "hls" ]]; then
+        if ! (
+            cd "$(dirname "$HLS_PLAYLIST")" &&
+                ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
+                    -y \
+                    -i "$(basename "$HLS_PLAYLIST")" \
+                    -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1
+        ); then
+            echo "STATUS=error" >>"$STATUS_FILE"
+            echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
+            return
+        fi
+    else
+        if ! ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
+            -i "$INPUT_FILE" -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1; then
+            echo "STATUS=error" >>"$STATUS_FILE"
+            echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
+            return
+        fi
     fi
-  fi
 
-  echo "STATUS=optimizing" >>"$STATUS_FILE"
+    echo "STATUS=optimizing" >>"$STATUS_FILE"
 
-  if ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
+    if ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
+        -y \
         -i "$OUTPUT_FILE" \
         -c:v libx264 -preset veryfast -crf 23 \
         -c:a aac -b:a 128k \
         "${OUTPUT_FILE}.opt.mp4" >>"$LOG_FILE" 2>&1; then
-    mv "${OUTPUT_FILE}.opt.mp4" "$OUTPUT_FILE"
-    echo "STATUS=done" >>"$STATUS_FILE"
-    [[ "$RECORDING_TYPE" == "hls" ]] && rm -rf "$HLS_PLAYLIST" "$HLS_DIR"
-    [[ "$RECORDING_TYPE" == "ts" && -f "$TS_FILE" ]] && rm "$TS_FILE"
-  else
-    echo "STATUS=error" >>"$STATUS_FILE"
-    echo "ERROR=Optimization failed" >>"$STATUS_FILE"
-  fi
+        mv "${OUTPUT_FILE}.opt.mp4" "$OUTPUT_FILE"
+        if grep -q '^INTERRUPTED=1' "$STATUS_FILE"; then
+            echo "Recording was interrupted, keeping STATUS=stopped" >>"$LOG_FILE"
+            echo "STATUS=stopped" >>"$STATUS_FILE"
+        else
+            echo "STATUS=done" >>"$STATUS_FILE"
+        fi
+
+        [[ "$RECORDING_TYPE" == "hls" ]] && rm -rf "$HLS_PLAYLIST" "$HLS_DIR"
+        [[ "$RECORDING_TYPE" == "ts" && -f "$TS_FILE" ]] && rm "$TS_FILE"
+    else
+        echo "STATUS=error" >>"$STATUS_FILE"
+        echo "ERROR=Optimization failed" >>"$STATUS_FILE"
+    fi
 }
 
 send_cleanup_report() {
-  if [[ -n "${BASE_URL:-}" ]]; then
-    if curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
-         -H "Content-Type: application/json" \
-         -d "{\"cacheKey\":\"$CACHE_KEY\"}" >/dev/null; then
-      echo "✅ Cleanup report sent."
+    echo "send_cleanup_report: BASE_URL='$BASE_URL' CACHE_KEY='$CACHE_KEY'" >>"$LOG_FILE"
+    if [[ -n "${BASE_URL:-}" ]]; then
+        if curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"cacheKey\":\"$CACHE_KEY\"}" >/dev/null; then
+            echo "✅ Cleanup report sent." >>"$LOG_FILE"
+        else
+            echo "❌ Cleanup report failed (exit $?)" >>"$LOG_FILE"
+        fi
     else
-      echo "❌ Cleanup report failed (exit $?)"
+        echo "⚠️ BASE_URL not set — skipping cleanup report" >>"$LOG_FILE"
     fi
-  fi
 }
 
-# --- Signal Traps ---
+# --- Trap Handler ---
 cleanup_and_exit() {
-  ACTUAL_STOP=$(date -Iseconds)
-  echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
-  echo "INTERRUPTED=1" >>"$STATUS_FILE"
-  finalize_recording
-  send_cleanup_report
-  exit 0
+    echo "INTERRUPTED=1" >>"$STATUS_FILE"
+    echo "STATUS=stopped" >>"$STATUS_FILE"
+    echo "🧨 Sending SIGINT to process group -$PID" >>"$LOG_FILE"
+    kill -INT "$PID" 2>/dev/null || true
+
+    sleep 5
+    kill -TERM -- -"$PID" 2>/dev/null || true
+
+    wait "$PID" 2>/dev/null || echo "⚠️ Child already exited"
+
+    echo "⚙️ Finalizing recording after interrupt..." >>"$LOG_FILE"
+
+    # CALL IT SAFELY
+    {
+        finalize_recording
+    } || {
+        echo "⚠️ finalize_recording failed" >>"$LOG_FILE"
+    }
+
+    # THIS ALWAYS RUNS NOW
+    echo "📡 Calling send_cleanup_report" >>"$LOG_FILE"
+    send_cleanup_report
+
+    echo "✅ Exiting after graceful interrupt." >>"$LOG_FILE"
+    exit 0
 }
 
 trap cleanup_and_exit SIGINT SIGTERM
 
 # --- Start Recording ---
 if [[ "$RECORDING_TYPE" == "hls" ]]; then
-  timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" \
-    -i "$STREAM_URL" \
-    -t "$DURATION" \
-    -c:v libx264 -preset ultrafast -g 25 -sc_threshold 0 \
-    -c:a aac -b:a 128k -ac 2 -ar 44100 \
-    -f hls \
-    -hls_time 4 \
-    -hls_list_size 0 \
-    -hls_flags append_list \
-    -hls_segment_filename "${HLS_DIR}/segment_%03d.ts" \
-    -hls_base_url "$(basename "$HLS_DIR")/" \
-    "$HLS_PLAYLIST" >>"$LOG_FILE" 2>&1 &
+    setsid timeout --foreground ${TIMEOUT}s ffmpeg -loglevel "$LOGLEVEL" \
+        -i "$STREAM_URL" \
+        -t "$DURATION" \
+        -c:v libx264 -preset ultrafast -g 25 -sc_threshold 0 \
+        -c:a aac -b:a 128k -ac 2 -ar 44100 \
+        -f hls \
+        -hls_time 4 \
+        -hls_list_size 0 \
+        -hls_flags append_list \
+        -hls_segment_filename "${HLS_DIR}/segment_%03d.ts" \
+        -hls_base_url "$(basename "$HLS_DIR")/" \
+        "$HLS_PLAYLIST" >>"$LOG_FILE" 2>&1 &
 else
-  timeout "${TIMEOUT}"s ffmpeg -loglevel "$LOGLEVEL" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
-    -i "$STREAM_URL" -t "$DURATION" -c copy -f mpegts "$TS_FILE" >>"$LOG_FILE" 2>&1 &
+    setsid timeout --foreground ${TIMEOUT}s ffmpeg -loglevel "$LOGLEVEL" \
+        -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
+        -i "$STREAM_URL" -t "$DURATION" -c copy -f mpegts "$TS_FILE" >>"$LOG_FILE" 2>&1 &
 fi
 
 PID=$!
-echo "PID=$PID" >>"$STATUS_FILE"
-echo "🕓 Waiting for FFmpeg process (PID=$PID)..." >>"$LOG_FILE"
+echo "FFMPEG_PID=$PID" >>"$STATUS_FILE"
+echo "🕒 Waiting for FFmpeg process (PID=$PID)..." >>"$LOG_FILE"
 
 wait $PID
 EXIT_CODE=$?
@@ -220,8 +295,9 @@ echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
 echo "FFMPEG_EXIT=$EXIT_CODE" >>"$STATUS_FILE"
 
 if [[ $EXIT_CODE -eq 124 || $EXIT_CODE -eq 130 || $EXIT_CODE -eq 255 ]]; then
-  echo "INTERRUPTED=1" >>"$STATUS_FILE"
+    echo "INTERRUPTED=1" >>"$STATUS_FILE"
+    echo "STATUS=stopped" >>"$STATUS_FILE"
 fi
 
-finalize_recording || echo "finalize_recording FAILED"
+finalize_recording || echo "finalize_recording FAILED" >>"$LOG_FILE"
 send_cleanup_report

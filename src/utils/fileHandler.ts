@@ -54,7 +54,7 @@ export async function readJsonFile<T>(filePath: string): Promise<T> {
         const data = await fs.readFile(filePath, "utf-8");
         return JSON.parse(data) as T;
     } catch (err) {
-        console.error("❌ Failed to read or parse JSON file:", filePath, err);
+        // console.error("❌ Failed to read or parse JSON file:", filePath, err);
         throw err;
     }
 }
@@ -68,9 +68,11 @@ export async function deleteFile(filePath: string): Promise<void> {
     }
 }
 
-export function deleteFileAndForget(filePath: string) {
+export async function deleteFileAndForget(filePath: string) {
     try {
-        fs.unlink(filePath);
+        if (await existsSync(filePath)) {
+            fs.unlink(filePath);
+        }
     } catch {
         // Ignore errors
     }
@@ -89,7 +91,6 @@ export async function ensureRecordingJobsDir(): Promise<void> {
 export function getJobsDir(): string {
     return path.join(getCacheDir(), "recording-jobs");
 }
-
 
 // returns the directory where recordings and downloads are stored
 // This directory could contain a lot of files, including files we did not create and have no info about
@@ -116,13 +117,10 @@ export async function readRecordingJobInfo(id: string): Promise<RecordingJobInfo
 
 // Read the finished-download-job bundle
 export async function readDownloadJobInfo(id: string): Promise<DownloadJobInfo> {
-  const p = getInfoJsonPath(id);
-  const txt = await fs.readFile(p, "utf-8");
-  return JSON.parse(txt) as DownloadJobInfo;
+    const p = getInfoJsonPath(id);
+    const txt = await fs.readFile(p, "utf-8");
+    return JSON.parse(txt) as DownloadJobInfo;
 }
-
-
-
 
 // Probe whether the bundle exists
 export function infoJsonExists(id: string): boolean {
@@ -147,16 +145,16 @@ export async function writeRecordingJobFile(job: RecordingJob, deleteEntryCash: 
     }
 }
 export async function readRecordingJobFile(cacheKey: string): Promise<RecordingJob> {
-    const filePath = path.join( getJobsDir(), `${cacheKey}.json`);
+    const filePath = path.join(getJobsDir(), `${cacheKey}.json`);
     return await readJsonFile<RecordingJob>(filePath);
 }
 
 export async function readDownloadJobFile(cacheKey: string): Promise<DownloadJob> {
-    const filePath = path.join( getJobsDir(), `${cacheKey}.json`);
+    const filePath = path.join(getJobsDir(), `${cacheKey}.json`);
     return await readJsonFile<DownloadJob>(filePath);
 }
 
-export async function writeDownloadingJobFile(job: DownloadJob, deleteEntryCash: boolean ): Promise<void> {
+export async function writeDownloadingJobFile(job: DownloadJob, deleteEntryCash: boolean): Promise<void> {
     const dir = getJobsDir();
     await fs.mkdir(dir, { recursive: true });
     const filePath = path.join(dir, `${job.cacheKey}.json`);

@@ -1,5 +1,6 @@
-// src/types/DownloadStatus.ts 
+// src/types/DownloadStatus.ts
 export interface DownloadStatus {
+    cacheKey: string;
     STATUS: string;
     STARTED_AT: string;
     URL: string;
@@ -7,4 +8,4 @@ export interface DownloadStatus {
     USER: string;
     PID: string;
     EXTRA_FIELDS?: Record<string, string>; // 👈 optional clean extension
-  }
+}

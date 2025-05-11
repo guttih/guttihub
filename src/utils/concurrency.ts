@@ -1,25 +1,49 @@
 // src/utils/concurrency.ts
 
-import { getActiveLiveJobs, readCashedEntryFile } from "@/utils/record/recordingJobUtils";
+import { getActiveLiveJobs } from "@/utils/record/recordingJobUtils";
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
-import { getJobsDir, ensureDownloadJobsDir } from "@/utils/fileHandler";
-import { DownloadStatus } from "@/types/DownloadStatus";
-import fs from "fs/promises";
-import path from "path";
-
+import { MovieConsumerMeta } from "@/types/MovieConsumerMeta";
+import { M3UEntry } from "@/types/M3UEntry";
+import { readConsumers, writeConsumers } from "./fileMovieConsumerStore";
 /**
  * Map of movie‐player consumerId → serviceId
  */
-const movieConsumers = new Map<string, string>();
+// const movieConsumers = new Map<string, MovieConsumerMeta>();
+
+// export function getMovieConsumers(): Map<string, MovieConsumerMeta> {
+//     return movieConsumers;
+// }
+
+export async function getMovieConsumers(): Promise<Map<string, MovieConsumerMeta>> {
+    const raw = await readConsumers(); // raw is Record<string, MovieConsumerMeta>
+    return new Map(Object.entries(raw)); // ✅ this returns Map<string, MovieConsumerMeta>
+}
 
 /** Call when an InlinePlayer mounts. */
-export function addMovieConsumer(consumerId: string, serviceId: string): void {
-  movieConsumers.set(consumerId, serviceId);
+export async function addMovieConsumer(consumerId: string, serviceId: string, entry: M3UEntry): Promise<void> {
+    const resolver = new StreamingServiceResolver();
+    const service = entry ? StreamingServiceResolver.extractServerFromUrl(entry.url) : null;
+    const serviceIdFromUrl = service ? resolver.findByServer(service)?.id : null;
+    const sId = serviceIdFromUrl ? serviceIdFromUrl : serviceId;
+    // movieConsumers.set(consumerId, { serviceId: sid , serviceId, entry });
+    await persistMovieConsumer(consumerId, sId, entry);
+}
+
+async function persistMovieConsumer(consumerId: string, serviceId: string, entry: M3UEntry): Promise<void> {
+    const consumers = await readConsumers();
+    consumers[consumerId] = { serviceId, entry };
+    await writeConsumers(consumers);
 }
 
 /** Call when an InlinePlayer unmounts. */
-export function removeMovieConsumer(consumerId: string): void {
-  movieConsumers.delete(consumerId);
+// export function removeMovieConsumer(consumerId: string): void {
+//     movieConsumers.delete(consumerId);
+// }
+
+export async function removeMovieConsumer(consumerId: string): Promise<void> {
+    const consumers = await readConsumers();
+    delete consumers[consumerId];
+    await writeConsumers(consumers);
 }
 
 /**
@@ -29,85 +53,27 @@ export function removeMovieConsumer(consumerId: string): void {
  */
 export async function getCombinedActiveCount(serviceId: string): Promise<number> {
     const resolver = new StreamingServiceResolver();
-  
+
     // 1) Count active live/record jobs for this service
     const jobs = await getActiveLiveJobs();
     let liveCount = 0;
     for (const job of jobs) {
-      const entry = await readCashedEntryFile(job.cacheKey);
-      if (!entry) continue;
-  
-      const svc = resolver.findByViewingUrl(entry.url);
-      if (svc?.id === serviceId) {
-        liveCount++;
-      }
-    }
-  
-    // 2) Count active movie players for this service
-    let movieCount = 0;
-    for (const sid of movieConsumers.values()) {
-      if (sid === serviceId) {
-        movieCount++;
-      }
-    }
-  
-    // 3) 🆕 Count active downloads for this service
-    let downloadCount = 0;
-    const downloadJobs = await getActiveDownloadJobs();
-    for (const job of downloadJobs) {
-      const svc = resolver.findByViewingUrl(job.URL);
-      if (svc?.id === serviceId) {
-        downloadCount++;
-      }
-    }
-  
-    return liveCount + movieCount + downloadCount;
-  }
-  
-
-
-/** Reads all active downloading jobs */
-export async function getActiveDownloadJobs(): Promise<DownloadStatus[]> {
-    const DOWNLOAD_JOBS_DIR = getJobsDir();
-  
-    try {
-      await ensureDownloadJobsDir(); 
-      const files = await fs.readdir(DOWNLOAD_JOBS_DIR);
-      const jobs: DownloadStatus[] = [];
-  
-      for (const file of files) {
-        if (!file.endsWith(".status")) continue;
-  
-        const filePath = path.join(DOWNLOAD_JOBS_DIR, file);
-        const content = await fs.readFile(filePath, "utf-8");
-        const lines = content.split("\n").filter(Boolean);
-  
-        const raw = Object.fromEntries(
-            lines.map((line) => {
-              const [key, ...rest] = line.split("=");
-              return [key, rest.join("=")];
-            })
-          ) as { [key: string]: string };
-          
-          const job: DownloadStatus = {
-            STATUS: raw.STATUS,
-            STARTED_AT: raw.STARTED_AT,
-            URL: raw.URL,
-            OUTPUT_FILE: raw.OUTPUT_FILE,
-            USER: raw.USER,
-            PID: raw.PID,
-          };
-          
-  
-        if (job.STATUS === "downloading") {
-          jobs.push(job);
+        // const entry = await readCashedEntryFile(job.cacheKey);
+        if (!job.entry) continue;
+        const svc = resolver.findByViewingUrl(job.entry.url);
+        if (svc?.id === serviceId) {
+            liveCount++;
         }
-      }
-  
-      return jobs;
-    } catch (err) {
-      console.error("❌ Error reading active downloads:", err);
-      return [];
     }
-  }
-  
+
+    // 2) Count active movie players for this service
+    const consumers = await getMovieConsumers(); // ✅ proper await
+    let movieCount = 0;
+    for (const [, meta] of consumers.entries()) {
+        if (meta.serviceId === serviceId) {
+            movieCount++;
+        }
+    }
+
+    return liveCount + movieCount;
+}

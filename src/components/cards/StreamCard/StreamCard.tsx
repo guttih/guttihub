@@ -8,15 +8,7 @@ import { makeImageProxyUrl } from "@/utils/ui/makeImageProxyUrl";
 import { hasRole } from "@/utils/auth/accessControl";
 import { UserRole } from "@/types/UserRole";
 import { showMessageBox } from "@/components/ui/MessageBox";
-import {
-    MediaStreamButton,
-    MediaPlayButton,
-    MediaDownloadButton,
-    MediaRecordButton,
-    MediaDeleteButton
-  } from "@/components/ui/MediaButtons";
-  
-  
+import { MediaStreamButton, MediaPlayButton, MediaDownloadButton, MediaRecordButton, MediaDeleteButton } from "@/components/ui/MediaButtons";
 
 interface Props {
     userName?: string;
@@ -30,7 +22,7 @@ interface Props {
     showDownloadButton?: boolean;
     showDeleteButton?: boolean;
     className?: string;
-    onPlay?: (url: string) => void;
+    onPlay?: (entry: M3UEntry) => void;
     onDelete?: (entry: M3UEntry) => void;
 }
 
@@ -137,8 +129,8 @@ export function StreamCard({
                 const { recordingId } = await startRes.json();
 
                 const playlistUrl = `/api/hls-stream/${recordingId}/playlist`;
-                
-                onPlay(playlistUrl);
+                entry.url = playlistUrl;
+                onPlay(entry);
                 await new Promise((resolve) => setTimeout(resolve, 10000));
                 setIsStartingStreaming(false);
             } catch (err) {
@@ -147,7 +139,7 @@ export function StreamCard({
             }
         } else {
             setIsStartingPlaying(true);
-            onPlay(entry.url);
+            onPlay(entry);
             setIsStartingPlaying(false);
         }
     };
@@ -155,38 +147,38 @@ export function StreamCard({
     const handleDownload = async () => {
         try {
             setIsStartingDownloading(true);
-    
+
             const res = await fetch("/api/cache", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(entry),
             });
-    
+
             if (!res.ok) {
                 throw new Error("Failed to cache entry");
             }
-    
-            const { cacheKey } = await res.json();  // ✅ first res.json()
-    
+
+            const { cacheKey } = await res.json(); // ✅ first res.json()
+
             const startRes = await fetch("/api/download/start", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ cacheKey, entry, user: userName }),
             });
-    
+
             if (!startRes.ok) {
                 console.error("Failed to start download");
                 setIsStartingDownloading(false);
                 return;
             }
-    
-            const { recordingId } = await startRes.json();  // 🛠 Correct: startRes.json() not res.json()!
-    
+
+            const { recordingId } = await startRes.json(); // 🛠 Correct: startRes.json() not res.json()!
+
             console.log("✅ Started download job:", recordingId);
         } catch (err) {
             console.error("❌ Error starting download:", err);
         } finally {
-            setIsStartingDownloading(false);  // 🛠 You had `setIsStartingRecording(false)` typo before
+            setIsStartingDownloading(false); // 🛠 You had `setIsStartingRecording(false)` typo before
         }
     };
 
@@ -206,8 +198,7 @@ export function StreamCard({
         } finally {
             setIsStartingDelete(false); // Re-enable button
         }
-    }
-    
+    };
 
     return (
         <div
@@ -259,12 +250,10 @@ export function StreamCard({
                 <p className="text-sm text-gray-400 truncate" title={`${M3UEntryFieldLabel.groupTitle}='${entry.groupTitle}'`}>
                     {entry.groupTitle}
                 </p>
-                
+
                 {/* Grouped control buttons */}
                 <div className="absolute bottom-4 right-4 flex gap-2">
-                    {showPlay && (
-                        <MediaPlayButton onClick={handlePlay} disabled={isStartingPlaying} title="Play Now" />
-                    )}
+                    {showPlay && <MediaPlayButton onClick={handlePlay} disabled={isStartingPlaying} title="Play Now" />}
                     {allowedToStreamLive && showStreamButton && (
                         <MediaStreamButton onClick={handlePlay} disabled={isStartingStreaming} title="Watch, and start streaming" />
                     )}
@@ -276,9 +265,7 @@ export function StreamCard({
                         <MediaDownloadButton onClick={handleDownload} disabled={isStartingdownloading} title="Download to disk" />
                     )}
 
-                    {allowedToDelete && (
-                        <MediaDeleteButton onClick={handleDelete} disabled={isStartingDelete} title="Delete file from disk" />
-                    )}
+                    {allowedToDelete && <MediaDeleteButton onClick={handleDelete} disabled={isStartingDelete} title="Delete file from disk" />}
                 </div>
 
                 <div className="flex items-center justify-between mt-2">

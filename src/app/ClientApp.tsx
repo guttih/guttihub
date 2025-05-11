@@ -22,8 +22,8 @@ import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect
 import { Spinner } from "@/components/Spinner/Spinner";
 import { useSession } from "next-auth/react";
 
-import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel";
-import { UserRole } from "@/utils/auth/accessControl";
+import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel/LiveMonitorPanel";
+import { hasRole, UserRole } from "@/utils/auth/accessControl";
 import { showMessageBox } from "@/components/ui/MessageBox";
 import { InlineHlsPlayer } from "@/components/InlineHlsPlayer";
 import { UserMenu } from "@/components/UserMenu/UserMenu";
@@ -43,10 +43,12 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         mode: "popup" | "inline";
         visible: boolean;
         waitForPlaylist?: boolean;
+        entity: M3UEntry;
     }>({
         url: "",
         mode: "popup",
         visible: false,
+        entity: {} as M3UEntry,
     });
     const searchName = useDebouncedState(searchNameInput, 1000);
     const searchTvgId = useDebouncedState(searchTvgIdInput, 1000);
@@ -118,17 +120,19 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     const pageSize = Number(appConfig.defaultPageSize);
 
-    function handlePlay(url: string) {
+    function handlePlay(entry: M3UEntry) {
+        const url = entry.url;
         const isOwnLiveStream = url.startsWith("/api/hls-stream/") && url.endsWith("/playlist");
         const absoluteUrl = new URL(url, window.location.origin).toString();
-        const matchingEntry = entries.find((entry) => entry.url === url);
-        console.log("ClientApp::handlePlay using URL:", isOwnLiveStream ? absoluteUrl : url);
-        console.log(`Title: ${matchingEntry?.name ?? "Unknown"}`);
+        // const matchingEntry = entries.find((entry) => entry.url === url);
+        // console.log("ClientApp::handlePlay using URL:", isOwnLiveStream ? absoluteUrl : url);
+        // console.log(`Title: ${matchingEntry?.name ?? "Unknown"}`);
         setPlayer({
             url: isOwnLiveStream ? absoluteUrl : url,
-            title: matchingEntry?.name ?? "",
+            title: entry?.name ?? "",
             mode: playerMode,
             visible: true,
+            entity: entry,
             waitForPlaylist: isOwnLiveStream, // We'll pass this down to InlinePlayer
         });
     }
@@ -559,6 +563,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             {player.visible && player.mode === "popup" && (
                 <InlinePlayer
                     url={player.url}
+                    entry={player.entity}
                     autoPlay={true}
                     movieTitle={player.title ?? ""}
                     serviceId={activeService?.id ?? ""}
@@ -595,6 +600,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                         const showRecord = canPlay && !isMovie;
                         const showStreaming = canPlay && !isMovie;
                         const showPlayButton = canPlay && isMovie;
+                        const showCopy = hasRole(userRole, "admin"); //!appConfig.hideCredentialsInUrl
                         return useInteractiveCard ? (
                             <StreamCardInteractive key={entry.url} serviceId={activeService.id} entry={entry} />
                         ) : (
@@ -605,13 +611,13 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                                 serviceId={activeService?.id ?? ""}
                                 entry={entry}
                                 userRole={userRole}
-                                showCopy={!appConfig.hideCredentialsInUrl}
+                                showCopy={showCopy}
                                 showRecordButton={showRecord}
                                 showPlayButton={showPlayButton}
                                 showStreamButton={showStreaming}
                                 showDeleteButton={activeService?.hasFileAccess}
                                 showDownloadButton={canPlay && !activeService?.hasFileAccess}
-                                onPlay={(url) => handlePlay(url)}
+                                onPlay={(entry) => handlePlay(entry)}
                                 onDelete={(deletedEntry) => setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))}
                             />
                         );
