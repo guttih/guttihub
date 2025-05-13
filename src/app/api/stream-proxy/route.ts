@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
     const url = req.nextUrl.searchParams.get("url");
-    const consumerId = req.nextUrl.searchParams.get("consumerId"); // 👈 new
+    // const consumerId = req.nextUrl.searchParams.get("consumerId"); // 👈 new
 
     if (!url || !/^https?:\/\/[^ ]+$/.test(url)) {
         return new Response("Invalid or missing URL", { status: 400 });
