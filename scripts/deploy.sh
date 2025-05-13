@@ -129,8 +129,8 @@ restart_pm2_app_on_server() {
     cd "$DEPLOY_DIR"
 
     echo "📦 Installing production deps..."
-    #npm install --omit=dev
-    npm ci --omit=dev --legacy-peer-deps
+    npm install --omit=dev
+    # npm ci --omit=dev --legacy-peer-deps
 
     echo "🔁 Reloading app with PM2..."
     pm2 reload ecosystem.config.js --env production || \
