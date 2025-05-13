@@ -24,11 +24,15 @@ import fs from "fs";
 import path from "path";
 import { getBaseUrl } from "@/utils/resolverUtils";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
+import { startMovieConsumerCleanup } from "@/utils/concurrency";
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
     {
         const { url, snapshotId, pagination, filters }: FetchM3URequest = await req.json();
         const force = req.nextUrl.searchParams.get("force") === "true";
+
+        startMovieConsumerCleanup(); // timer to gard movie consumer players
+
         if (force) {
             const session = await getServerSession({ req, ...authOptions });
             const role = getUserRoleServerOnly(session?.user?.email);

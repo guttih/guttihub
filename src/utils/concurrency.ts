@@ -26,12 +26,12 @@ export async function addMovieConsumer(consumerId: string, serviceId: string, en
     const serviceIdFromUrl = service ? resolver.findByServer(service)?.id : null;
     const sId = serviceIdFromUrl ? serviceIdFromUrl : serviceId;
     // movieConsumers.set(consumerId, { serviceId: sid , serviceId, entry });
-    await persistMovieConsumer(consumerId, sId, entry);
+    await persistMovieConsumer(consumerId, sId, entry, Date.now());
 }
 
-async function persistMovieConsumer(consumerId: string, serviceId: string, entry: M3UEntry): Promise<void> {
+async function persistMovieConsumer(consumerId: string, serviceId: string, entry: M3UEntry, lastSeen: number): Promise<void> {
     const consumers = await readConsumers();
-    consumers[consumerId] = { serviceId, entry };
+    consumers[consumerId] = { serviceId, entry, lastSeen };
     await writeConsumers(consumers);
 }
 
@@ -76,4 +76,34 @@ export async function getCombinedActiveCount(serviceId: string): Promise<number>
     }
 
     return liveCount + movieCount;
+}
+
+let movieConsumerCleanupStarted = false;
+
+export function startMovieConsumerCleanup() {
+    if (movieConsumerCleanupStarted) return;
+    movieConsumerCleanupStarted = true;
+
+    const TIMEOUT_MS = 10_000;
+    const SCAN_INTERVAL_MS = 10_000;
+
+    setInterval(async () => {
+        const now = Date.now();
+        const consumers = await readConsumers();
+        let changed = false;
+
+        for (const [id, meta] of Object.entries(consumers)) {
+            if (!meta.lastSeen || now - meta.lastSeen > TIMEOUT_MS) {
+                console.log(`💀 Movie consumer timed out: ${id}`);
+                delete consumers[id];
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            await writeConsumers(consumers);
+        }
+    }, SCAN_INTERVAL_MS);
+
+    console.log(`🧼 Movie consumer cleanup started (every ${SCAN_INTERVAL_MS / 1000}s, timeout: ${TIMEOUT_MS / 1000}s)`);
 }

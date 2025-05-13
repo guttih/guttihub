@@ -153,6 +153,16 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
             }
         };
 
+        const handleBeforeUnload = () => {
+            try {
+                navigator.sendBeacon("/api/movie-consumers/on-player-close", JSON.stringify({ id: consumerId.current }));
+            } catch (err) {
+                console.warn("sendBeacon failed:", err);
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+
         if (!isUnshared) return; // skip everything if stream is shared
 
         const handlePlay = () => register();
@@ -166,7 +176,8 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
             video.removeEventListener("play", handlePlay);
             video.removeEventListener("pause", handleStop);
             video.removeEventListener("ended", handleStop);
-            unregister(); // final cleanup
+            window.removeEventListener("beforeunload", handleBeforeUnload); // cleanup
+            unregister(); // Normal teardown
         };
     }, [finalUrl, serviceId]);
 

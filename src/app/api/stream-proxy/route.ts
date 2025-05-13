@@ -1,9 +1,10 @@
-// File: src/app/api/stream-proxy/route.ts
+// src/app/api/stream-proxy/route.ts
 
 import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
     const url = req.nextUrl.searchParams.get("url");
+    const consumerId = req.nextUrl.searchParams.get("consumerId"); // 👈 new
 
     if (!url || !/^https?:\/\/[^ ]+$/.test(url)) {
         return new Response("Invalid or missing URL", { status: 400 });
@@ -19,9 +20,9 @@ export async function GET(req: NextRequest) {
             method: "GET",
             headers: {
                 "User-Agent": "VLC/3.0.18 LibVLC/3.0.18",
-                "Accept": "*/*",
+                Accept: "*/*",
                 "Accept-Language": "en-US,en;q=0.9",
-                ...(rangeHeader ? { "Range": rangeHeader } : {}),
+                ...(rangeHeader ? { Range: rangeHeader } : {}),
             },
             redirect: "follow",
             signal: controller.signal,
@@ -30,8 +31,6 @@ export async function GET(req: NextRequest) {
         clearTimeout(timeout);
 
         const headers = new Headers(upstreamResponse.headers);
-
-        // Set correct content type if missing
         const contentType = headers.get("content-type");
         if (!contentType) {
             if (url.endsWith(".m3u8")) {
@@ -41,22 +40,15 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // CORS for browser requests
         headers.set("Access-Control-Allow-Origin", "*");
-
-        // Disable content-encoding so we forward raw stream
         headers.delete("content-encoding");
         headers.delete("transfer-encoding");
 
-        // Only delete content-length for partial/range requests
         if (rangeHeader) {
             headers.delete("content-length");
         }
 
-        // Let client know it supports ranges
         headers.set("Accept-Ranges", "bytes");
-
-        // Disable caching
         headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
         headers.set("Pragma", "no-cache");
 
@@ -64,7 +56,6 @@ export async function GET(req: NextRequest) {
             status: upstreamResponse.status,
             headers,
         });
-
     } catch (err) {
         clearTimeout(timeout);
         console.error("❌ Stream proxy error:", err);

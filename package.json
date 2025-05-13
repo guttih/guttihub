@@ -22,7 +22,6 @@
         "test:file": "vitest run --reporter=verbose"
     },
     "dependencies": {
-        "@gumlet/react-hls-player": "^1.0.1",
         "@heroicons/react": "^2.2.0",
         "axios": "^1.8.4",
         "check-disk-space": "^3.4.0",
@@ -40,6 +39,7 @@
         "@tailwindcss/postcss": "^4",
         "@types/lodash": "^4.17.16",
         "@types/node": "^20",
+        "@types/proper-lockfile": "^4.1.4",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "@typescript-eslint/eslint-plugin": "^8.29.1",

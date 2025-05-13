@@ -25,7 +25,6 @@ import { useSession } from "next-auth/react";
 import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel/LiveMonitorPanel";
 import { hasRole, UserRole } from "@/utils/auth/accessControl";
 import { showMessageBox } from "@/components/ui/MessageBox";
-import { InlineHlsPlayer } from "@/components/InlineHlsPlayer";
 import { UserMenu } from "@/components/UserMenu/UserMenu";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
@@ -543,25 +542,22 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 />
             </div>
             {player.visible && player.mode === "inline" && (
-                <InlineHlsPlayer
+                <InlinePlayer
                     key={player.url}
                     url={player.url}
-                    title={player.title ?? ""}
+                    serviceId={activeService?.id ?? ""}
+                    waitForPlaylist={player.waitForPlaylist}
+                    entry={player.entity}
+                    autoPlay={true}
+                    movieTitle={player.title ?? ""}
                     onClose={handleClosePlayer}
                     className="rounded shadow w-full max-w-3xl mx-auto"
+                    showCloseButton={true}
                 />
-                // <InlinePlayer
-                // key={player.url}
-                //     url={player.url}
-                //     serviceId={activeService?.id ?? ""}
-                //     waitForPlaylist={player.waitForPlaylist}
-                //     onClose={handleClosePlayer}
-                //     className="rounded shadow w-full max-w-3xl mx-auto"
-                //     showCloseButton={true}
-                // />
             )}
             {player.visible && player.mode === "popup" && (
                 <InlinePlayer
+                    key={player.url}
                     url={player.url}
                     entry={player.entity}
                     autoPlay={true}
