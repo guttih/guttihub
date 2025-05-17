@@ -213,7 +213,7 @@ ssh "$DEPLOY_SERVER" "mkdir -p $DEPLOY_DIR"
 
 #with subdirs
 scp -r \
-    "$REPO_ROOT/.next" \
+    "$REPO_ROOT/.next"/* \
     "$REPO_ROOT/package.json" \
     "$REPO_ROOT/next.config.ts" \
     "$REPO_ROOT/src" \
