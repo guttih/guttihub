@@ -127,10 +127,9 @@ restart_pm2_app_on_server() {
     ssh "$DEPLOY_SERVER" <<EOF
     source ~/.nvm/nvm.sh
     cd "$DEPLOY_DIR"
-    "🧹 Cleaning house..."
-    rm -rf .next node_modules
     echo "📦 Installing production deps..."
     npm install --omit=dev
+
     # npm ci --omit=dev --legacy-peer-deps
 
     echo "🔁 Reloading app with PM2..."
@@ -213,13 +212,13 @@ ssh "$DEPLOY_SERVER" "mkdir -p $DEPLOY_DIR"
 
 #with subdirs
 scp -r \
-    "$REPO_ROOT/.next"/* \
+    "$REPO_ROOT/.next" \
     "$REPO_ROOT/package.json" \
     "$REPO_ROOT/next.config.ts" \
     "$REPO_ROOT/src" \
     "$REPO_ROOT/ecosystem.config.js" \
     "$REPO_ROOT/tailwind.config.js" \
-    "$DEPLOY_TARGET"
+    "$DEPLOY_TARGET/"
 
 # Copy the .env.production file to the server
 scp "$REPO_ROOT/.env.production" "$DEPLOY_TARGET"

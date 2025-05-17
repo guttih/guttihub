@@ -14,6 +14,8 @@ interface MonitorCardBaseProps {
     user?: string;
     cacheKey: string;
     showKillButton?: boolean;
+    className?: string;
+
     onKill?: (cacheKey: string) => void;
 }
 
@@ -28,8 +30,12 @@ export function MonitorCardBase({
     cacheKey,
     user,
     showKillButton = true,
+    className,
     onKill,
 }: MonitorCardBaseProps) {
+    const effectiveClassName = className
+        ? `bg-gray-800 rounded p-6 shadow-lg w-full transition-all duration-200 ${className}`
+        : "bg-gray-800 hover:bg-gray-750 hover:ring-1 hover:ring-gray-700 rounded p-6 shadow-lg w-full transition-all duration-200";
     const [isKilling, setIsKilling] = useState(false);
 
     const handleKillClick = async () => {
@@ -44,7 +50,7 @@ export function MonitorCardBase({
     };
 
     return (
-        <div className="bg-gray-800 hover:bg-gray-750 hover:ring-1 hover:ring-gray-700 rounded p-6 shadow-lg w-full transition-all duration-200">
+        <div className={effectiveClassName}>
             <div className="flex justify-between items-center">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
