@@ -11,6 +11,7 @@ interface MonitorCardRecordingProps {
     logoUrl?: string;
     serviceName?: string;
     startedAt: string;
+    user?: string;
     status: string;
     cacheKey: string;
     watchUrl: string;
@@ -24,6 +25,7 @@ export function MonitorCardRecording({
     logoUrl,
     serviceName,
     startedAt,
+    user,
     status,
     cacheKey,
     watchUrl,
@@ -75,6 +77,7 @@ export function MonitorCardRecording({
             logoUrl={logoUrl}
             serviceName={serviceName}
             startedAt={startedAt}
+            user={user}
             status={status}
             cacheKey={cacheKey}
             showKillButton={false}
