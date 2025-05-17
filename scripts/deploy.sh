@@ -127,7 +127,8 @@ restart_pm2_app_on_server() {
     ssh "$DEPLOY_SERVER" <<EOF
     source ~/.nvm/nvm.sh
     cd "$DEPLOY_DIR"
-
+    "🧹 Cleaning house..."
+    rm -rf .next node_modules
     echo "📦 Installing production deps..."
     npm install --omit=dev
     # npm ci --omit=dev --legacy-peer-deps

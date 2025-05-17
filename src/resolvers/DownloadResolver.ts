@@ -1,7 +1,7 @@
 // src/resolvers/DownloadResolver.ts
 
 import { spawn } from "child_process";
-import { buildRecordingId, getBaseUrl, getExtensionFromUrl, getFinalOutputFilename, quoteShellArg } from "@/utils/resolverUtils";
+import { buildRecordingId, getBaseUrl, getExtensionFromUrl, getFinalOutputFilename } from "@/utils/resolverUtils";
 import { ensureMediaDir, getMediaDir, getScriptPath, getWorkDir, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
 import { M3UEntry } from "@/types/M3UEntry";
 import { DownloadJob } from "@/types/DownloadJob";
@@ -21,7 +21,7 @@ export class DownloadResolver {
             const recordingId = buildRecordingId("download-", new Date(), entry.url, null);
             const workDir = `${getWorkDir()}`;
             const outputFile = `${workDir}/${recordingId}`;
-            const finalOutputFile = `${getMediaDir()}/${ getFinalOutputFilename(params.entry, "ts", true)}`;
+            const finalOutputFile = `${getMediaDir()}/${getFinalOutputFilename(params.entry, "ts", true)}`;
             console.log(`🚀 Starting download job: ${recordingId}`);
 
             const job: DownloadJob = {
@@ -41,17 +41,21 @@ export class DownloadResolver {
             };
             const baseUrl = getBaseUrl();
 
-
-
             ensureMediaDir();
             await writeDownloadingJobFile(job, true);
             const args = [
-                "--url"       , entry.url, 
-                "--outputFile", outputFile, 
-                "--user"      , quoteShellArg(user), 
-                "--baseUrl"   , baseUrl,
-                "--cacheKey"  , cacheKey,
-                "--loglevel"  , "info",
+                "--url",
+                entry.url,
+                "--outputFile",
+                outputFile,
+                "--user",
+                user,
+                "--baseUrl",
+                baseUrl,
+                "--cacheKey",
+                cacheKey,
+                "--loglevel",
+                "info",
             ];
 
             spawn("bash", [DownloadResolver.scriptDownload, ...args], {

@@ -21,6 +21,7 @@ import { MovieJob } from "@/types/MovieJob";
 import { M3UEntry } from "@/types/M3UEntry";
 import { DownloadJob } from "@/types/DownloadJob";
 import { getMovieConsumers } from "@/utils/concurrency";
+import { EnrichedJob } from "@/types/EnrichedJob";
 
 export async function readCashedEntryFile(cacheKey: string): Promise<M3UEntry | null> {
     const dir = getCacheDir();
@@ -310,13 +311,12 @@ export async function enrichJob(job: RecordingJob | DownloadJob | MovieJob) {
     return await enrichRecordingJob(job as RecordingJob);
 }
 
-export async function enrichMovieJob(job: MovieJob) {
+export async function enrichMovieJob(job: MovieJob): Promise<EnrichedJob> {
     const entry = job.entry ? job.entry : await readCashedEntryFile(job.cacheKey); //In the beginning there was only entry, on disk, then god came and populated the RecordingJob with the entry
 
     const resolver = new StreamingServiceResolver();
     const service = resolver.findById(job.recordingId);
     const name = service ? service.name : "Unknown Service";
-
     return {
         recordingId: job.recordingId,
         cacheKey: job.cacheKey,
@@ -325,6 +325,7 @@ export async function enrichMovieJob(job: MovieJob) {
         name: entry?.name ?? "Unknown Stream",
         groupTitle: entry?.groupTitle ?? "Unknown Group",
         startedAt: job.startTime,
+        user: job.user,
         status: "playing",
         serviceName: name,
         tvgLogo: entry?.tvgLogo ?? "/fallback.png",
@@ -333,7 +334,7 @@ export async function enrichMovieJob(job: MovieJob) {
     };
 }
 
-export async function enrichRecordingJob(job: RecordingJob) {
+export async function enrichRecordingJob(job: RecordingJob): Promise<EnrichedJob> {
     const entry = job.entry ? job.entry : await readCashedEntryFile(job.cacheKey); //In the beginning there was only entry, on disk, then god came and populated the RecordingJob with the entry
     const status = await readStatusFile(job.statusFile);
 
@@ -345,7 +346,8 @@ export async function enrichRecordingJob(job: RecordingJob) {
     const alive = pid ? await isProcessAlive(pid) : false;
     const resolver = new StreamingServiceResolver();
     const service = entry ? StreamingServiceResolver.extractServerFromUrl(entry.url) : null;
-    const name = service ? resolver.findByServer(service)?.name : "Unknown Service";
+    const found = service ? resolver.findByServer(service) : null;
+    const name = found?.name ?? "Unknown Service";
 
     let finalStatus = status?.STATUS || "unknown";
     if (finalStatus === "recording" && !alive) {
@@ -361,6 +363,7 @@ export async function enrichRecordingJob(job: RecordingJob) {
         name: entry?.name ?? "Unknown Stream",
         groupTitle: entry?.groupTitle ?? "Unknown Group",
         startedAt: job.startTime,
+        user: job.user,
         status: finalStatus,
         serviceName: name,
         tvgLogo: entry?.tvgLogo ?? "/fallback.png",
@@ -388,6 +391,7 @@ export async function enrichDownloadJob(job: DownloadStatus) {
         name: downloadJob.entry?.name ?? "Unknown Download",
         groupTitle: downloadJob.entry?.groupTitle ?? "Download",
         startedAt: status?.STARTED_AT ?? new Date().toISOString(),
+        user: downloadJob.user,
         status: status?.STATUS ?? "unknown",
         serviceName: service?.name ?? "Download Manager",
         tvgLogo: downloadJob.entry?.tvgLogo ?? "/download-icon.png",

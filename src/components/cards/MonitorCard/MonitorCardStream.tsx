@@ -10,6 +10,7 @@ interface MonitorCardStreamProps {
     logoUrl?: string;
     serviceName?: string;
     startedAt: string;
+    user?: string;
     status: string;
     watchUrl: string;
     cacheKey: string;
@@ -23,6 +24,7 @@ export function MonitorCardStream({
     logoUrl,
     serviceName,
     startedAt,
+    user,
     status,
     watchUrl,
     cacheKey,
@@ -57,6 +59,7 @@ export function MonitorCardStream({
             logoUrl={logoUrl}
             serviceName={serviceName}
             startedAt={startedAt}
+            user={user}
             status={status}
             cacheKey={cacheKey}
             onKill={onKill}

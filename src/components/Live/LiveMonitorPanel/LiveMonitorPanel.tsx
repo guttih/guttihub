@@ -3,20 +3,7 @@ import { hasRole, UserRole } from "@/utils/auth/accessControl";
 import { useEffect, useState } from "react";
 import { showMessageBox } from "../../ui/MessageBox";
 import { MonitorCardDownload, MonitorCardRecording, MonitorCardStream, MonitorCardMovie } from "@/components/cards/MonitorCard";
-
-interface LiveJob {
-    recordingId: string;
-    cacheKey: string;
-    name: string;
-    groupTitle?: string;
-    startedAt: string;
-    status: string;
-    format: string;
-    serviceName?: string;
-    tvgLogo?: string;
-    duration?: number;
-    movieUrl?: string;
-}
+import { EnrichedJob } from "@/types/EnrichedJob";
 
 interface LiveMonitorPanelProps {
     hideIfNone?: boolean;
@@ -34,7 +21,7 @@ function getSafeLogoUrl(url?: string): string | undefined {
 }
 
 export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Live Streams", onInlinePlay }: LiveMonitorPanelProps) {
-    const [jobs, setJobs] = useState<LiveJob[]>([]);
+    const [jobs, setJobs] = useState<EnrichedJob[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +56,7 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
     }, []);
 
     function handleKill(cacheKey: string) {
+        console.log("Stopping job with cacheKey:", cacheKey);
         fetch("/api/live/stop", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -116,6 +104,7 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
                         logoUrl,
                         serviceName: job.serviceName,
                         startedAt: job.startedAt,
+                        user: job.user,
                         status: job.status,
                     };
 

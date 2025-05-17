@@ -11,12 +11,13 @@ interface MonitorCardDownloadProps {
     logoUrl?: string;
     serviceName?: string;
     startedAt: string;
+    user?: string;
     status: string;
     cacheKey: string;
     onKill?: (cacheKey: string) => void;
 }
 
-export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, startedAt, status, cacheKey, onKill }: MonitorCardDownloadProps) {
+export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, startedAt, user, status, cacheKey, onKill }: MonitorCardDownloadProps) {
     const [isLaunchingMonitor, setLaunchingMonitor] = useState(false);
     const [progressPercent, setProgressPercent] = useState<number | null>(null);
     const [contentLength, setContentLength] = useState<number | null>(null);
@@ -68,6 +69,7 @@ export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, st
             logoUrl={logoUrl}
             serviceName={serviceName}
             startedAt={startedAt}
+            user={user}
             status={status}
             cacheKey={cacheKey}
             onKill={onKill}

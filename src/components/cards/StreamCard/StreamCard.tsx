@@ -121,7 +121,7 @@ export function StreamCard({
                 const startRes = await fetch("/api/live/start", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ cacheKey }),
+                    body: JSON.stringify({ cacheKey, user: userName }),
                 });
 
                 if (!startRes.ok) throw new Error("Failed to start live stream");

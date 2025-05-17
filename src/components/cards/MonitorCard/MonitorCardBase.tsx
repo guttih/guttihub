@@ -11,6 +11,7 @@ interface MonitorCardBaseProps {
     startedAt: string;
     status: string;
     children?: React.ReactNode;
+    user?: string;
     cacheKey: string;
     showKillButton?: boolean;
     onKill?: (cacheKey: string) => void;
@@ -25,6 +26,7 @@ export function MonitorCardBase({
     status,
     children,
     cacheKey,
+    user,
     showKillButton = true,
     onKill,
 }: MonitorCardBaseProps) {
@@ -57,7 +59,10 @@ export function MonitorCardBase({
 
                     <p className="font-semibold">{name}</p>
                     {groupTitle && <p className="text-sm text-gray-400">{groupTitle}</p>}
-                    <p className="text-xs text-gray-500">Started: {new Date(startedAt).toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">
+                        Started: {new Date(startedAt).toLocaleString()}
+                        {user && <span className="ml-2 italic">by {user}</span>}
+                    </p>
                     <p className="text-xs mt-2">
                         <span className="font-bold">Status:</span> {status}
                     </p>

@@ -6,7 +6,7 @@ import { readCashedEntryFile } from "@/utils/record/recordingJobUtils";
 import { LiveResolver } from "@/resolvers/LiveResolver";
 
 export async function POST(req: NextRequest) {
-    const { cacheKey } = await req.json();
+    const { cacheKey, user } = await req.json();
 
     if (!cacheKey) {
         return new Response(JSON.stringify({ error: "Missing live start cacheKey" }), { status: 400 });
@@ -29,11 +29,7 @@ export async function POST(req: NextRequest) {
             return new Response(JSON.stringify({ error: "Invalid or expired cache key" }), { status: 404 });
         }
 
-    
-        
-
-        
-        const result = await LiveResolver.startStream(cacheKey , entry);
+        const result = await LiveResolver.startStream(cacheKey, entry, user);
         const recordingId = result.recordingId;
         return new Response(JSON.stringify({ recordingId, entry }), {
             status: 200,
