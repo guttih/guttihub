@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { createReadStream, statSync, existsSync } from "fs";
 import path, { join } from "path";
 import { Readable } from "stream";
-import { outDirectories } from "@/config";
+import { getWorkDir } from "@/utils/fileHandler";
 
 export async function GET(
     req: NextRequest,
@@ -10,13 +10,13 @@ export async function GET(
   ) {
     const { params } = context as { params: { recordingId: string } };
     const { recordingId } = params;
-  const recordDir = outDirectories.find((dir) => dir.label === "Recordings");
+  const recordDir = getWorkDir();
 
-  if (!recordDir || !recordDir.path) {
+  if (!recordDir) {
     return new Response("Recordings directory not found", { status: 404 });
   }
 
-  const filePath = join(path.resolve(recordDir.path), `${recordingId}.ts`);
+  const filePath = join(path.resolve(recordDir), `${recordingId}.ts`);
   if (!existsSync(filePath)) {
     return new Response(`File not found: ${filePath}`, { status: 404 });
   }

@@ -11,12 +11,14 @@ export async function GET(req: Request) {
     }
 
     const recordingId = new URL(req.url).searchParams.get("recordingId");
-    if (!recordingId) {
-        return NextResponse.json({ error: "Missing recordingId" }, { status: 400 });
+    const cacheKey = new URL(req.url).searchParams.get("cacheKey");
+    if (!recordingId && !cacheKey) {
+        return NextResponse.json({ error: "Missing recordingId and cacheKey" }, { status: 400 });
     }
 
     try {
-        const info = await getRecordingJobInfo(recordingId);
+        
+        const info = await getRecordingJobInfo(cacheKey, recordingId);
 
         // 1) flatten any arrays to their last value
         const flatStatus: Record<string, string> = {};

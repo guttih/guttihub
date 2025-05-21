@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { createReadStream, existsSync, statSync } from "fs";
 import path from "path";
-import { outDirectories } from "@/config";
 import { Readable } from "stream";
 import { trackViewer } from "@/utils/liveViewers";
+import { getWorkDir } from "@/utils/fileHandler";
 
 export async function GET(
   req: NextRequest,
@@ -14,13 +14,12 @@ export async function GET(
 
   trackViewer(recordingId, req.headers.get("x-forwarded-for") || "unknown");
 
-  const recordDir = outDirectories.find((d) => d.label === "Recordings");
-
-  if (!recordDir?.path) {
+  const recordDir = getWorkDir();
+  if (!recordDir) {
     return new Response("Recordings directory not found", { status: 404 });
   }
 
-  const segmentPath = path.resolve(recordDir.path, `${recordingId}_hls`, filename);
+  const segmentPath = path.resolve(recordDir, `${recordingId}_hls`, filename);
 
   if (!existsSync(segmentPath)) {
     return new Response("Segment not found", { status: 404 });

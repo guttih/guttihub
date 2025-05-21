@@ -23,7 +23,7 @@
         "name": "next"
       }
     ],
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "node", "next"],
     "paths": {
       "@/*": [
         "src/*"
@@ -35,7 +35,9 @@
     "src",
     ".next/types/**/*.ts",
     "test",
-    "test/helpers"
+    "test/helpers",
+    "types/next-auth.d.ts",
+    "types/check-disk-space.d.ts"
     
   ],
   "exclude": [

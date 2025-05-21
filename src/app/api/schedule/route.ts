@@ -6,32 +6,45 @@
 */
 import { NextRequest, NextResponse } from "next/server";
 import { runJobctl } from "@/utils/jobctl";
-
+import { SystemScheduledJob } from "@/types/SystemScheduledJob";
+import { Job, JobctlResult } from "@/types/Jobctl";
+import { jobctlToSystemScheduledJobMapper } from "@/types/SystemScheduledJob";
 
 /* ---------- list -------------------------------------------------- */
 export async function GET() {
-    const json = await runJobctl("list");
-    return NextResponse.json(json, { status: json.ok ? 200 : 500 });
-}
+    const result: JobctlResult = await runJobctl("list");
+  
+    if (!result.ok || !("jobs" in result)) {
+      return NextResponse.json({ ok: false, jobs: [] }, { status: 500 });
+    }
+  
+    const systemJobs: SystemScheduledJob[] = result.jobs.map((job: Job) => {
+      return jobctlToSystemScheduledJobMapper(job)
+    });
+  
+    return NextResponse.json({ ok: true, systemJobs });
+  }
+
 
 /* ---------- add --------------------------------------------------- */
 export async function POST(req: NextRequest) {
-    const { datetime, desc, cmd } = (await req.json()) as {
+    const { datetime, description, command } = (await req.json()) as {
         datetime?: string;
-        desc?: string;
-        cmd?: string;
+        description?: string;
+        command?: string;
     };
-    if (!datetime || !desc || !cmd) return NextResponse.json({ ok: false, error: "Missing field" }, { status: 400 });
+    
+    if (!datetime || !description || !command) return NextResponse.json({ ok: false, error: "Missing field" }, { status: 400 });
 
-    const json = await runJobctl("add", datetime, desc, cmd);
+    const json = await runJobctl("add", datetime, description, command);
     return NextResponse.json(json, { status: json.ok ? 201 : 500 });
 }
 
 /* ---------- delete ------------------------------------------------ */
 export async function DELETE(req: NextRequest) {
-    const { id } = (await req.json()) as { id?: string };
-    if (!id) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+    const { systemJobId } = (await req.json()) as { systemJobId?: string };
+    if (!systemJobId) return NextResponse.json({ ok: false, error: "Missing systemJobId" }, { status: 400 });
 
-    const json = await runJobctl("delete", id);
+    const json = await runJobctl("delete", systemJobId);
     return NextResponse.json(json, { status: json.ok ? 200 : 500 });
 }

@@ -7,14 +7,16 @@ import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 import { detectStreamFormat, StreamFormat } from "@/types/StreamFormat";
 
 import Hls, { ErrorData } from "hls.js";
+import { M3UEntry } from "@/types/M3UEntry";
 
 export interface InlinePlayerProps {
     url: string;
-    /** Which service this playback belongs to */
+    movieTitle: string;
     serviceId: string;
     autoPlay?: boolean;
     controls?: boolean;
     className?: string;
+    entry: M3UEntry;
     showCloseButton?: boolean;
     onClose?: () => void;
     draggable?: boolean;
@@ -33,6 +35,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     autoPlay = true,
     controls = true,
     className = "w-full aspect-video rounded shadow-md",
+    entry,
     showCloseButton = false,
     onClose,
     draggable = false,
@@ -43,6 +46,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     onMove,
     onResize,
     waitForPlaylist = false,
+    movieTitle,
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [canPlay, setCanPlay] = useState(false);
@@ -112,60 +116,70 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
     }, [finalUrl]);
 
     // 3️⃣ Register/unregister only for unshared streams
-useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !finalUrl || !serviceId) return;
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !finalUrl || !serviceId) return;
 
-    const isUnshared = finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl);
-    let registered = false;
+        const isUnshared = finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl);
+        let registered = false;
 
-    const register = async () => {
-        if (!registered) {
-            registered = true;
-            try {
-                await fetch("/api/live/consumers", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ id: consumerId.current, serviceId }),
-                });
-            } catch (err) {
-                console.error("Failed to register InlinePlayer:", err);
+        const register = async () => {
+            if (!registered) {
+                registered = true;
+                try {
+                    await fetch("/api/live/consumers", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: consumerId.current, serviceId, entry }),
+                    });
+                } catch (err) {
+                    console.error("Failed to register InlinePlayer:", err);
+                }
             }
-        }
-    };
+        };
 
-    const unregister = async () => {
-        if (registered) {
-            registered = false;
-            try {
-                await fetch("/api/live/consumers", {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ id: consumerId.current }),
-                });
-            } catch (err) {
-                console.error("Failed to unregister InlinePlayer:", err);
+        const unregister = async () => {
+            if (registered) {
+                registered = false;
+                try {
+                    await fetch("/api/live/consumers", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: consumerId.current }),
+                    });
+                } catch (err) {
+                    console.error("Failed to unregister InlinePlayer:", err);
+                }
             }
-        }
-    };
+        };
 
-    if (!isUnshared) return; // skip everything if stream is shared
+        const handleBeforeUnload = () => {
+            try {
+                navigator.sendBeacon("/api/movie-consumers/on-player-close", JSON.stringify({ id: consumerId.current }));
+            } catch (err) {
+                console.warn("sendBeacon failed:", err);
+            }
+        };
 
-    const handlePlay = () => register();
-    const handleStop = () => unregister();
+        window.addEventListener("beforeunload", handleBeforeUnload);
 
-    video.addEventListener("play", handlePlay);
-    video.addEventListener("pause", handleStop);
-    video.addEventListener("ended", handleStop);
+        if (!isUnshared) return; // skip everything if stream is shared
 
-    return () => {
-        video.removeEventListener("play", handlePlay);
-        video.removeEventListener("pause", handleStop);
-        video.removeEventListener("ended", handleStop);
-        unregister(); // final cleanup
-    };
-}, [finalUrl, serviceId]);
+        const handlePlay = () => register();
+        const handleStop = () => unregister();
 
+        video.addEventListener("play", handlePlay);
+        video.addEventListener("pause", handleStop);
+        video.addEventListener("ended", handleStop);
+
+        return () => {
+            video.removeEventListener("play", handlePlay);
+            video.removeEventListener("pause", handleStop);
+            video.removeEventListener("ended", handleStop);
+            window.removeEventListener("beforeunload", handleBeforeUnload); // cleanup
+            unregister(); // Normal teardown
+        };
+    }, [finalUrl, serviceId]);
 
     // Drag & resize handlers (unchanged)
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -247,12 +261,12 @@ useEffect(() => {
                 />
             )}
 
-{finalUrl && (
-    <div className="absolute top-1 left-1 text-xs bg-black bg-opacity-50 text-white px-2 py-1 rounded z-40">
-        mode: {finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl) ? "unshared" : "shared"}
-    </div>
-)}
-
+            {finalUrl && (
+                <div className="absolute top-1 left-1 text-xs bg-black bg-opacity-50 text-white px-2 py-1 rounded z-40">
+                    {/* mode: {finalUrl.includes("/stream-proxy") || isRawServiceUrl(finalUrl) ? "unshared" : "shared"} */}
+                    {movieTitle && <span className="ml-2">{movieTitle}</span>}
+                </div>
+            )}
 
             {draggable && onResize && (
                 <div
@@ -281,20 +295,18 @@ useEffect(() => {
 function isRawServiceUrl(url: string): boolean {
     try {
         const u = new URL(url);
-        return !u.host.includes("localhost") &&
-               !u.pathname.startsWith("/hls-stream") &&
-               !u.pathname.startsWith("/recordings");
+        return !u.host.includes("localhost") && !u.pathname.startsWith("/hls-stream") && !u.pathname.startsWith("/recordings");
     } catch {
         return false;
     }
 }
 
-
 function makeStreamProxyUrl(playUrl: string): string {
     if (playUrl.includes("/hls-stream") && playUrl.endsWith("/playlist")) {
         return playUrl;
     }
-    return `/api/stream-proxy?url=${encodeURIComponent(playUrl)}`;
+    console.warn("[InlinePlayer] Using stream proxy for URL:", playUrl);
+    return `/api/stream-proxy?url=${playUrl}`;
 }
 
 function normalizeUrl(playUrl: string): string {

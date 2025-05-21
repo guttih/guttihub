@@ -1,6 +1,6 @@
 {
     "name": "guttihub",
-    "version": "0.1.0",
+    "version": "0.8.28",
     "private": true,
     "scripts": {
         "dev": "next dev --turbopack",
@@ -8,7 +8,7 @@
         "start": "next start",
         "clean": "rm -rf .next",
         "rebuild": "npm run clean && npm run build",
-        "deploy": "bash scripts/deploy.sh",
+        "deploy": "npm version patch && bash scripts/deploy.sh",
         "postinstall": "chmod +x src/scripts/*.sh",
         "list": "bash scripts/list.sh",
         "lint:next": "next lint",
@@ -24,9 +24,11 @@
     "dependencies": {
         "@heroicons/react": "^2.2.0",
         "axios": "^1.8.4",
+        "check-disk-space": "^3.4.0",
+        "classnames": "^2.5.1",
         "hls.js": "^1.6.1",
         "lodash": "^4.17.21",
-        "next": "15.2.4",
+        "next": "^15.2.4",
         "next-auth": "^4.24.11",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
@@ -37,6 +39,7 @@
         "@tailwindcss/postcss": "^4",
         "@types/lodash": "^4.17.16",
         "@types/node": "^20",
+        "@types/proper-lockfile": "^4.1.4",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "@typescript-eslint/eslint-plugin": "^8.29.1",
@@ -49,5 +52,22 @@
         "tailwindcss": "^4",
         "typescript": "^5",
         "vitest": "^3.1.1"
-    }
+    },
+    "description": "IPTV streaming client built with [Next.js](https://nextjs.org).   This project is designed to download and play IPTV streams from `.m3u` playlists, supporting playback and metadata management in a modern web interface.",
+    "main": "index.js",
+    "directories": {
+        "doc": "docs",
+        "test": "test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/guttih/guttihub.git"
+    },
+    "keywords": [],
+    "author": "guttih <gudjonholm@gmail.com>",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/guttih/guttihub/issues"
+    },
+    "homepage": "https://guttih.com"
 }

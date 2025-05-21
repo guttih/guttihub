@@ -67,6 +67,16 @@ BASE_URL=https://tv.guttih.com
 
 If not set in production, scheduled recordings will fail.
 
+Although `BASE_URL` is required in production, it should also be set in `.env.local` during development to avoid system check errors.
+
+[source,.env]
+----
+BASE_URL=http://localhost:3000
+----
+
+This value is used to generate stream URLs and perform system-level actions like cleanup. If it's missing, the system check will report a failure.
+
+
 
 == Naming Conventions
 
@@ -108,6 +118,8 @@ import StreamCard from '@/components/StreamCard';
 - Example/default files use naming like `services.example.ts` / `services.ts`
 
 === Tests
+
+In this project, we use https://vitest.dev/[Vitest] for testing. 
 
 - Unit tests go in `test/` or in `__tests__` folders near their targets
 - Match the source file name with a `.test.ts` suffix
@@ -164,26 +176,63 @@ This provides real-time autocomplete, previews, and hover tooltips for Tailwind 
 
 == Local Deployment Setup
 
-=== Using PM2 for Process Management
+[NOTE]
+====
+Quick PM2 Commands:
 
-This project recommends using https://pm2.keymetrics.io/[PM2] to run the production server reliably in the background.
+- Start: `pm2 start ecosystem.config.js --env production`
+- Restart: `pm2 reload ecosystem.config.js --env production`
+- Logs: `pm2 logs`
+- List: `pm2 list`
+====
 
-First, install PM2 globally on your server:
 
+=== Running with PM2
+
+This project uses PM2 for production process management.
+
+.Install PM2 (if not already)
 [source,sh]
 ----
 npm install -g pm2
 ----
 
-Then, after deploying your files, start the server:
-
+.Start the app (production mode)
 [source,sh]
 ----
 cd /var/www/guttihub
-npm install --omit=dev
-pm2 start npm --name guttihub -- run start --env production
+#npm install --omit=dev
+npm ci --omit=dev
+pm2 start ecosystem.config.js --env production
 pm2 save
 ----
+* We had to use `npm ci --omit=dev --legacy-peer-deps` instead of `npm install --omit=dev` because of the /react-hls-player dependency.  
+
+
+.Check logs and status
+[source,sh]
+----
+pm2 logs
+pm2 list
+----
+
+.Restart manually if needed
+[source,sh]
+----
+pm2 reload ecosystem.config.js --env production
+----
+
+.Enable auto-start after reboot
+[source,sh]
+----
+pm2 startup
+pm2 save
+----
+
+.App Ports
+- Dev: `PORT=3000`
+- Prod: `PORT=6301`
+
 
 To ensure PM2 restarts the app after a server reboot:
 
@@ -254,3 +303,30 @@ You can also restart it manually with:
 ----
 pm2 restart guttihub
 ----
+
+
+== System Requirements
+
+This app uses scheduled jobs via the `at` command. It must be installed and the `atd` service must be running.
+
+.Installing `at`
+[source,sh]
+----
+# Debian/Ubuntu
+sudo apt update && sudo apt install -y at && sudo systemctl enable --now atd
+
+# Fedora/RHEL/CentOS
+sudo dnf install -y at && sudo systemctl enable --now atd
+
+# Arch Linux
+sudo pacman -S at && sudo systemctl enable --now atd
+----
+
+You can verify installation with:
+
+[source,sh]
+----
+atq
+----
+
+If this command fails, scheduling recordings will not work.

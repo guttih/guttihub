@@ -1,6 +1,7 @@
+// src/app/api/fetch-m3u/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { parseM3U } from "@/utils/parseM3U";
-import { ensureCacheDir, getCacheFilePath, isFileFresh, readFile, readJsonFile, writeFile, writeJsonFile } from "@/utils/fileHandler";
+import { ensureCacheDir, getCacheFilePath, getMediaDir, isFileFresh, readFile, readJsonFile, writeFile, writeJsonFile } from "@/utils/fileHandler";
 import { inferContentCategory, ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
 import { M3UResponse } from "@/types/M3UResponse";
 import { sanitizeM3UUrls } from "@/utils/urlSanitizer";
@@ -13,10 +14,32 @@ import { FetchM3URequest } from "@/types/FetchM3URequest";
 import { StreamFormat, getStreamFormatByExt } from "@/types/StreamFormat";
 import { filterEntries } from "@/utils/filterEntries";
 import { extractYears } from "@/utils/ui/extractYears";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/authOptions";
+import { getUserRoleServerOnly } from "@/utils/serverOnly/hasUserAccessLevel";
+import { isModerator } from "@/types/UserRole";
+import { StreamingService } from "@/types/StreamingService";
+import { M3UEntry } from "@/types/M3UEntry";
+import fs from "fs";
+import path from "path";
+import { getBaseUrl } from "@/utils/resolverUtils";
+import { RecordingJobInfo } from "@/types/RecordingJobInfo";
+import { startMovieConsumerCleanup } from "@/utils/concurrency";
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
     {
         const { url, snapshotId, pagination, filters }: FetchM3URequest = await req.json();
+        const force = req.nextUrl.searchParams.get("force") === "true";
+
+        startMovieConsumerCleanup(); // timer to gard movie consumer players
+
+        if (force) {
+            const session = await getServerSession({ req, ...authOptions });
+            const role = getUserRoleServerOnly(session?.user?.email);
+            if (isModerator(role)) {
+                return makeErrorResponse("Unauthorized: Only admins can force refresh", 403);
+            }
+        }
 
         try {
             // Infer server origin with fallback port
@@ -24,7 +47,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
             try {
                 resolvedUrl = new URL(url, req.nextUrl.origin); // supports relative URLs
-            } catch ( err ) {
+            } catch (err) {
                 if (err instanceof TypeError) {
                     return makeErrorResponse(err.message, 400);
                 }
@@ -41,24 +64,22 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
                 return makeErrorResponse("Service not found", 404);
             }
 
-            await ensureCacheDir();
-
             //We do not need the m3u file, but we want the json file with the entries so let's move next 3 lines to a function
-            let chasedData: CashedEntries;
 
-            if (service.hasFileAccess ) {
-                console.log("[VIRTUAL] Loading recordings from internal API service %s", service.name);
+            // if (service.hasFileAccess === true) {
+            //     console.log("[VIRTUAL] Loading recordings from internal API service %s", service.name);
+            //     // makeM3UList(service);
+            //     // const res = await fetch(service.refreshUrl);
+            //     // if (!res.ok) {
+            //     //     return makeErrorResponse("Failed to load local recordings", 500);
+            //     // }
 
-                const res = await fetch(service.refreshUrl);
-                if (!res.ok) {
-                    return makeErrorResponse("Failed to load local recordings", 500);
-                }
-                
-                const json = await res.json();
-                chasedData = json.data as CashedEntries;
-            } else {
-                chasedData = await getCachedOrFreshData(url, service.username, service.name);
-            }
+            //     // const json = await res.json();
+
+            //     chasedData = json.data as CashedEntries;
+            // } else {
+            const chasedData = await getCachedOrFreshData(service, url, force);
+            // }
 
             if (pagination?.offset && snapshotId && snapshotId !== chasedData.snapshotId) {
                 console.log("[CACHE] Snapshot ID mismatch. Fetching fresh data.");
@@ -114,18 +135,23 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         }
     }
 
-    async function getCachedOrFreshData(url: string, username: string, serviceName: string): Promise<CashedEntries> {
+    async function getCachedOrFreshData(service: StreamingService, url: string, force: boolean): Promise<CashedEntries> {
+        const username = service.username;
+        const serviceName = service.name;
         const filePathCashed = getCacheFilePath(username, serviceName, "cashedEntries");
 
-        if (await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs)) {
+        const usingCache = !force && (await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs));
+
+        if (usingCache && !service.hasFileAccess) {
             console.log("[CACHE] Using cached file:", filePathCashed);
             return await readJsonFile<CashedEntries>(filePathCashed);
         }
 
-        // Fetch fresh .m3u, parse it, and write cashed entries to disk
+        // We need to a fresh m3u file and parse it
 
         const cacheFilePathM3U = getCacheFilePath(username, serviceName, "m3u");
-        const rawM3U = await getCachedOrFreshM3U(url, cacheFilePathM3U);
+
+        const rawM3U = service.hasFileAccess ? await getCachedOrFreshM3UFromLocal(service) : await getCachedOrFreshM3U(url, cacheFilePathM3U, force);
 
         const entries = parseM3U(rawM3U);
 
@@ -155,8 +181,22 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         return cashed;
     }
 
-    async function getCachedOrFreshM3U(url: string, filePath: string): Promise<string> {
-        if (await isFileFresh(filePath, appConfig.playlistCacheTTLInMs)) {
+    async function getCachedOrFreshM3UFromLocal(service: StreamingService): Promise<string> {
+        const filePath = getCacheFilePath(service.username, service.name, "m3u");
+
+        // for now there is no need to cache this, let's always create a new one to be sure we have the actual disk content
+        // if (await isFileFresh(filePath, appConfig.playlistCacheTTLInMs)) {
+        //     console.log("[CACHE] Using cached file:", filePath);
+        //     return await readFile(filePath);
+        // }
+        console.log("[FETCH] Creating fresh .m3u");
+        const text = await makeM3UList(service);
+        await writeFile(filePath, text); //why await?  we have the text already
+        return text;
+    }
+
+    async function getCachedOrFreshM3U(url: string, filePath: string, force: boolean = false): Promise<string> {
+        if (!force && (await isFileFresh(filePath, appConfig.playlistCacheTTLInMs))) {
             console.log("[CACHE] Using cached file:", filePath);
             return await readFile(filePath);
         }
@@ -166,7 +206,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             headers: { "User-Agent": "Mozilla/5.0" },
         });
         const text = await response.text();
-        await writeFile(filePath, text);
+        await writeFile(filePath, text); // why await?  we have the text already
         return text;
     }
 
@@ -207,4 +247,67 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             return true;
         });
     }
+}
+
+async function makeM3UList(service: StreamingService): Promise<string> {
+    let listM3U = "#EXTM3U";
+    const mediaDir = getMediaDir();
+    const fileList = fs.readdirSync(mediaDir).filter((file) => !file.endsWith(".json"));
+
+    for (const file of fileList) {
+        const filePath = path.join(mediaDir, file);
+        const fileStat = fs.statSync(filePath);
+        if (fileStat.isFile()) {
+            const jsonFilePath = path.join(mediaDir, file + ".json");
+            const jsonData = fs.existsSync(jsonFilePath) ? await readJsonFile<RecordingJobInfo>(jsonFilePath) : null;
+            let str: string;
+            if (jsonData && jsonData?.job && jsonData?.job?.entry) {
+                // jsonData.entry.url = makeMediaUrl(service.id, filePath);
+                str = makeM3UListEntry(jsonData.job.entry, makeMediaUrl(service.id, filePath));
+            } else {
+                str = makeM3UListEntry(makeM3UEmptyEntry(service.id, filePath), makeMediaUrl(service.id, filePath));
+            }
+
+            listM3U += `\n${str}`;
+        }
+    }
+
+    return listM3U;
+}
+
+// works  : http://localhost:3000/api/video/local-recordings/media/uk_bbc_1_hd.mp4
+// broken : http://localhost:3000/api/stream-proxy/%2Fmedia%2Fuk_bbc_1_hd.mp4
+function makeMediaUrl(serviceId: string, fullFilePath: string): string {
+    const baseUrl = getBaseUrl();
+    const strippedPath = fullFilePath.replace(/\\/g, "/").replace(/.*\/videos\//, "");
+    const url = `${baseUrl}/api/video/${serviceId}/${strippedPath}`;
+    return url;
+}
+
+function makeM3UListEntry(entry: M3UEntry, url: string): string {
+    const { tvgId, tvgName, tvgLogo, groupTitle, name } = entry;
+
+    // -1 for live/unknown length; then all the tvg-* attrs, comma, and the display name.
+    const infoLine = `#EXTINF:-1 tvg-id="${tvgId}" tvg-name="${tvgName}" tvg-logo="${tvgLogo}" group-title="${groupTitle}",${name}`;
+
+    // URL on its own line
+    return `${infoLine}\n${url}`;
+}
+
+function makeM3UEmptyEntry(serviceId: string, filePath: string): M3UEntry {
+    const url = makeMediaUrl(serviceId, filePath);
+    const fileName = path.basename(filePath, path.extname(filePath));
+    const ext = path.extname(filePath).substring(1);
+
+    // Create a new M3UEntry object with default values
+    const entry: M3UEntry = {
+        tvgId: fileName,
+        tvgName: fileName,
+        tvgLogo: "/fallback.png",
+        groupTitle: `format:${getStreamFormatByExt(ext)}`,
+        name: fileName,
+        url: url,
+    };
+
+    return entry;
 }

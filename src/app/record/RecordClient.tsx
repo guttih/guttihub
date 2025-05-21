@@ -7,7 +7,7 @@ import { M3UEntry } from "@/types/M3UEntry";
 
 export default function RecordClient() {
   const searchParams = useSearchParams();
-  const cacheKey = searchParams.get("cacheKey");
+  const cacheKey = searchParams?.get("cacheKey") ?? "";
   const [entry, setEntry] = useState<M3UEntry | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState("unknown");
@@ -20,7 +20,7 @@ export default function RecordClient() {
       }
 
       try {
-        const res = await fetch(`/api/entry-by-cachekey?cacheKey=${cacheKey}`);
+        const res = await fetch(`/api/cache/${cacheKey}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to fetch entry");
         setEntry(data.entry);

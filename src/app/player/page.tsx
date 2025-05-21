@@ -6,7 +6,7 @@ export default async function PlayerPage({ searchParams }: { searchParams: Promi
     const query = await searchParams;
     const encodedUrl = query?.streamUrl;
     const serviceId = query?.serviceId;
-    const url = encodedUrl ? decodeURIComponent(encodedUrl)  : "";
+    const url = encodedUrl;
     if (!url) {
         return <div className="text-red-500 p-4">Missing the &apos;streamUrl&apos; parameter from the URL.</div>;
     }

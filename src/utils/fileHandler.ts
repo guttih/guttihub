@@ -1,8 +1,21 @@
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
+import { DownloadJob } from "@/types/DownloadJob";
 import { RecordingJob } from "@/types/RecordingJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
+import { DownloadJobInfo } from "@/types/DownloadJobInfo";
+import { outDirectories } from "@/config";
+
+/**
+ * Resolves an absolute path to a script inside src/scripts/
+ * Works even in PM2 or production environments
+ */
+export function getScriptPath(scriptName: string): string {
+    // Find root directory relative to the compiled dist (likely in .next or out)
+    const rootDir = path.resolve(process.cwd());
+    return path.join(rootDir, "src/scripts", scriptName);
+}
 
 const CACHE_DIR = path.resolve(process.cwd(), ".cache");
 
@@ -19,6 +32,14 @@ export async function ensureCacheDir(): Promise<void> {
     await fs.mkdir(CACHE_DIR, { recursive: true });
 }
 
+export async function ensureMediaDir(): Promise<void> {
+    await fs.mkdir(getMediaDir(), { recursive: true });
+}
+
+export async function ensureDownloadJobsDir(): Promise<void> {
+    await fs.mkdir(getJobsDir(), { recursive: true });
+}
+
 export async function fileExists(filePath: string): Promise<boolean> {
     try {
         await fs.access(filePath);
@@ -33,8 +54,27 @@ export async function readJsonFile<T>(filePath: string): Promise<T> {
         const data = await fs.readFile(filePath, "utf-8");
         return JSON.parse(data) as T;
     } catch (err) {
-        console.error("❌ Failed to read or parse JSON file:", filePath, err);
+        // console.error("❌ Failed to read or parse JSON file:", filePath, err);
         throw err;
+    }
+}
+
+export async function deleteFile(filePath: string): Promise<void> {
+    try {
+        await fs.unlink(filePath);
+    } catch (err) {
+        console.error("❌ Failed to delete file:", filePath, err);
+        throw err;
+    }
+}
+
+export async function deleteFileAndForget(filePath: string) {
+    try {
+        if (await existsSync(filePath)) {
+            fs.unlink(filePath);
+        }
+    } catch {
+        // Ignore errors
     }
 }
 
@@ -48,43 +88,81 @@ export async function ensureRecordingJobsDir(): Promise<void> {
     await fs.mkdir(dir, { recursive: true });
 }
 
-export function getRecordingJobsDir(): string {
+export function getJobsDir(): string {
     return path.join(getCacheDir(), "recording-jobs");
 }
- 
-  // Build the path to the bundle
-  export function getInfoJsonPath(id: string): string {
-    return path.join(getRecordingJobsDir(), `${id}-info.json`);
-  }
-  
-  // Read the finished-job bundle
-  export async function readRecordingJobInfo(id: string): Promise<RecordingJobInfo> {
+
+// returns the directory where recordings and downloads are stored
+// This directory could contain a lot of files, including files we did not create and have no info about
+export function getMediaDir(): string {
+    return outDirectories[1].path;
+}
+
+// returns the direcrtory ffmpeg uses to store its temporary files until the job is finished and the final file is moved to the media dir
+export function getWorkDir(): string {
+    return outDirectories[0].path;
+}
+
+// Build the path to the bundle
+export function getInfoJsonPath(id: string): string {
+    return path.join(getJobsDir(), `${id}-info.json`);
+}
+
+// Read the finished-recording-job bundle
+export async function readRecordingJobInfo(id: string): Promise<RecordingJobInfo> {
     const p = getInfoJsonPath(id);
     const txt = await fs.readFile(p, "utf-8");
     return JSON.parse(txt) as RecordingJobInfo;
-  }
-  
-  // Probe whether the bundle exists
-  export function infoJsonExists(id: string): boolean {
-    return existsSync(getInfoJsonPath(id));
-  }
-  
-  // Read a .status or .log by raw path
-  export async function readFileRaw(p: string): Promise<string> {
-    return fs.readFile(p, "utf-8");
-  }
-
-export async function writeRecordingJobFile(job: RecordingJob): Promise<void> {
-    const dir = getRecordingJobsDir();
-    await fs.mkdir(dir, { recursive: true });
-    const filePath = path.join(dir, `${job.recordingId}.json`);
-    await writeJsonFile(filePath, job);
 }
 
-export async function readRecordingJobFile(recordingId: string): Promise<RecordingJob> {
-    const dir = getRecordingJobsDir();
-    const filePath = path.join(dir, `${recordingId}.json`);
+// Read the finished-download-job bundle
+export async function readDownloadJobInfo(id: string): Promise<DownloadJobInfo> {
+    const p = getInfoJsonPath(id);
+    const txt = await fs.readFile(p, "utf-8");
+    return JSON.parse(txt) as DownloadJobInfo;
+}
+
+// Probe whether the bundle exists
+export function infoJsonExists(id: string): boolean {
+    return existsSync(getInfoJsonPath(id));
+}
+
+// Read a .status or .log by raw path
+export async function readFileRaw(p: string): Promise<string> {
+    return fs.readFile(p, "utf-8");
+}
+
+// Write the finished-job bundle, and if deleteEntryCash is true,
+// and a file with same name exists in the cache dir (not recording-jobs dir), delete it
+export async function writeRecordingJobFile(job: RecordingJob, deleteEntryCash: boolean): Promise<void> {
+    const dir = getJobsDir();
+    await fs.mkdir(dir, { recursive: true });
+    const filePath = path.join(dir, `${job.cacheKey}.json`);
+    await writeJsonFile(filePath, job);
+    if (deleteEntryCash) {
+        const oldEntryfilePath = path.join(getCacheDir(), `${job.cacheKey}.json`);
+        deleteFileAndForget(oldEntryfilePath);
+    }
+}
+export async function readRecordingJobFile(cacheKey: string): Promise<RecordingJob> {
+    const filePath = path.join(getJobsDir(), `${cacheKey}.json`);
     return await readJsonFile<RecordingJob>(filePath);
+}
+
+export async function readDownloadJobFile(cacheKey: string): Promise<DownloadJob> {
+    const filePath = path.join(getJobsDir(), `${cacheKey}.json`);
+    return await readJsonFile<DownloadJob>(filePath);
+}
+
+export async function writeDownloadingJobFile(job: DownloadJob, deleteEntryCash: boolean): Promise<void> {
+    const dir = getJobsDir();
+    await fs.mkdir(dir, { recursive: true });
+    const filePath = path.join(dir, `${job.cacheKey}.json`);
+    await writeJsonFile(filePath, job);
+    if (deleteEntryCash) {
+        const oldEntryfilePath = path.join(getCacheDir(), `${job.cacheKey}.json`);
+        deleteFileAndForget(oldEntryfilePath);
+    }
 }
 
 export async function readFile(filePath: string): Promise<string> {
@@ -110,5 +188,25 @@ export async function isFileFresh(filePath: string, maxAgeMs: number): Promise<b
         return Date.now() - stat.mtimeMs < maxAgeMs;
     } catch {
         return false;
+    }
+}
+
+export async function readStatusFile(filePath: string): Promise<Record<string, string>> {
+    try {
+        const raw = await readFile(filePath);
+        const lines = raw.split("\n");
+        const obj: Record<string, string> = {};
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith("#")) continue;
+            const [key, ...valueParts] = trimmed.split("=");
+            if (key && valueParts.length > 0) {
+                obj[key] = valueParts.join("="); // allow '=' in values
+            }
+        }
+        return obj;
+    } catch (err) {
+        console.warn(`⚠️ readStatusFile(${filePath}) failed`, err);
+        return {}; // <– instead of throwing error, we return empty object
     }
 }

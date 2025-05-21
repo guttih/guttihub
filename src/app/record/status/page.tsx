@@ -5,29 +5,52 @@ import { useSearchParams } from "next/navigation";
 import StatusClient from "./StatusClient";
 import { useEffect, useState } from "react";
 import { RecordingJob } from "@/types/RecordingJob";
+import { showMessageBox } from "@/components/ui/MessageBox";
 
 function StatusPageContent() {
     const searchParams = useSearchParams();
-    const [recordingId, setRecordingId] = useState<string | null>(null);
+    const [cacheKey, setCacheKey] = useState<string | null>(null);
+    const [hasShownError, setHasShownError] = useState(false);
 
     useEffect(() => {
-        // force update when the URL param changes
-        const id = searchParams.get("recordingId");
-        setRecordingId(id);
-    }, [searchParams]);
+        const key = searchParams?.get("cacheKey") ?? null;
+
+        if (!key && !hasShownError) {
+            showMessageBox({
+                title: "Missing cacheKey",
+                message: "No recording found — check the link and try again.",
+                variant: "error",
+                displayTime: null,
+                blocking: true,
+                toast: false,
+                position: "center",
+                buttonText: "OK"
+            }).then(() => {
+                // Optional: Redirect the user to a safe fallback page
+                // router.push("/schedule");
+            });
+    
+            setHasShownError(true);
+            return;
+        }
+    
+        setCacheKey(key);
+    }, [searchParams, hasShownError]);
+    
 
     const [job, setJob] = useState<RecordingJob | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!recordingId) return;
+        if (!cacheKey) return;
 
         const fetchData = async () => {
             try {
-                const jobRes = await fetch(`/api/record/job?recordingId=${recordingId}`);
+                const jobRes = await fetch(`/api/record/job?cacheKey=${cacheKey}`);
                 const jobJson = await jobRes.json();
+                console.log(`-> /api/record/job?cacheKey=${cacheKey}`, jobJson);
 
-                if (!jobRes.ok || !jobJson?.recordingId) throw new Error("Invalid job data");
+                if (!jobRes.ok || !jobJson?.cacheKey) throw new Error("Invalid job data");
 
                 setJob(jobJson);
             } catch (err: unknown) {
@@ -40,7 +63,7 @@ function StatusPageContent() {
         };
 
         fetchData();
-    }, [recordingId]);
+    }, [cacheKey]);
 
 
     if (error) return <div className="p-6 text-red-400">{error}</div>;

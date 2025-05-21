@@ -1,11 +1,10 @@
 // src/utils/LiveWatcher.ts
 import { listActiveStreams, getViewerCount, shouldAutoStop } from "./liveViewers";
-import { readRecordingJobFile } from "./fileHandler";
-import path from "path";
+import { getScriptPath, readRecordingJobFile } from "./fileHandler";
 import { spawn } from "child_process";
 
 const CHECK_INTERVAL_MS = 10_000;
-const stopScript = path.resolve(process.cwd(), "src/scripts/stop-record.sh");
+const stopScript = getScriptPath("stop-record.sh");
 
 let active = false;
 

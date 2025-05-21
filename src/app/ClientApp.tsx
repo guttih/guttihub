@@ -5,14 +5,15 @@ import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
 import { services } from "@/config";
-import { StreamCard } from "@/components/StreamCard/StreamCard";
+import { StreamCard } from "@/components/cards/StreamCard/StreamCard";
 import { StreamFormat } from "@/types/StreamFormat";
 import { appConfig } from "@/config";
 import { ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
-import { useDebouncedState } from "./hooks/useDebouncedState";
+import { useDebouncedState } from "src/hooks/useDebouncedState";
+import { useInputFocusTracker } from "src/hooks/useInputFocusTracker";
 import { ApiResponse } from "@/types/ApiResponse";
 import { M3UResponse } from "@/types/M3UResponse";
-import StreamCardInteractive from "@/components/StreamCardInteractive/StreamCardInteractive";
+import StreamCardInteractive from "@/components/cards/StreamCardInteractive/StreamCardInteractive";
 import { InlinePlayer } from "@/components/InlinePlayer/InlinePlayer";
 import { FetchM3URequest } from "@/types/FetchM3URequest";
 import { FilterInput } from "@/components/FilterInput/FilterInput";
@@ -20,10 +21,11 @@ import { PaginationControls } from "@/components/PaginationControls/PaginationCo
 import { YearFilterSelect } from "@/components/YearFilterSelect/YearFilterSelect";
 import { Spinner } from "@/components/Spinner/Spinner";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
-import { LiveDebugPanel } from "@/components/Live/LiveDebugPanel";
 
-import { hasRole, UserRole } from "@/types/UserRole"; // Ensure UserRole is imported from the correct path
+import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel/LiveMonitorPanel";
+import { hasRole, UserRole } from "@/utils/auth/accessControl";
+import { showMessageBox } from "@/components/ui/MessageBox";
+import { UserMenu } from "@/components/UserMenu/UserMenu";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -32,16 +34,20 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const [searchNameInput, setSearchNameInput] = useState("");
     const [searchGroupInput, setSearchGroupInput] = useState("");
     const [searchTvgIdInput, setSearchTvgIdInput] = useState("");
+
     const [selectedYears, setSelectedYears] = useState<string[]>([]);
     const [player, setPlayer] = useState<{
         url: string;
+        title?: string;
         mode: "popup" | "inline";
         visible: boolean;
         waitForPlaylist?: boolean;
+        entity: M3UEntry;
     }>({
         url: "",
         mode: "popup",
         visible: false,
+        entity: {} as M3UEntry,
     });
     const searchName = useDebouncedState(searchNameInput, 1000);
     const searchTvgId = useDebouncedState(searchTvgIdInput, 1000);
@@ -59,7 +65,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const [popupPosition, setPopupPosition] = useState({ x: 100, y: 100 });
     const [popupSize, setPopupSize] = useState({ width: 480, height: 270 });
     const [snapshotId, setSnapshotId] = useState("");
-    const [focusedInput, setFocusedInput] = useState<string | null>(null);
+    const { focusedInput, setFocusedInput, trackInput, restoreFocus } = useInputFocusTracker();
     const [activeService, setActiveService] = useState<StreamingService | null>(null);
     const [totalEntries, setTotalEntries] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
@@ -69,6 +75,12 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         searchGroup: { isRegex: false, isCaseSensitive: false },
         searchTvgId: { isRegex: false, isCaseSensitive: false },
     });
+
+    useEffect(() => {
+        if (!loading && focusedInput) {
+            restoreFocus(focusedInput);
+        }
+    }, [loading, focusedInput]);
 
     const debouncedFilters = useMemo(
         () => ({
@@ -94,27 +106,32 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         [searchName, searchGroup, searchTvgId, searchFormat, searchCategory, inputModes, debouncedYears]
     );
 
+    const hasActiveFilters = useMemo(() => {
+        return (
+            !!debouncedFilters.name.value ||
+            !!debouncedFilters.groupTitle.value ||
+            !!debouncedFilters.tvgId.value ||
+            !!debouncedFilters.format ||
+            !!debouncedFilters.category ||
+            (debouncedFilters.years && debouncedFilters.years.length > 0)
+        );
+    }, [debouncedFilters]);
+
     const pageSize = Number(appConfig.defaultPageSize);
 
-    // function normalizeStreamUrl(playUrl: string): string {
-    //     const parsed = new URL(playUrl, window.location.origin);
-    //     const isMixedContent = window.location.protocol === "https:" && parsed.protocol === "http:";
-    //     const isCrossOrigin = parsed.origin !== window.location.origin;
-    //     const proxyNeeded = isMixedContent || isCrossOrigin;
-
-    //     return proxyNeeded ? `/api/stream-proxy?url=${encodeURIComponent(playUrl)}` : playUrl;
-    // }
-
-    function handlePlay(url: string) {
-        console.log("handlePlay called, input URL:", url);
-
+    function handlePlay(entry: M3UEntry) {
+        const url = entry.url;
         const isOwnLiveStream = url.startsWith("/api/hls-stream/") && url.endsWith("/playlist");
         const absoluteUrl = new URL(url, window.location.origin).toString();
-        console.log("ClientApp::handlePlay using URL:", isOwnLiveStream ? absoluteUrl : url);
+        // const matchingEntry = entries.find((entry) => entry.url === url);
+        // console.log("ClientApp::handlePlay using URL:", isOwnLiveStream ? absoluteUrl : url);
+        // console.log(`Title: ${matchingEntry?.name ?? "Unknown"}`);
         setPlayer({
             url: isOwnLiveStream ? absoluteUrl : url,
+            title: entry?.name ?? "",
             mode: playerMode,
             visible: true,
+            entity: entry,
             waitForPlaylist: isOwnLiveStream, // We'll pass this down to InlinePlayer
         });
     }
@@ -130,19 +147,36 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }));
     }
 
-    function handlePageChange(offset: number) {
-        if (offset > 0) {
-            setCurrentPage((p) => Math.min(totalPages, p + 1));
-        } else {
-            setCurrentPage((p) => Math.max(1, p - 1));
+    function isValidRegex(pattern: string): boolean {
+        try {
+            new RegExp(pattern);
+            return true;
+        } catch {
+            return false;
         }
     }
 
     const buttonBaseClasses = "bg-gray-700 text-white px-4 py-2 rounded transition-colors duration-150 hover:bg-gray-600 disabled:opacity-50";
 
-    async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown") {
+    async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) {
         if (!service) return;
         console.log(`handleFetch called by : ${source}`);
+        // Validate each regex-enabled input
+        if (
+            (inputModes.searchName.isRegex && !isValidRegex(searchName)) ||
+            (inputModes.searchGroup.isRegex && !isValidRegex(searchGroup)) ||
+            (inputModes.searchTvgId.isRegex && !isValidRegex(searchTvgId))
+        ) {
+            return showMessageBox({
+                variant: "warning",
+                blocking: false,
+                title: "Invalid Regex",
+                message: "Please fix your regex pattern(s) before searching.",
+                toast: true,
+                position: "bottom-right",
+                displayTime: 3000,
+            });
+        }
 
         setActiveService(service);
         setLoading(true);
@@ -157,7 +191,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 },
                 filters: debouncedFilters,
             };
-            const res = await fetch("/api/fetch-m3u", {
+            const res = await fetch(`/api/fetch-m3u${force ? "?force=true" : ""}`, {
                 method: "POST",
                 body: JSON.stringify(requestBody),
             });
@@ -165,8 +199,27 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             const json: ApiResponse<M3UResponse> = await res.json();
 
             if (!json.success) {
-                alert(`Failed to load: ${json.error}`);
-                return;
+                return showMessageBox({
+                    variant: "warning",
+                    title: "No items found",
+                    message: json.error,
+                    toast: true,
+                    blocking: false,
+                    position: "bottom-right",
+                    displayTime: 5000,
+                });
+            } else if (force) {
+                if (force) {
+                    showMessageBox({
+                        variant: "success",
+                        title: `${service?.name ?? "Unknown"}`,
+                        message: `Playlist refreshed successfully!`,
+                        toast: true,
+                        blocking: false,
+                        position: "bottom-right",
+                        displayTime: 5000,
+                    });
+                }
             }
 
             setSnapshotId(json.data.snapshotId);
@@ -217,7 +270,6 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         }
     }, [loading, focusedInput]);
 
-    
     useEffect(() => {
         if (!activeService) return;
         handleFetch(activeService, "useEffect:... [currentPage, activeService, debouncedFilters, handleFetch])");
@@ -264,7 +316,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     }
 
     const EraserIcon = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path d="M19 19H5m7-14l7 7-8 8-7-7 8-8z" />
         </svg>
     );
@@ -275,24 +327,20 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 {/* ←‑ existing heading */}
                 <h1 className="text-xl font-bold truncate max-w-[60%]">{appConfig.appName}</h1>
 
-                {/* Displays only once session resolved */}
-                {hasRole(userRole, "moderator") && (
-                    <Link
-                        href="/schedule"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 whitespace-nowrap"
-                    >
-                        Scheduler
-                    </Link>
-                )}
-
                 {/* existing user name */}
-                <h3 className="text-lg font-semibold text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block">
-                    {session?.user?.name} {userRole}
-                </h3>
+                <div className="flex items-center gap-4 relative">
+                    <div className="flex items-center justify-between mb-4">
+                        <UserMenu
+                            userName={session?.user?.name ?? "unknown"}
+                            userRole={userRole}
+                            showForceRefresh={activeService?.id !== undefined && !activeService?.hasFileAccess}
+                            onForceRefresh={() => handleFetch(undefined, "Admin Force Refresh", true)}
+                            onExport={handleExport}
+                            canExport={entries.length > 0 && entries.length <= appConfig.maxEntryExportCount}
+                        />
+                    </div>
+                </div>
             </div>
-
             <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
                 {loading && <Spinner />}
 
@@ -309,7 +357,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                                 if (selected) {
                                     setActiveService(selected);
                                     setCurrentPage(1);
-                                    console.log("🌀 Switching to service:", selected);
+                                    // console.log("🌀 Switching to service:", selected);
                                     // handleFetch(selected, "onChange: serviceSelect");
                                 }
                             }}
@@ -326,31 +374,6 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                             ))}
                         </select>
                     </label>
-
-                    {/* Export Button */}
-                    {entries.length > 0 && entries.length <= appConfig.maxEntryExportCount && (
-                        <button
-                            onClick={handleExport}
-                            className={`${buttonBaseClasses} flex items-center gap-2`}
-                            title="Download filtered entries as .m3u playlist"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-                                />
-                            </svg>
-                            <span>Export</span>
-                        </button>
-                    )}
                 </div>
                 {/* Right Group: Card Style + Player Mode */}
                 <div className="flex flex-wrap items-end gap-4">
@@ -385,13 +408,23 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     )}
                 </div>
             </div>
-
             {/* Filters */}
             <div className="w-full mb-6">
-                <fieldset className="relative border border-gray-700 rounded p-4">
-                    <legend className="text-sm text-gray-400 px-2">Filters</legend>
+                <fieldset
+                    className={`relative rounded p-4 transition-colors duration-200 border ${
+                        hasActiveFilters ? "border-gray-400 border-[1.5px]" : "border-gray-700 border"
+                    }`}
+                >
+                    <legend
+                        className={`text-sm px-2 transition-colors duration-200 ${
+                            hasActiveFilters ? "text-gray-300 font-bold" : "text-gray-400 font-normal"
+                        }`}
+                    >
+                        Filters
+                    </legend>
                     <button
-                        className="absolute right-1 -top-7 z-10 bg-gray-800 hover:bg-red-600 text-white p-2 rounded-full shadow transition"
+                        className={`absolute right-1 -top-7 z-10 w-9 h-9 flex items-center justify-center rounded-full shadow transition
+                            ${hasActiveFilters ? "bg-yellow-600 hover:bg-yellow-500 text-white" : "bg-gray-700 text-gray-400"}`}
                         onClick={handleClearFilters}
                         title="Clear all filters"
                     >
@@ -403,36 +436,58 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                             name="searchName"
                             label={M3UEntryFieldLabel.name}
                             value={searchNameInput}
-                            onChange={setSearchNameInput}
                             mode={inputModes.searchName}
                             onToggle={toggleInputMode}
                             loading={loading}
-                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                            onBlur={() => setFocusedInput(null)}
+                            onChange={(val) => {
+                                setSearchNameInput(val);
+                                const el = document.querySelector<HTMLInputElement>('input[name="searchName"]');
+                                if (el) trackInput("searchName", el.selectionStart, el.selectionEnd);
+                            }}
+                            onFocus={(e) => {
+                                const { name, selectionStart, selectionEnd } = e.currentTarget;
+                                setFocusedInput(name);
+                                trackInput(name, selectionStart, selectionEnd);
+                            }}
                         />
                         <FilterInput
                             name="searchGroup"
                             label={M3UEntryFieldLabel.groupTitle}
                             value={searchGroupInput}
-                            onChange={setSearchGroupInput}
+                            onChange={(val) => {
+                                setSearchGroupInput(val);
+                                const el = document.querySelector<HTMLInputElement>('input[name="searchGroup"]');
+                                if (el) trackInput("searchGroup", el.selectionStart, el.selectionEnd);
+                            }}
+                            onFocus={(e) => {
+                                const { name, selectionStart, selectionEnd } = e.currentTarget;
+                                setFocusedInput(name);
+                                trackInput(name, selectionStart, selectionEnd);
+                            }}
                             mode={inputModes.searchGroup}
                             onToggle={toggleInputMode}
                             loading={loading}
-                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                            onBlur={() => setFocusedInput(null)}
                         />
 
                         <FilterInput
                             name="searchTvgId"
                             label={M3UEntryFieldLabel.tvgId}
                             value={searchTvgIdInput}
-                            onChange={setSearchTvgIdInput}
+                            onChange={(val) => {
+                                setSearchTvgIdInput(val);
+                                const el = document.querySelector<HTMLInputElement>('input[name="searchTvgId"]');
+                                if (el) trackInput("searchTvgId", el.selectionStart, el.selectionEnd);
+                            }}
+                            onFocus={(e) => {
+                                const { name, selectionStart, selectionEnd } = e.currentTarget;
+                                setFocusedInput(name);
+                                trackInput(name, selectionStart, selectionEnd);
+                            }}
                             mode={inputModes.searchTvgId}
                             onToggle={toggleInputMode}
                             loading={loading}
-                            onFocus={(e) => setFocusedInput(e.currentTarget.name)}
-                            onBlur={() => setFocusedInput(null)}
                         />
+
                         <select
                             name="searchCategory"
                             onFocus={(e) => setFocusedInput(e.currentTarget.name)}
@@ -481,23 +536,32 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 </fieldset>
             </div>
             <div className="flex flex-wrap items-end gap-4 mb-6">
-                <LiveDebugPanel userRole={userRole} />
+                <LiveMonitorPanel
+                    userRole={userRole}
+                    // onInlinePlay={handlePlay}
+                />
             </div>
             {player.visible && player.mode === "inline" && (
                 <InlinePlayer
+                    key={player.url}
                     url={player.url}
                     serviceId={activeService?.id ?? ""}
                     waitForPlaylist={player.waitForPlaylist}
+                    entry={player.entity}
+                    autoPlay={true}
+                    movieTitle={player.title ?? ""}
                     onClose={handleClosePlayer}
                     className="rounded shadow w-full max-w-3xl mx-auto"
                     showCloseButton={true}
                 />
             )}
-
             {player.visible && player.mode === "popup" && (
                 <InlinePlayer
+                    key={player.url}
                     url={player.url}
+                    entry={player.entity}
                     autoPlay={true}
+                    movieTitle={player.title ?? ""}
                     serviceId={activeService?.id ?? ""}
                     waitForPlaylist={player.waitForPlaylist}
                     onClose={handleClosePlayer}
@@ -512,52 +576,55 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     className="w-[400px] aspect-video bg-black shadow-xl rounded"
                 />
             )}
-
-            <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalEntries={totalEntries}
-                onPageChange={handlePageChange}
-                buttonClassName={buttonBaseClasses}
-                className={`mt-6`}
-            />
-
-            <div className="grid grid-cols-1 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-x-6 gap-y-8">
-                {activeService && entries.map((entry) => {
-                    const ext = entry.url.split(".").pop()?.toLowerCase() ?? "";
-                    const isMovie = ["mp4", "mkv"].includes(ext);
-                    const viewslots = (activeService?.maxConcurrentViewers ?? 0) - liveCount;
-                    const canPlay = viewslots > 0;
-                    const showRecord = canPlay && !isMovie;
-                    const showStreaming = canPlay && !isMovie;
-                    const showPlayButton = canPlay && isMovie;
-                    return useInteractiveCard ? (
-                        <StreamCardInteractive key={entry.url} serviceId={activeService.id} entry={entry} />
-                    ) : (
-                        // The card figures out if user is allowed to see the buttons based on userRole, app only thinks about the count of cuncurrent viewers
-                        <StreamCard
-                            key={entry.url}
-                            serviceId={activeService?.id ?? ""}
-                            entry={entry}
-                            userRole={userRole}
-                            showCopy={!appConfig.hideCredentialsInUrl}
-                            showRecordButton={showRecord}
-                            showPlayButton={showPlayButton}
-                            showStreamButton={showStreaming}
-                            showDeleteButton={activeService?.hasFileAccess}
-                            onPlay={(url) => handlePlay(url)}
-                            onDelete={(deletedEntry) => setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))}
-                        />
-                    );
-                })}
-            </div>
-
-            {entries && entries.length > 6 && (
+            {totalEntries > appConfig.defaultPageSize && (
                 <PaginationControls
                     currentPage={currentPage}
                     totalPages={totalPages}
                     totalEntries={totalEntries}
-                    onPageChange={(delta) => setCurrentPage((prev) => Math.max(1, Math.min(totalPages, prev + delta)))}
+                    onPageChange={(page) => setCurrentPage(Math.max(1, Math.min(totalPages, page)))}
+                    buttonClassName={buttonBaseClasses}
+                    className="mt-6"
+                />
+            )}
+            <div className="grid grid-cols-1 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-x-6 gap-y-8">
+                {activeService &&
+                    entries.map((entry) => {
+                        const ext = entry.url.split(".").pop()?.toLowerCase() ?? "";
+                        const isMovie = ["mp4", "mkv"].includes(ext);
+                        const viewslots = (activeService?.maxConcurrentViewers ?? 0) - liveCount;
+                        const canPlay = viewslots > 0;
+                        const showRecord = canPlay && !isMovie;
+                        const showStreaming = canPlay && !isMovie;
+                        const showPlayButton = canPlay && isMovie;
+                        const showCopy = hasRole(userRole, "admin"); //!appConfig.hideCredentialsInUrl
+                        return useInteractiveCard ? (
+                            <StreamCardInteractive key={entry.url} serviceId={activeService.id} entry={entry} />
+                        ) : (
+                            // The card figures out if user is allowed to see the buttons based on userRole, app only thinks about the count of cuncurrent viewers
+                            <StreamCard
+                                key={entry.url}
+                                userName={session?.user?.name ?? "unknown"}
+                                serviceId={activeService?.id ?? ""}
+                                entry={entry}
+                                userRole={userRole}
+                                showCopy={showCopy}
+                                showRecordButton={showRecord}
+                                showPlayButton={showPlayButton}
+                                showStreamButton={showStreaming}
+                                showDeleteButton={activeService?.hasFileAccess}
+                                showDownloadButton={canPlay && !activeService?.hasFileAccess}
+                                onPlay={(entry) => handlePlay(entry)}
+                                onDelete={(deletedEntry) => setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))}
+                            />
+                        );
+                    })}
+            </div>
+            {totalEntries > appConfig.defaultPageSize && (
+                <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalEntries={totalEntries}
+                    onPageChange={(page) => setCurrentPage(Math.max(1, Math.min(totalPages, page)))}
                     buttonClassName={buttonBaseClasses}
                     className="mt-6"
                 />
