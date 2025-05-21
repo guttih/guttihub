@@ -82,6 +82,7 @@ export function MonitorCardRecording({
             cacheKey={cacheKey}
             showKillButton={false}
             onKill={onKill}
+            className="hover:bg-red-800 hover:ring-red-700"
         >
             <div className="flex flex-col items-start gap-2 text-left w-full text-left">
                 <Button
