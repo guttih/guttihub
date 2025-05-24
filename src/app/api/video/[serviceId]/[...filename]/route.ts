@@ -134,9 +134,10 @@ export async function DELETE(
             return NextResponse.json({ error: "Only files can be deleted" }, { status: 400 });
         }
 
-        const infoPath = `${filePath}-info.json`;
+        const infoPath = `${filePath}.json`;
         if (await fileExists(infoPath)) deleteFileAndForget(infoPath); //always delete the info file
-        console.log("Media file deleting:", filePath);  
+        console.log("Media file deleting:", filePath);
+
         await unlink(filePath); //this could fail, but, hey, we at least removed the info file
         console.log("Media file deleting done:");
         return NextResponse.json({ message: "File deleted successfully" });

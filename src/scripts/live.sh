@@ -3,13 +3,34 @@
 # --- Parse named arguments ---
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --baseUrl) BASE_URL="$2"; shift 2 ;;
-        --cacheKey) CACHE_KEY="$2"; shift 2 ;;
-        --url) STREAM_URL="$2"; shift 2 ;;
-        --user) USER="$2"; shift 2 ;;
-        --outputFile) OUTPUT_FILE="$2"; shift 2 ;;
-        --loglevel) LOGLEVEL="$2"; shift 2 ;;
-        *) echo "Unknown parameter: $1" >&2; exit 1 ;;
+    --baseUrl)
+        BASE_URL="$2"
+        shift 2
+        ;;
+    --cacheKey)
+        CACHE_KEY="$2"
+        shift 2
+        ;;
+    --url)
+        STREAM_URL="$2"
+        shift 2
+        ;;
+    --user)
+        USER="$2"
+        shift 2
+        ;;
+    --outputFile)
+        OUTPUT_FILE="$2"
+        shift 2
+        ;;
+    --loglevel)
+        LOGLEVEL="$2"
+        shift 2
+        ;;
+    *)
+        echo "Unknown parameter: $1" >&2
+        exit 1
+        ;;
     esac
 done
 
@@ -23,17 +44,17 @@ done
 LOGLEVEL="${LOGLEVEL:-error}"
 
 sanitize_path_param() {
-  local val="$1"
-  val="${val#\"}"
-  val="${val%\"}"
-  echo "$(realpath "$val")"
+    local val="$1"
+    val="${val#\"}"
+    val="${val%\"}"
+    echo "$(realpath "$val")"
 }
 
 strip_surrounding_quotes() {
-  local val="$1"
-  val="${val#\"}"
-  val="${val%\"}"
-  echo "$val"
+    local val="$1"
+    val="${val#\"}"
+    val="${val%\"}"
+    echo "$val"
 }
 
 USER="$(strip_surrounding_quotes "$USER")"
@@ -48,33 +69,33 @@ mkdir -p "$HLS_DIR"
 
 STARTED_AT=$(date -Iseconds)
 
-echo "STATUS=live" > "$STATUS_FILE"
-echo "STARTED_AT=$STARTED_AT" >> "$STATUS_FILE"
-echo "STREAM=$STREAM_URL" >> "$STATUS_FILE"
-echo "USER=$USER" >> "$STATUS_FILE"
-echo "OUTPUT_FILE=$OUTPUT_FILE" >> "$STATUS_FILE"
-echo "HLS_PLAYLIST=$HLS_PLAYLIST" >> "$STATUS_FILE"
-echo "LOG_FILE=$LOG_FILE" >> "$STATUS_FILE"
+echo "STATUS=live" >"$STATUS_FILE"
+echo "STARTED_AT=$STARTED_AT" >>"$STATUS_FILE"
+echo "STREAM=$STREAM_URL" >>"$STATUS_FILE"
+echo "USER=$USER" >>"$STATUS_FILE"
+echo "OUTPUT_FILE=$OUTPUT_FILE" >>"$STATUS_FILE"
+echo "HLS_PLAYLIST=$HLS_PLAYLIST" >>"$STATUS_FILE"
+echo "LOG_FILE=$LOG_FILE" >>"$STATUS_FILE"
 
 send_cleanup_report() {
-  if [[ -n "${BASE_URL:-}" ]]; then
-    echo -n "Sending cleanup report to $BASE_URL/api/job/has-ended/$CACHE_KEY"
-    if curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
-         -H "Content-Type: application/json" \
-         -d "{\"cacheKey\":\"$CACHE_KEY\"}"; then
-      echo " ✅ OK"
-    else
-      echo " ❌ FAIL (exit $?)"
+    if [[ -n "${BASE_URL:-}" ]]; then
+        echo -n "Sending cleanup report to $BASE_URL/api/job/has-ended/$CACHE_KEY"
+        if curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"cacheKey\":\"$CACHE_KEY\"}"; then
+            echo " ✅ OK for job $CACHE_KEY"
+        else
+            echo " ❌ FAIL (exit $?) for job $CACHE_KEY"
+        fi
     fi
-  fi
 }
 
 # --- Cleanup logic ---
 cleanup() {
     ACTUAL_STOP=$(date -Iseconds)
-    echo "Stopping live stream at $ACTUAL_STOP" >> "$LOG_FILE"
-    echo "ACTUAL_STOP=$ACTUAL_STOP" >> "$STATUS_FILE"
-    echo "STATUS=stopped" >> "$STATUS_FILE"
+    echo "Stopping live stream at $ACTUAL_STOP" >>"$LOG_FILE"
+    echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
+    echo "STATUS=stopped" >>"$STATUS_FILE"
 
     [[ -f "$HLS_PLAYLIST" ]] && rm "$HLS_PLAYLIST"
     [[ -d "$HLS_DIR" ]] && rm -rf "$HLS_DIR"
@@ -100,8 +121,8 @@ ffmpeg -loglevel info \
     "$HLS_PLAYLIST" 2>&1 &
 PID=$!
 
-echo "PID=$PID" >> "$STATUS_FILE"
-echo "FFmpeg PID $PID started at $STARTED_AT" >> "$LOG_FILE"
+echo "PID=$PID" >>"$STATUS_FILE"
+echo "FFmpeg PID $PID started at $STARTED_AT" >>"$LOG_FILE"
 
 wait $PID
 EXIT_CODE=$?
