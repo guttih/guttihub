@@ -224,9 +224,9 @@ send_cleanup_report() {
         if curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
             -H "Content-Type: application/json" \
             -d "{\"cacheKey\":\"$CACHE_KEY\"}" >/dev/null; then
-            echo "✅ Cleanup report sent." >>"$LOG_FILE"
+            echo "✅ Cleanup report sent for job $CACHE_KEY" >>"$LOG_FILE"
         else
-            echo "❌ Cleanup report failed (exit $?)" >>"$LOG_FILE"
+            echo "❌ Cleanup report failed (exit $?) for job $CACHE_KEY" >>"$LOG_FILE"
         fi
     else
         echo "⚠️ BASE_URL not set — skipping cleanup report" >>"$LOG_FILE"

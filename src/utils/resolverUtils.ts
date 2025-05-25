@@ -4,17 +4,22 @@ import fs from "fs/promises";
 import * as fsSync from "fs"; //todo: we should only use fs/promises I think
 import path from "path";
 import {
+    getJobsDir,
+    getCacheDir,
+    getWorkDir,
+    getMediaDir,
     readRecordingJobFile,
     readRecordingJobInfo,
     infoJsonExists,
     readFileRaw,
-    getJobsDir,
+    readJsonFile,
+    writeJsonFile,
     readDownloadJobFile,
     readDownloadJobInfo,
     deleteFileAndForget,
     fileExists,
 } from "@/utils/fileHandler";
-import { getCacheDir, readJsonFile, writeJsonFile } from "@/utils/fileHandler";
+
 import { RecordingJob } from "@/types/RecordingJob";
 import { DownloadJob } from "@/types/DownloadJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
@@ -23,6 +28,8 @@ import { M3UEntry } from "@/types/M3UEntry";
 import { DownloadJobInfo } from "@/types/DownloadJobInfo";
 import { isProcessAlive } from "./process";
 import { getLatestStatus } from "./statusHelpers";
+import { CleanupCandidate } from "@/types/CleanupCandidate";
+import { appConfig } from "@/config/index"; // Import appConfig if needed
 
 export function getBaseUrl(): string {
     const baseUrl = process.env.BASE_URL;
@@ -66,12 +73,11 @@ export function getHumanReadableTimestamp(): string {
 }
 
 function addTimestampBeforeExtension(filePath: string, timestamp: string): string {
-  const dir = path.dirname(filePath);
-  const ext = path.extname(filePath);
-  const base = path.basename(filePath, ext);
-  return path.join(dir, `${base}-${timestamp}${ext}`);
+    const dir = path.dirname(filePath);
+    const ext = path.extname(filePath);
+    const base = path.basename(filePath, ext);
+    return path.join(dir, `${base}-${timestamp}${ext}`);
 }
-
 
 /**
  * Read a recording’s .log file and return an array of non‑empty lines.
@@ -374,8 +380,8 @@ export async function processFinishedDownload(job: DownloadJob): Promise<boolean
     // now clean up
     await deleteDownloadJob(job.recordingId, true);
     // drop any leftover files quietly
-    await Promise.all([deleteFileAndForget(job.logFile),deleteFileAndForget(job.statusFile),]);
-      
+    await Promise.all([deleteFileAndForget(job.logFile), deleteFileAndForget(job.statusFile)]);
+
     return true;
 }
 
@@ -425,7 +431,6 @@ export async function finalizeJobStart(cacheKey: string): Promise<boolean> {
         const timestamp = getHumanReadableTimestamp();
         job.finalOutputFile = addTimestampBeforeExtension(job.finalOutputFile, timestamp);
     }
-    
 
     await fs.rename(job.outputFile, job.finalOutputFile);
 
@@ -462,91 +467,18 @@ export async function processFinishedRecording(job: RecordingJob): Promise<void>
     const removeCasheAlso = job.format === "hls-live";
     await deleteRecordingJob(job.recordingId, removeCasheAlso);
     // drop any leftover files quietly
-    await Promise.all([deleteFileAndForget(job.logFile),deleteFileAndForget(job.statusFile),]);
+    await Promise.all([deleteFileAndForget(job.logFile), deleteFileAndForget(job.statusFile)]);
 }
 
 function deleteJobFiles(job: RecordingJob | DownloadJob): void {
     if (!job) return;
 
-    if (
-        job.outputFile &&
-        job.outputFile !== job.finalOutputFile &&
-        fsSync.existsSync(job.outputFile)
-      ) {
+    if (job.outputFile && job.outputFile !== job.finalOutputFile && fsSync.existsSync(job.outputFile)) {
         deleteFileAndForget(job.outputFile);
-      }
-      
+    }
+
     if (job.statusFile) deleteFileAndForget(job.statusFile);
     if (job.logFile) deleteFileAndForget(job.logFile);
-}
-
-export async function cleanupFinishedJobs(options: { force?: boolean } = {}): Promise<void> {
-    const { force = false } = options;
-    const jobDir = getJobsDir();
-    const now = Date.now();
-    const SEVEN_HOURS_MS = 7 * 60 * 60 * 1000; // 7 hours
-
-    const files = await fs.readdir(jobDir);
-
-    for (const file of files) {
-        // Skip info bundles, these are not job metadata JSONs
-        if (!file.endsWith(".json") || file.includes("-info")) continue;
-
-        const filePath = path.join(jobDir, file);
-        let job: RecordingJob | DownloadJob;
-
-        try {
-            job = await readJsonFile(filePath);
-        } catch (e) {
-            console.warn(`❌ Skipping unreadable job: ${file}`, e);
-            continue;
-        }
-
-        const statusFile = job.statusFile;
-        const finalOutputFile = job.finalOutputFile;
-        const infoFilePath = path.join(jobDir, `${job.recordingId}-info.json`);
-
-        // If force is true, skip the linked files check and just clean up the job
-        if (!force) {
-            // If the job is linked (i.e., the info.json and finalOutputFile exist), skip it
-            if ((await fileExists(infoFilePath)) && (await fileExists(finalOutputFile))) {
-                console.log(`💼 Skipping job ${job.recordingId} — linked job files exist.`);
-                continue; // Skip cleanup for files that are linked
-            }
-        }
-
-        // We now check if the file is older than 7 hours before considering it for deletion
-        const fileAge = now - (await fs.stat(filePath)).mtimeMs;
-        if (fileAge < SEVEN_HOURS_MS) {
-            console.log(`⏳ Skipping file ${file} as it is younger than 7 hours.`);
-            continue; // Skip any files younger than 7 hours
-        }
-
-        // **Ghost Jobs**: If the job has no .info.json or .finalOutputFile, it's a ghost job
-        if (!(await fileExists(infoFilePath)) && !(await fileExists(finalOutputFile))) {
-            console.log(`💀 Deleting ghost job: ${job.recordingId} — no associated files.`);
-            await deleteJobFiles(job);
-            continue; // Skip further processing for this ghost job
-        }
-
-        // **Zombie Jobs**: If the status is not "done," "stopped," or "error," but the job is not running, it’s a zombie job
-        const status = await readJobStatusFile(statusFile);
-        const statusValue = getLatestStatus(status.STATUS);
-        const pidRaw = getLatestStatus(status.PID);
-        const pidAlive = pidRaw ? await isProcessAlive(parseInt(pidRaw, 10)) : false;
-
-        if (["done", "stopped", "error"].includes(statusValue)) {
-            // If the job is "done," proceed with the cleanup
-            console.log(`✅ Deleting completed job: ${job.recordingId}`);
-            await deleteJobFiles(job);
-        } else if (!pidAlive) {
-            // Zombie job, process is dead but marked as still active
-            console.log(`🧟 Deleting zombie job: ${job.recordingId} — process no longer alive.`);
-            await deleteJobFiles(job);
-        } else {
-            console.log(`💤 Skipping active job: ${job.recordingId} — still running.`);
-        }
-    }
 }
 
 // export async function cleanupGhostCacheFiles(force = false): Promise<void> {
@@ -620,4 +552,245 @@ export function getFinalOutputFilename(entry: M3UEntry, fallbackExtension = "mp4
     }
 
     return `${baseName}.${extension}`;
+}
+
+async function cleanOldCacheFiles(maxAgeMs: number): Promise<void> {
+    const files = await fs.readdir(getCacheDir());
+    const candidates = files.filter((f) => f.startsWith("cache-") && f.endsWith(".json"));
+    const usedKeys = new Set((await fs.readdir(getJobsDir())).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")));
+
+    for (const file of candidates) {
+        const fullPath = path.join(getCacheDir(), file);
+        const stat = await fs.stat(fullPath);
+        if (Date.now() - stat.mtimeMs > maxAgeMs && !usedKeys.has(file.replace(".json", ""))) {
+            console.log(`🪓🧊cache : ${fullPath}`);
+            await deleteFileAndForget(fullPath);
+        }
+    }
+}
+
+async function cleanOldJobInfoFiles(maxAgeMs: number): Promise<void> {
+    const files = await fs.readdir(getJobsDir());
+    for (const file of files) {
+        if (!file.endsWith("-info.json")) continue;
+        const fullPath = path.join(getJobsDir(), file);
+        const stat = await fs.stat(fullPath);
+        const jobId = file.replace("-info.json", "");
+        const correspondingFinalFile = path.join(getMediaDir(), `${jobId}.json`);
+
+        if (Date.now() - stat.mtimeMs > maxAgeMs && !(await fileExists(correspondingFinalFile))) {
+            console.log(`🪓💡Info  : ${fullPath}`);
+            await deleteFileAndForget(fullPath);
+        }
+    }
+}
+
+// async function cleanOrphanedWorkFiles(maxAgeMs: number): Promise<void> {
+//     const files = await fs.readdir(getWorkDir());
+//     const trackedFinals = new Set((await fs.readdir(getJobsDir())).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")));
+
+//     for (const file of files) {
+//         if (!/\.(log|status|part)$/.test(file)) continue;
+//         const fullPath = path.join(getWorkDir(), file);
+//         const stat = await fs.stat(fullPath);
+//         const base = file.replace(/\.(log|status|part)$/, "");
+//         if (Date.now() - stat.mtimeMs > maxAgeMs && !trackedFinals.has(base)) {
+//             console.log(`🪓🚧Orphan: ${fullPath}`);
+//             await deleteFileAndForget(fullPath);
+//         }
+//     }
+// }
+
+async function cleanOrphanedWorkFiles(maxAgeMs: number): Promise<void> {
+    const dir = getWorkDir();
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    const trackedFinals = new Set((await fs.readdir(getJobsDir())).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")));
+
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const stat = await fs.stat(fullPath);
+        const age = Date.now() - stat.mtimeMs;
+
+        // 🧼 Cleanup .log, .status, .part files
+        if (entry.isFile() && /\.(log|status|part)$/.test(entry.name)) {
+            const baseWithExt = entry.name.replace(/\.(log|status|part)$/, ""); // e.g. download-foo.mkv
+            const base = baseWithExt.replace(/\.\w+$/, ""); // strips .mkv/.mp4/.ts
+            if (age > maxAgeMs && !trackedFinals.has(base)) {
+                console.log(`🪓 Orphan file: ${fullPath}`);
+                await deleteFileAndForget(fullPath);
+            }
+        }
+
+        // 🧼 Cleanup *_hls/ directories
+        if (entry.isDirectory() && entry.name.endsWith("_hls")) {
+            const base = entry.name.replace(/-?playlist?_?hls$/, ""); // fallback regex
+            if (age > maxAgeMs && !trackedFinals.has(base)) {
+                console.log(`🧹 Orphan HLS dir: ${fullPath}`);
+                await fs.rm(fullPath, { recursive: true, force: true });
+            }
+        }
+    }
+}
+
+async function cleanOrphanedMediaJson(maxAgeMs: number): Promise<void> {
+    const files = await fs.readdir(getMediaDir());
+
+    for (const file of files) {
+        if (!file.endsWith(".json")) continue;
+
+        const fullPath = path.join(getMediaDir(), file);
+        const stat = await fs.stat(fullPath);
+        const age = Date.now() - stat.mtimeMs;
+
+        const correspondingMediaFile = fullPath.replace(/\.json$/, ""); // strip only last `.json`
+
+        if (age > maxAgeMs && !(await fileExists(correspondingMediaFile))) {
+            console.log(`🪓🎬 Orphan media .json: ${fullPath}`);
+            await deleteFileAndForget(fullPath);
+        }
+    }
+}
+
+/**
+ * Delete any .json file that is more than 8 hours old and does not point existing finalOutputFile
+ *
+ */
+
+export async function deleteOldDanglingJobs(force: boolean = false): Promise<void> {
+    // We need to search in 4 folders for these files:
+    // 1. cache dir
+    //   - .cache/cache-1747469404211-d7e0ba2e-edf9-40d4-9b0c-a2b81aa9d791.json
+    //   - Search criteria: older than 8 hours and match .cache/cache-*.json -> dir = getCacheDir()
+    // 2. jobs dir, example:
+    //   - .cache/recording-jobs/cache-1747486473910-7b2415a9-ce17-474a-9b5b-4988be092e46.json
+    //   - .cache/recording-jobs/download-250517T125433-897760.mkv-info.json
+    //   - .cache/recording-jobs/download-250513T200235-1204237.mkv-info.json
+    //   - .cache/recording-jobs/live-250511T235806-1290307-info.json
+    //   - .cache/recording-jobs/recording-250513T201125-64374.mp4-info.json
+    //   - Search criteria: older than 8 hours and match .cache/recording-jobs/[cache-|download-|live-|recording-]*.json
+    //       - For each file selected for deletion, check if the finalOutputFile exists
+    // 4. work dir, example:
+    //   - public/videos/recordings/download-250523T205521-471517.mkv.log
+    //   - public/videos/recordings/download-250523T205521-471517.mkv.part
+    //   - public/videos/recordings/download-250523T205521-471517.mkv.status
+    //   - public/videos/recordings/recording-250513T201125-64374.mp4.log
+    // 4. media dir, example:
+    //   - public/videos/media/4k-a_-_the_big_cigar_2024_s01_e06.mkv.json
+    //   - Search criteria: older than 8 hours and match public/videos/media/*.json
+
+    // probably It would be best to create atleast 4 separate functions for each of these directories
+    // and porbably we should create helper functions that accept a RecordingJob or DownloadJob and delete associated files without question
+
+    const maxAgeMs = force ? 0 : appConfig.minCleanupAgeMs;
+    console.log(`🧹 Cleaning up old dangling jobs older than ${maxAgeMs / (1000 * 60)} minutes...`);
+    await Promise.all([
+        cleanOldCacheFiles(maxAgeMs),
+        cleanOldJobInfoFiles(maxAgeMs),
+        cleanOrphanedWorkFiles(maxAgeMs),
+        cleanOrphanedMediaJson(maxAgeMs),
+    ]);
+}
+
+export async function findJobsToCleanup(force = false): Promise<CleanupCandidate[]> {
+    const jobDir = getJobsDir();
+    const now = Date.now();
+    const MIN_CLEANUP_AGE_MS = appConfig.minCleanupAgeMs; // 8 hours
+
+    const files = (await fs.readdir(jobDir)).filter((f) => f.endsWith(".json") && !f.includes("-info"));
+    const result: CleanupCandidate[] = [];
+
+    for (const file of files) {
+        const filePath = path.join(jobDir, file);
+        const job = await readJsonFile<RecordingJob | DownloadJob>(filePath);
+        const infoPath = path.join(jobDir, `${job.recordingId}-info.json`);
+        const finalPath = job.finalOutputFile;
+        const age = now - (await fs.stat(filePath)).mtimeMs;
+
+        if (!force && (await fileExists(infoPath)) && (await fileExists(finalPath))) continue;
+        if (age < MIN_CLEANUP_AGE_MS && !force) continue;
+
+        const status = await readJobStatusFile(job.statusFile);
+        const state = normalizeStatus(getLatestStatus(status.STATUS));
+        const pidAlive = await isProcessAlive(parseInt(getLatestStatus(status.PID) || "0", 10));
+
+        if (!(await fileExists(infoPath)) && !(await fileExists(finalPath))) {
+            result.push({ job, reason: "ghost", fullPath: filePath });
+        } else if (!pidAlive && !["done", "stopped", "error"].includes(state)) {
+            result.push({ job, reason: "zombie", fullPath: filePath });
+        } else if (["done", "stopped", "error"].includes(state)) {
+            result.push({ job, reason: "done", fullPath: filePath });
+        } else if (force) {
+            result.push({ job, reason: "forced", fullPath: filePath });
+        }
+    }
+
+    return result;
+}
+
+export async function deleteJobCompletely(job: RecordingJob | DownloadJob): Promise<void> {
+    const isDownload = "url" in job;
+
+    // Delete main job file (and .cache if needed)
+    if (isDownload) {
+        console.log(`🗑️ deleteDownloadJob(${job.recordingId}, true);`); // TODO: remove line
+        await deleteDownloadJob(job.recordingId, true);
+    } else {
+        console.log(`🗑️ deleteRecordingJob(${job.recordingId}, true);`); //TODO: remove line
+        await deleteRecordingJob(job.recordingId, true);
+    }
+
+    // Delete additional artifacts (logs, part, hls dir, info bundles, etc.)
+    const extras = getExtraJobArtifacts(job, true);
+
+    for (const file of extras) {
+        if (await fileExists(file)) {
+            if (fsSync.statSync(file).isDirectory()) {
+                console.log(`🧨 Deleting directory (${file}`); // TODO: remove line
+                await fs.rm(file, { recursive: true, force: true });
+            } else {
+                console.log(`🧨🧨 file (${file}`); // TODO: remove line
+                await deleteFileAndForget(file);
+            }
+        }
+    }
+}
+
+export async function cleanupFinishedJobs(options: { force?: boolean } = {}): Promise<void> {
+    const jobs = await findJobsToCleanup(options.force ?? false);
+    for (const { job, reason, fullPath } of jobs) {
+        console.log(`🧹 Cleaning up job ${job.recordingId} due to: ${reason}`);
+        await deleteJobCompletely(job);
+
+        // if delteJobCompletely did not delete the job file it self, we delete it here
+        if (await fileExists(fullPath)) {
+            console.log(`🗑️ Deleting job file: ${fullPath}`);
+            await deleteFileAndForget(fullPath);
+        }
+    }
+
+    deleteOldDanglingJobs();
+}
+
+function getExtraJobArtifacts(job: RecordingJob | DownloadJob, skipMediaInfo: boolean = true): string[] {
+    const paths: string[] = [];
+    if (job.logFile) paths.push(job.logFile);
+    if (job.statusFile) paths.push(job.statusFile);
+    if (job.outputFile && job.outputFile !== job.finalOutputFile) paths.push(job.outputFile);
+
+    if (!fsSync.existsSync(job.finalOutputFile) || !skipMediaInfo) {
+        paths.push(`${job.finalOutputFile}.json`); //we will always delete if finalOutputFile does not exist
+    }
+    paths.push(path.join(getJobsDir(), `${job.recordingId}-info.json`));
+    paths.push(`${job.finalOutputFile}.part`);
+
+    const workDir = getWorkDir();
+    const workFiles = fsSync.readdirSync(workDir);
+    for (const f of workFiles) {
+        if (f.startsWith(job.recordingId) && f.endsWith("_hls")) {
+            paths.push(path.join(workDir, f));
+        }
+    }
+
+    return paths;
 }

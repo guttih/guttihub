@@ -3,7 +3,7 @@
 // Correcting the second argument to the handler function to match the expected type for Next.js.
 
 import { NextRequest, NextResponse } from "next/server";
-import { cleanupFinishedJobs, finalizeJobStart } from "@/utils/resolverUtils";
+import { cleanupFinishedJobs, deleteOldDanglingJobs, finalizeJobStart } from "@/utils/resolverUtils";
 
 // Corrected POST function signature with dynamic params
 export async function POST(req: NextRequest) {
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, error: "Job finalization failed" }, { status: 500 });
         }
         await cleanupFinishedJobs();
+        deleteOldDanglingJobs();
 
         return NextResponse.json({
             success: true,

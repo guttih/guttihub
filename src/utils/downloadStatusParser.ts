@@ -9,6 +9,7 @@ export function extractLatestDownloadProgressPercent(logLines: string[]): number
 }
 
 export function formatBytes(bytes: number): string {
+    if (typeof bytes !== "number" || isNaN(bytes)) return "N/A";
     const units = ["B", "KB", "MB", "GB", "TB"];
     let i = 0;
     while (bytes >= 1024 && i < units.length - 1) {

@@ -68,14 +68,15 @@ export async function deleteFile(filePath: string): Promise<void> {
     }
 }
 
-export async function deleteFileAndForget(filePath: string) {
-    try {
-        if (await existsSync(filePath)) {
-            fs.unlink(filePath);
-        }
-    } catch {
-        // Ignore errors
+export function deleteFileAndForget(filePath: string): Promise<void> {
+    if (filePath.endsWith(".mp4") || filePath.endsWith(".mkv")) {
+        // If it's a media file, we don't want to delete it silently
+        console.warn(`⚠️ Deleting media file ${filePath} silently is not recommended.`);
     }
+
+    return fs.unlink(filePath).catch(() => {
+        // Silently ignore all errors: ENOENT, EACCES, EPERM, etc.
+    });
 }
 
 export async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
