@@ -2,7 +2,6 @@
 
 import fs from "fs/promises";
 import path from "path";
-import * as fsSync from "fs";
 
 import { fileExists, writeJsonFile, deleteFileAndForget } from "@/utils/fileHandler";
 import { getJobsDir } from "@/utils/fileHandler";

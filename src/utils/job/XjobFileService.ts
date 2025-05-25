@@ -6,7 +6,6 @@ import { getJobsDir, getCacheDir, writeJsonFile, readJsonFile, deleteFileAndForg
 import { RecordingJob } from "@/types/RecordingJob";
 import { DownloadJob } from "@/types/DownloadJob";
 import { Job } from "@/types/Job";
-import { XisDownloadJob } from "./XjobClassifier";
 
 /** Generic job read */
 export async function XreadJobFile<T extends Job = Job>(cacheKey: string): Promise<T> {
