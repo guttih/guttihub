@@ -2,17 +2,15 @@
 
 import fs from "fs/promises";
 import path from "path";
-import { promises as fsSync } from "fs";
 
 import { fileExists, deleteFileAndForget, readJsonFile } from "@/utils/fileHandler";
 import { getCacheDir, getJobsDir, getWorkDir, getMediaDir } from "@/utils/fileHandler";
-import { Job } from "@/types/Job";
 import { appConfig } from "@/config/index";
 import { DownloadJob } from "@/types/DownloadJob";
 import { RecordingJob } from "@/types/RecordingJob";
 import { CleanupCandidate } from "@/types/CleanupCandidate";
 import { isProcessAlive } from "@/utils/process";
-import { getLatestStatus } from "@/utils/statusHelpers"; // legacy; might move to XjobStatusHelpers
+import { getLatestStatus, StatusValue } from "@/utils/statusHelpers"; // legacy; might move to XjobStatusHelpers
 import { XnormalizeStatus } from "./XjobStatusHelpers";
 
 export async function XdeleteOldDanglingJobs(force = false): Promise<void> {
@@ -40,7 +38,8 @@ export async function XfindJobsToCleanup(force = false): Promise<CleanupCandidat
         if (!force && (await fileExists(infoPath)) && (await fileExists(final))) continue;
         if (age < maxAge && !force) continue;
 
-        const status = await readJsonFile(job.statusFile).catch(() => ({}));
+        const status: Record<string, StatusValue> = await readJsonFile<Record<string, StatusValue>>(job.statusFile).catch(() => ({}));
+
         const state = XnormalizeStatus(getLatestStatus(status.STATUS));
         const pid = parseInt(getLatestStatus(status.PID) || "0", 10);
         const alive = await isProcessAlive(pid);

@@ -1,33 +1,35 @@
 // src/utils/job/XenrichedJobHelpers.ts
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
-import { XreadJobFile } from "@/utils/job/jobFileService";
 import { readStatusFile } from "@/utils/fileHandler";
 import { isProcessAlive } from "@/utils/process";
-import { isDownloadJob, isMovieJob, isRecordingJob, Job } from "@/types/Job";
+import { Job } from "@/types/Job";
 import { DownloadStatus } from "@/types/DownloadStatus";
 import { EnrichedJob } from "@/types/EnrichedJob";
 import { RecordingJob } from "@/types/RecordingJob";
 import { DownloadJob } from "@/types/DownloadJob";
 import { MovieJob } from "@/types/MovieJob";
 import { M3UEntry } from "@/types/M3UEntry";
-import { readDownloadJobFile } from "@/utils/fileHandler"; // legacy fallback for now
 import { XreadCachedEntry } from "@/utils/job/XreadCachedEntry";
+import { XisDownloadJob, XisMovieJob, XisRecordingJob } from "./XjobClassifier";
+import { XreadDownloadJob } from "./XjobFileService";
+import { XresolveJobEntry } from "./XjobEntryHelpers";
+
 /**
  * Smart dispatcher for enriching any known job type.
  */
 export async function XenrichJob(job: Job): Promise<EnrichedJob | null> {
     if (!job) return null;
 
-    if (isDownloadJob(job)) {
+    if (XisDownloadJob(job)) {
         const status = await XgetDownloadJobStatus(job);
         if (status) return await XenrichDownloadJob(status);
     }
 
-    if (isMovieJob(job)) {
+    if (XisMovieJob(job)) {
         return await XenrichMovieJob(job);
     }
 
-    if (isRecordingJob(job)) {
+    if (XisRecordingJob(job)) {
         return await XenrichRecordingJob(job);
     }
 
@@ -59,19 +61,25 @@ export async function XenrichMovieJob(job: MovieJob): Promise<EnrichedJob> {
 }
 
 export async function XenrichRecordingJob(job: RecordingJob): Promise<EnrichedJob> {
-    const entry = job.entry || (await XreadCachedEntry(job.cacheKey));
+    const entry = await XresolveJobEntry(job.entry, job.cacheKey);
     const status = await readStatusFile(job.statusFile);
-    const pidAlive = status?.PID ? await isProcessAlive(parseInt(status.PID)) : false;
 
-    let finalStatus = status?.STATUS ?? "unknown";
-    if (finalStatus === "recording" && !pidAlive) {
-        finalStatus = "error";
+    let pid: number | null = null;
+    if (status?.PID) {
+        pid = parseInt(status.PID, 10);
     }
 
-    const resolver = new StreamingServiceResolver();
-    const server = entry?.url ? StreamingServiceResolver.extractServerFromUrl(entry.url) : null;
-    const service = server ? resolver.findByServer(server) : null;
+    const alive = pid ? await isProcessAlive(pid) : false;
 
+    const resolver = new StreamingServiceResolver();
+    const service = entry ? StreamingServiceResolver.extractServerFromUrl(entry.url) : null;
+    const found = service ? resolver.findByServer(service) : null;
+    const name = found?.name ?? "Unknown Service";
+
+    let finalStatus = status?.STATUS || "unknown";
+    if (finalStatus === "recording" && !alive) {
+        finalStatus = "error";
+    }
     return {
         recordingId: job.recordingId,
         cacheKey: job.cacheKey,
@@ -90,7 +98,7 @@ export async function XenrichRecordingJob(job: RecordingJob): Promise<EnrichedJo
 }
 
 export async function XenrichDownloadJob(status: DownloadStatus): Promise<EnrichedJob> {
-    const job = await readDownloadJobFile(status.cacheKey); // Can be XreadJobFile if legacy removed
+    const job = await XreadDownloadJob(status.cacheKey); // Can be XreadJobFile if legacy removed
 
     const resolver = new StreamingServiceResolver();
     const server = job.entry?.url ? StreamingServiceResolver.extractServerFromUrl(job.entry.url) : null;

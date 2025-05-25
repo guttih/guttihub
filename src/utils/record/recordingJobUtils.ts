@@ -3,40 +3,28 @@
 import { RecordingJob } from "@/types/RecordingJob";
 import { DownloadStatus } from "@/types/DownloadStatus";
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
-import {
-    fileExists,
-    getCacheDir,
-    getJobsDir,
-    readFileRaw,
-    readJsonFile,
-    readStatusFile,
-    readDownloadJobFile,
-    ensureDownloadJobsDir,
-} from "@/utils/fileHandler";
-import { isProcessAlive } from "@/utils/process";
+import { fileExists, getJobsDir, readFileRaw, readStatusFile, ensureDownloadJobsDir } from "@/utils/fileHandler";
 import path from "path";
 import fs from "fs/promises";
 import { parseLatestStatus } from "@/utils/resolverUtils";
 import { MovieJob } from "@/types/MovieJob";
-import { M3UEntry } from "@/types/M3UEntry";
 import { DownloadJob } from "@/types/DownloadJob";
 import { getMovieConsumers } from "@/utils/concurrency";
-import { EnrichedJob } from "@/types/EnrichedJob";
-import { XenrichDownloadJob, XenrichMovieJob, XenrichRecordingJob } from "../job/XenrichedJobHelpers";
+import { XreadDownloadJob } from "../job/XjobFileService";
 
-export async function readCashedEntryFile(cacheKey: string): Promise<M3UEntry | null> {
-    const dir = getCacheDir();
-    const recordingPath = `${dir}/${cacheKey}.json`;
-    try {
-        if (await fileExists(recordingPath)) {
-            return await readJsonFile<M3UEntry>(recordingPath);
-        } else {
-            return null;
-        }
-    } catch {
-        return null;
-    }
-}
+// export async function readCashedEntryFile(cacheKey: string): Promise<M3UEntry | null> {
+//     const dir = getCacheDir();
+//     const recordingPath = `${dir}/${cacheKey}.json`;
+//     try {
+//         if (await fileExists(recordingPath)) {
+//             return await readJsonFile<M3UEntry>(recordingPath);
+//         } else {
+//             return null;
+//         }
+//     } catch {
+//         return null;
+//     }
+// }
 
 export async function isPidRunningFromStatus(statusFilePath: string): Promise<boolean> {
     try {
@@ -139,7 +127,7 @@ export async function getActiveDownloadJobs(): Promise<DownloadJob[]> {
             try {
                 //remove the .json extension
                 const cacheKey = path.basename(file, ".json");
-                const job = await readDownloadJobFile(cacheKey);
+                const job = await XreadDownloadJob(cacheKey);
                 if (!job.url || !job.statusFile || !(await fileExists(job.statusFile))) continue;
 
                 const content = await fs.readFile(job.statusFile, "utf-8");
@@ -180,39 +168,39 @@ export async function getActiveDownloadJobs(): Promise<DownloadJob[]> {
  * Enrich a RecordingJob (for live/scheduled recordings)
  */
 
-async function getAcriveDownloadJobStatus(job: DownloadJob): Promise<DownloadStatus | null> {
-    //remove the .json extension
-    try {
-        if (!job.url || !job.statusFile || !(await fileExists(job.statusFile))) return null;
+// async function getAcriveDownloadJobStatus(job: DownloadJob): Promise<DownloadStatus | null> {
+//     //remove the .json extension
+//     try {
+//         if (!job.url || !job.statusFile || !(await fileExists(job.statusFile))) return null;
 
-        const content = await fs.readFile(job.statusFile, "utf-8");
-        const lines = content.split("\n").filter(Boolean);
+//         const content = await fs.readFile(job.statusFile, "utf-8");
+//         const lines = content.split("\n").filter(Boolean);
 
-        const raw = Object.fromEntries(
-            lines.map((line) => {
-                const [key, ...rest] = line.split("=");
-                return [key, rest.join("=")];
-            })
-        ) as { [key: string]: string };
+//         const raw = Object.fromEntries(
+//             lines.map((line) => {
+//                 const [key, ...rest] = line.split("=");
+//                 return [key, rest.join("=")];
+//             })
+//         ) as { [key: string]: string };
 
-        const jobStatus: DownloadStatus = {
-            cacheKey: job.cacheKey,
-            STATUS: raw.STATUS,
-            STARTED_AT: raw.STARTED_AT,
-            URL: raw.URL,
-            OUTPUT_FILE: raw.OUTPUT_FILE,
-            USER: raw.USER,
-            PID: raw.PID,
-        };
+//         const jobStatus: DownloadStatus = {
+//             cacheKey: job.cacheKey,
+//             STATUS: raw.STATUS,
+//             STARTED_AT: raw.STARTED_AT,
+//             URL: raw.URL,
+//             OUTPUT_FILE: raw.OUTPUT_FILE,
+//             USER: raw.USER,
+//             PID: raw.PID,
+//         };
 
-        if (jobStatus.STATUS === "downloading") {
-            return jobStatus;
-        }
-    } catch {
-        return null; // Not required, but explicit
-    }
-    return null;
-}
+//         if (jobStatus.STATUS === "downloading") {
+//             return jobStatus;
+//         }
+//     } catch {
+//         return null; // Not required, but explicit
+//     }
+//     return null;
+// }
 
 // export async function enrichJob(job: RecordingJob | DownloadJob | MovieJob) {
 //     if (!job) return null;
@@ -297,7 +285,7 @@ async function getAcriveDownloadJobStatus(job: DownloadJob): Promise<DownloadSta
  * Enrich a Download job (for download manager)
  */
 export async function enrichDownloadJob(job: DownloadStatus) {
-    const downloadJob = await readDownloadJobFile(job.cacheKey);
+    const downloadJob = await XreadDownloadJob(job.cacheKey);
     const status = await readStatusFile(`${downloadJob.outputFile}.status`);
 
     const resolver = new StreamingServiceResolver();

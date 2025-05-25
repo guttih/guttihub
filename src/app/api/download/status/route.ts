@@ -3,22 +3,22 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
-import { getDownloadJobInfo } from "@/utils/resolverUtils";
+import { XgetDownloadJobInfo } from "@/utils/job/XgetJobInfo";
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
- const recordingId = searchParams.get("recordingId");
-  const cacheKey = searchParams.get("cacheKey");
-  if (!cacheKey && !recordingId ) return NextResponse.json({ error: "Missing cacheKey and recordingId" }, { status: 400 });
+    const { searchParams } = new URL(req.url);
+    const recordingId = searchParams.get("recordingId");
+    const cacheKey = searchParams.get("cacheKey");
+    if (!cacheKey && !recordingId) return NextResponse.json({ error: "Missing cacheKey and recordingId" }, { status: 400 });
 
-  try {
-    const info = await getDownloadJobInfo(cacheKey, cacheKey);
-    return NextResponse.json(info.status);
-  } catch (err) {
-    console.warn("Failed to load download status for", cacheKey, err);
-    return NextResponse.json({ error: "Status unavailable" });
-  }
+    try {
+        const info = await XgetDownloadJobInfo(cacheKey, cacheKey);
+        return NextResponse.json(info.status);
+    } catch (err) {
+        console.warn("Failed to load download status for", cacheKey, err);
+        return NextResponse.json({ error: "Status unavailable" });
+    }
 }

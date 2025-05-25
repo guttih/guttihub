@@ -58,7 +58,6 @@ export async function getCombinedActiveCount(serviceId: string): Promise<number>
     const jobs = await getActiveLiveJobs();
     let liveCount = 0;
     for (const job of jobs) {
-        // const entry = await readCashedEntryFile(job.cacheKey);
         if (!job.entry) continue;
         const svc = resolver.findByViewingUrl(job.entry.url);
         if (svc?.id === serviceId) {

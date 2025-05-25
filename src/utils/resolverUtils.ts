@@ -7,31 +7,28 @@ import {
     getJobsDir,
     getCacheDir,
     getWorkDir,
-    getMediaDir,
-    readRecordingJobFile,
     readRecordingJobInfo,
     infoJsonExists,
     readFileRaw,
     readJsonFile,
-    readDownloadJobFile,
-    readDownloadJobInfo,
     deleteFileAndForget,
     fileExists,
 } from "@/utils/fileHandler";
 
 import { RecordingJob } from "@/types/RecordingJob";
 import { DownloadJob } from "@/types/DownloadJob";
-import { RecordingJobInfo } from "@/types/RecordingJobInfo";
+import { RecordingJobInfo } from "@/types/JobInfo";
 import { getActiveLiveJobs } from "@/utils/record/recordingJobUtils";
 import { M3UEntry } from "@/types/M3UEntry";
-import { DownloadJobInfo } from "@/types/DownloadJobInfo";
 import { isProcessAlive } from "./process";
 import { getLatestStatus } from "./statusHelpers";
 import { CleanupCandidate } from "@/types/CleanupCandidate";
 import { appConfig } from "@/config/index"; // Import appConfig if needed
 import { XprocessFinishedRecording } from "./job/XjobFinalizer";
-import { XreadJobStatusFile } from "./job/XjobStatusHelpers";
+import { parseLog, XreadJobStatusFile } from "./job/XjobStatusHelpers";
 import { XdeleteOldDanglingJobs } from "./job/XcleanupHelpers";
+import { XisDownloadJob } from "./job/XjobClassifier";
+import { XreadRecordingJob } from "./job/XjobFileService";
 
 export function getBaseUrl(): string {
     const baseUrl = process.env.BASE_URL;
@@ -205,11 +202,11 @@ export async function getRecordingJobInfo(cacheKey: string | null, recordingId: 
     if (!cacheKey) {
         throw new Error("Missing cacheKey");
     }
-    const job = await readRecordingJobFile(cacheKey);
+    const job = await XreadRecordingJob(cacheKey);
     const [logText, statusText, entry] = await Promise.all([
         readFileRaw(job.logFile),
         readFileRaw(job.statusFile),
-        (await readRecordingJobFile(`recording-${job.cacheKey}`)).entry,
+        (await XreadRecordingJob(`recording-${job.cacheKey}`)).entry,
     ]);
     return {
         job,
@@ -219,25 +216,25 @@ export async function getRecordingJobInfo(cacheKey: string | null, recordingId: 
     };
 }
 
-export async function getDownloadJobInfo(cacheKey: string | null, recordingId: string | null): Promise<DownloadJobInfo> {
-    if (recordingId && infoJsonExists(recordingId)) {
-        return await readDownloadJobInfo(recordingId); // ✅ now returns correct type
-    }
+// export async function getDownloadJobInfo(cacheKey: string | null, recordingId: string | null): Promise<DownloadJobInfo> {
+//     if (recordingId && infoJsonExists(recordingId)) {
+//         return await readDownloadJobInfo(recordingId); // ✅ now returns correct type
+//     }
 
-    if (!cacheKey) {
-        throw new Error("Missing cacheKey");
-    }
+//     if (!cacheKey) {
+//         throw new Error("Missing cacheKey");
+//     }
 
-    const job = await readDownloadJobFile(cacheKey);
-    const [logText, statusText] = await Promise.all([readFileRaw(job.logFile), readFileRaw(job.statusFile)]);
+//     const job = await XreadDownloadJob(cacheKey);
+//     const [logText, statusText] = await Promise.all([readFileRaw(job.logFile), readFileRaw(job.statusFile)]);
 
-    return {
-        job,
-        entry: job.entry,
-        logs: parseLog(logText),
-        status: parseStatus(statusText),
-    };
-}
+//     return {
+//         job,
+//         entry: job.entry,
+//         logs: parseLog(logText),
+//         status: parseStatus(statusText),
+//     };
+// }
 
 /**
  * Looks up the recordingId that matches the given cacheKey.
@@ -277,12 +274,12 @@ export function parseLatestStatus(text: string): Record<string, string> {
 /**
  * Parse raw log text into non‑empty lines.
  */
-export function parseLog(text: string): string[] {
-    return text
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-}
+// export function parseLog(text: string): string[] {
+//     return text
+//         .split(/\r?\n/)
+//         .map((l) => l.trim())
+//         .filter((l) => l.length > 0);
+// }
 
 export async function deleteRecordingJob(recordingId: string, removeCasheAlso: boolean): Promise<void> {
     const jobFilePath = path.join(getJobsDir(), `${recordingId}.json`);
@@ -731,7 +728,7 @@ export async function findJobsToCleanup(force = false): Promise<CleanupCandidate
 }
 
 export async function deleteJobCompletely(job: RecordingJob | DownloadJob): Promise<void> {
-    const isDownload = "url" in job;
+    const isDownload = XisDownloadJob(job);
 
     // Delete main job file (and .cache if needed)
     if (isDownload) {

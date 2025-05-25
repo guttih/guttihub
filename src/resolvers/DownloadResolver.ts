@@ -2,9 +2,10 @@
 
 import { spawn } from "child_process";
 import { buildRecordingId, getBaseUrl, getExtensionFromUrl, getFinalOutputFilename } from "@/utils/resolverUtils";
-import { ensureMediaDir, getMediaDir, getScriptPath, getWorkDir, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
+import { ensureMediaDir, getMediaDir, getScriptPath, getWorkDir, writeDownloadingJobFile } from "@/utils/fileHandler";
 import { M3UEntry } from "@/types/M3UEntry";
 import { DownloadJob } from "@/types/DownloadJob";
+import { XreadJobFile } from "@/utils/job/XjobFileService";
 
 export class DownloadResolver {
     static scriptDownload = getScriptPath("download.sh");
@@ -83,7 +84,7 @@ export class DownloadResolver {
 
     static async stopDownload(cacheKey: string): Promise<{ success: boolean; message?: string; error?: string }> {
         try {
-            const job = await readDownloadJobFile(cacheKey);
+            const job = await XreadJobFile<DownloadJob>(cacheKey);
             if (!job) throw new Error("Download job not found");
 
             const args = ["--outputFile", job.outputFile];

@@ -8,12 +8,11 @@ import { fileExists, writeJsonFile, deleteFileAndForget } from "@/utils/fileHand
 import { getJobsDir } from "@/utils/fileHandler";
 import { getHumanReadableTimestamp } from "@/utils/resolverUtils";
 
-import { Job, isDownloadJob, isRecordingJob } from "@/types/Job";
+import { Job } from "@/types/Job";
 import { RecordingJob } from "@/types/RecordingJob";
-import { DownloadJob } from "@/types/DownloadJob";
-import { XreadJobFile } from "./jobFileService";
 import { readJobLogFile } from "@/utils/resolverUtils";
 import { XreadJobStatusFile } from "./XjobStatusHelpers";
+import { XisDownloadJob, XisRecordingJob } from "./XjobClassifier";
 
 export async function XfinalizeJob(job: Job): Promise<boolean> {
     const { logs, status } = await XloadJobMeta(job);
@@ -75,7 +74,7 @@ export async function XloadJobMeta(job: Job): Promise<{ logs: string[]; status: 
 }
 
 export async function XdeleteJobArtifacts(job: Job, removeCache: boolean = false): Promise<void> {
-    if (isDownloadJob(job) || isRecordingJob(job)) {
+    if (XisDownloadJob(job) || XisRecordingJob(job)) {
         const jobPath = path.join(getJobsDir(), `${job.recordingId}.json`);
         if (await fileExists(jobPath)) {
             await deleteFileAndForget(jobPath);

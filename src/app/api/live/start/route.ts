@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { getRecordingIdByCacheKey } from "@/utils/resolverUtils";
 import { readCashedEntryFile } from "@/utils/record/recordingJobUtils";
 import { LiveResolver } from "@/resolvers/LiveResolver";
+import { XresolveJobEntry } from "@/utils/job/XjobEntryHelpers";
 
 export async function POST(req: NextRequest) {
     const { cacheKey, user } = await req.json();
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const entry = await readCashedEntryFile(cacheKey);
+        const entry = await XresolveJobEntry(undefined, cacheKey);
         if (!entry) {
             return new Response(JSON.stringify({ error: "Invalid or expired cache key" }), { status: 404 });
         }

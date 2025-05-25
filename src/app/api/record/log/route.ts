@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
-import { getRecordingJobInfo } from "@/utils/resolverUtils";
+import { XgetRecordingJobInfo } from "@/utils/job/XgetJobInfo";
 
 export async function GET(req: Request) {
     // auth boilerplate…
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     if (!recordingId) return NextResponse.json({ error: "Missing recordingId" }, { status: 400 });
 
     try {
-        const info = await getRecordingJobInfo(cacheKey, recordingId);
+        const info = await XgetRecordingJobInfo(cacheKey, recordingId);
         return NextResponse.json({ log: info.logs.join("\n") });
     } catch (err) {
         console.warn("Failed to load logs for", recordingId, err);

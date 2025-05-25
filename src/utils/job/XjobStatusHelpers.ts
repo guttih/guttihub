@@ -95,3 +95,13 @@ export function XhumanizeStatus(raw: string): string {
             return "Unknown";
     }
 }
+
+/**
+ * Parses a raw log file string into trimmed non-empty lines.
+ */
+export function parseLog(logText: string): string[] {
+    return logText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+}

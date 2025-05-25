@@ -1,11 +1,13 @@
 // src/app/api/download/monitor/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { readDownloadJobFile, readDownloadJobInfo } from "@/utils/fileHandler";
+import { readDownloadJobInfo } from "@/utils/fileHandler";
 import { infoJsonExists } from "@/utils/fileHandler";
 import { readJobLogFile } from "@/utils/resolverUtils";
 import { extractLatestDownloadProgressPercent } from "@/utils/downloadStatusParser";
 import { XreadJobStatusFile } from "@/utils/job/XjobStatusHelpers";
+import { DownloadJob } from "@/types/DownloadJob";
+import { XreadJobFile } from "@/utils/job/XjobFileService";
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -35,7 +37,7 @@ export async function GET(req: NextRequest) {
         }
 
         // 🧠 Still live
-        const job = await readDownloadJobFile(cacheKey!);
+        const job = await XreadJobFile<DownloadJob>(cacheKey!);
         const statusLinesRaw = await XreadJobStatusFile(job.statusFile); // reuseable
         const logLinesRaw = await readJobLogFile(job.logFile); // reuseable
         const progressPercent = extractLatestDownloadProgressPercent(logLinesRaw);

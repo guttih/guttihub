@@ -1,10 +1,11 @@
+// src/utils/fileHandler.ts
+
 import fs from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import { DownloadJob } from "@/types/DownloadJob";
 import { RecordingJob } from "@/types/RecordingJob";
-import { RecordingJobInfo } from "@/types/RecordingJobInfo";
-import { DownloadJobInfo } from "@/types/DownloadJobInfo";
+import { RecordingJobInfo, DownloadJobInfo } from "@/types/JobInfo";
 import { outDirectories } from "@/config";
 
 /**
@@ -145,15 +146,15 @@ export async function writeRecordingJobFile(job: RecordingJob, deleteEntryCash: 
         deleteFileAndForget(oldEntryfilePath);
     }
 }
-export async function readRecordingJobFile(cacheKey: string): Promise<RecordingJob> {
-    const filePath = path.join(getJobsDir(), `${cacheKey}.json`);
-    return await readJsonFile<RecordingJob>(filePath);
-}
+// export async function readRecordingJobFile(cacheKey: string): Promise<RecordingJob> {
+//     const filePath = path.join(getJobsDir(), `${cacheKey}.json`);
+//     return await readJsonFile<RecordingJob>(filePath);
+// }
 
-export async function readDownloadJobFile(cacheKey: string): Promise<DownloadJob> {
-    const filePath = path.join(getJobsDir(), `${cacheKey}.json`);
-    return await readJsonFile<DownloadJob>(filePath);
-}
+// export async function readDownloadJobFile(cacheKey: string): Promise<DownloadJob> {
+//     const filePath = path.join(getJobsDir(), `${cacheKey}.json`);
+//     return await readJsonFile<DownloadJob>(filePath);
+// }
 
 export async function writeDownloadingJobFile(job: DownloadJob, deleteEntryCash: boolean): Promise<void> {
     const dir = getJobsDir();
