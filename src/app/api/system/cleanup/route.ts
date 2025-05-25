@@ -1,8 +1,9 @@
 // src/app/api/system/cleanup/route.ts
 
 import { NextResponse } from "next/server";
-import { cleanupFinishedJobs, deleteOldDanglingJobs } from "@/utils/resolverUtils";
+import { cleanupFinishedJobs } from "@/utils/resolverUtils";
 import { hasUserAccessLevelServerOnly } from "@/utils/serverOnly/hasUserAccessLevel";
+import { XdeleteOldDanglingJobs } from "@/utils/job/XcleanupHelpers";
 
 export async function POST(req: Request) {
     try {
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
         }
         const validForce = !!force;
         await cleanupFinishedJobs({ force: validForce });
-        await deleteOldDanglingJobs(validForce);
+        await XdeleteOldDanglingJobs(validForce);
         return NextResponse.json({ success: true, message: `Cleanup complete${force ? " (forced)" : ""}.` });
     } catch (err) {
         console.error("🧨 Cleanup failed:", err);

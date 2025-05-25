@@ -1,7 +1,8 @@
 // src/app/api/live/active/route.ts
 
 import { NextResponse } from "next/server";
-import { getActiveLiveJobs, enrichJob } from "@/utils/record/recordingJobUtils";
+import { getActiveLiveJobs } from "@/utils/record/recordingJobUtils";
+import { XenrichJob } from "@/utils/job/XenrichedJobHelpers";
 
 // import { cleanupFinishedJobs } from "@/utils/resolverUtils";
 
@@ -22,19 +23,8 @@ export async function GET() {
     try {
         // 1. Fetch active jobs
         const liveJobs = await getActiveLiveJobs();
-        // const downloadJobs = await getActiveDownloadJobs();
-        // const downloadJobsStatus = await getActiveDownloadJobsStatuses(downloadJobs);
+        const enrichedJobs = await Promise.all(liveJobs.map(XenrichJob));
 
-        // // 2. Enrich
-
-        const enrichedJobs = await Promise.all(liveJobs.map(enrichJob));
-
-        // const enrichedLive = await Promise.all(liveJobs.map(enrichRecordingJob));
-        // const enrichedDownloads = await Promise.all(downloadJobsStatus.map(enrichDownloadJob));
-
-        // 3. Combine
-        // const combined = [...enrichedLive, ...enrichedDownloads];
-        // const uniqueJobs = Array.from(new Map(combined.map((job) => [job.cacheKey, job])).values());
         return NextResponse.json(enrichedJobs);
     } catch (err) {
         console.error("❌ Failed to list active jobs:", err);
