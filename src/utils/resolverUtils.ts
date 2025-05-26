@@ -30,6 +30,7 @@ import { isProcessAlive } from "./process";
 import { getLatestStatus } from "./statusHelpers";
 import { CleanupCandidate } from "@/types/CleanupCandidate";
 import { appConfig } from "@/config/index"; // Import appConfig if needed
+import { expandAllJobs } from "./JobctlMetaExpander";
 
 export function getBaseUrl(): string {
     const baseUrl = process.env.BASE_URL;
@@ -758,11 +759,26 @@ export async function deleteJobCompletely(job: RecordingJob | DownloadJob): Prom
 
 export async function cleanupFinishedJobs(options: { force?: boolean } = {}): Promise<void> {
     const jobs = await findJobsToCleanup(options.force ?? false);
+    if (jobs.length === 0) {
+        return;
+    }
+
+    // Make sure we do not delete scheduled jobs
+
+    const enrichedJobs = await expandAllJobs();
+
     for (const { job, reason, fullPath } of jobs) {
         console.log(`🧹 Cleaning up job ${job.recordingId} due to: ${reason}`);
+        // make sure we do not delete jobs that are still scheduled
+        if (enrichedJobs.some((j) => j.cacheKey === job.cacheKey)) {
+            console.log(`⚠️ Skipping job ${job.recordingId} because it is still scheduled.`);
+            continue;
+        }
+
         await deleteJobCompletely(job);
 
         // if delteJobCompletely did not delete the job file it self, we delete it here
+
         if (await fileExists(fullPath)) {
             console.log(`🗑️ Deleting job file: ${fullPath}`);
             await deleteFileAndForget(fullPath);
