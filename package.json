@@ -1,6 +1,6 @@
 {
     "name": "guttihub",
-    "version": "0.8.39",
+    "version": "0.8.40",
     "private": true,
     "scripts": {
         "dev": "next dev --turbopack",
