@@ -223,8 +223,12 @@ scp -r \
 # Copy the .env.production file to the server
 scp "$REPO_ROOT/.env.production" "$DEPLOY_TARGET"
 
+ssh "$DEPLOY_SERVER" "mkdir -p $DEPLOY_DIR/public/icons"
+
 # Copy only top-level files from public/ (not subdirs like public/cache)
 find "$REPO_ROOT/public" -maxdepth 1 -type f -exec scp {} "$DEPLOY_TARGET/public/" \;
+# Copy only public/icons contents (not other subdirs)
+scp "$REPO_ROOT/public/icons/"* "$DEPLOY_TARGET/public/icons/"
 
 # install npm if not installed without dev
 echo "🎉 Updated version has been copied to deployment dir"
