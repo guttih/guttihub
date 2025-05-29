@@ -77,6 +77,12 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     });
 
     useEffect(() => {
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("/service-worker.js").catch(console.error);
+        }
+    }, []);
+
+    useEffect(() => {
         if (!loading && focusedInput) {
             restoreFocus(focusedInput);
         }
