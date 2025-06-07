@@ -31,6 +31,7 @@ import { getLatestStatus } from "./statusHelpers";
 import { CleanupCandidate } from "@/types/CleanupCandidate";
 import { appConfig } from "@/config/index"; // Import appConfig if needed
 import { expandAllJobs } from "./JobctlMetaExpander";
+import { ContentSteeringController } from "hls.js";
 
 export function getBaseUrl(): string {
     const baseUrl = process.env.BASE_URL;
@@ -433,7 +434,7 @@ export async function finalizeJobStart(cacheKey: string): Promise<boolean> {
         job.finalOutputFile = addTimestampBeforeExtension(job.finalOutputFile, timestamp);
     }
 
-    await fs.rename(job.outputFile, job.finalOutputFile);
+    await fs.rename(job.outputFile, job.finalOutputFile); //todo: what if filename already exists... do we account for that?
 
     const info = { job, logs, status };
     const infoFilePath = path.join(getJobsDir(), `${job.recordingId}-info.json`);
@@ -684,7 +685,10 @@ export async function deleteOldDanglingJobs(force: boolean = false): Promise<voi
     // and porbably we should create helper functions that accept a RecordingJob or DownloadJob and delete associated files without question
 
     const maxAgeMs = force ? 0 : appConfig.minCleanupAgeMs;
+    const cutoffDate = new Date(Date.now() - maxAgeMs);
     console.log(`🧹 Cleaning up old dangling jobs older than ${maxAgeMs / (1000 * 60)} minutes...`);
+    console.log(`    - Files before ${cutoffDate.toLocaleString()}) will be deleted.`);
+
     await Promise.all([
         cleanOldCacheFiles(maxAgeMs),
         cleanOldJobInfoFiles(maxAgeMs),
@@ -757,8 +761,8 @@ export async function deleteJobCompletely(job: RecordingJob | DownloadJob): Prom
     }
 }
 
-export async function cleanupFinishedJobs(options: { force?: boolean } = {}): Promise<void> {
-    const jobs = await findJobsToCleanup(options.force ?? false);
+export async function cleanupFinishedJobs(force: boolean = false): Promise<void> {
+    const jobs = await findJobsToCleanup(force);
     if (jobs.length === 0) {
         return;
     }

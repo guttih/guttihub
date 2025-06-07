@@ -12,12 +12,43 @@ include::next.adoc[]
 
 .List all relevant project files (excluding build and cache directories)
 [source,sh]
+----
 find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/*" ! -path "./html/*" -print
-
+----
 .List and display specific files
 [source,sh]
 ----
 find . -type f \( -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "parseM3U.ts" -o -name "route.ts" -o -name "page.tsx" -o -name "PlayerClient.tsx" -o -name "PlayerButton.tsx" -o -name "StreamCard.tsx" \) -exec sh -c 'echo {}; cat {}' \;
+----
+
+.List all json files that are used to describe jobs or finished artifacts
+[source,sh]
+----
+echo "🕒 $(date '+%Y-%m-%d %H:%M:%S')  🕒:Current time, 🍼:Yonger than 8 hours, 💀:Older than 8 hours  " && \
+find . \
+  \( -path "./node_modules" -o -path "./.next" -o -path "./.vscode" -o -path "./.git"  -o -path "./scripts" -o -path "./public" -o -path "./html" \) -prune -false \
+  -o -type f -name "*.json" \
+  ! -path "./public/manifest.json" \
+  ! -path "./package.json" \
+  ! -path "./.vscode/launch.json" \
+  ! -path "./.vscode/settings.json" \
+  ! -path "./tsconfig.json" \
+  ! -path "./package-lock.json" \
+  ! -path "./src/config/services.json" \
+  ! -path "./.cache/movie-consumers.json" \
+  ! -path "./src/config/authorizedUsers.json" \
+  ! -path "./src/config/output-dirs.json" \
+  -print0 | while IFS= read -r -d '' file; do
+    mod_time=$(stat -c '%y' "$file" | cut -d'.' -f1)
+    if [ "$(find "$file" -mmin +480)" ]; then
+      echo "💀 $mod_time  $file"
+    else
+      echo "🍼 $mod_time  $file"
+    fi
+  done
+
+
+
 ----
 
 [[npm-scripts]]
@@ -119,7 +150,7 @@ import StreamCard from '@/components/StreamCard';
 
 === Tests
 
-In this project, we use https://vitest.dev/[Vitest] for testing. 
+In this project, we use https://vitest.dev/[Vitest] for testing.
 
 - Unit tests go in `test/` or in `__tests__` folders near their targets
 - Match the source file name with a `.test.ts` suffix
@@ -206,7 +237,7 @@ npm ci --omit=dev
 pm2 start ecosystem.config.js --env production
 pm2 save
 ----
-* We had to use `npm ci --omit=dev --legacy-peer-deps` instead of `npm install --omit=dev` because of the /react-hls-player dependency.  
+* We had to use `npm ci --omit=dev --legacy-peer-deps` instead of `npm install --omit=dev` because of the /react-hls-player dependency.
 
 
 .Check logs and status
