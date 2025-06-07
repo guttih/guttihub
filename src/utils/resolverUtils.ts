@@ -31,7 +31,6 @@ import { getLatestStatus } from "./statusHelpers";
 import { CleanupCandidate } from "@/types/CleanupCandidate";
 import { appConfig } from "@/config/index"; // Import appConfig if needed
 import { expandAllJobs } from "./JobctlMetaExpander";
-import { ContentSteeringController } from "hls.js";
 
 export function getBaseUrl(): string {
     const baseUrl = process.env.BASE_URL;
