@@ -31,6 +31,7 @@ import { getLatestStatus } from "./statusHelpers";
 import { CleanupCandidate } from "@/types/CleanupCandidate";
 import { appConfig } from "@/config/index"; // Import appConfig if needed
 import { expandAllJobs } from "./JobctlMetaExpander";
+import { logger } from "./logger";
 
 export function getBaseUrl(): string {
     const baseUrl = process.env.BASE_URL;
@@ -167,7 +168,7 @@ export async function cleanupStreamingJobs(targetJobId?: string): Promise<void> 
         const pidNum = parseInt(lastPidVal as string, 10);
 
         if (!isNaN(pidNum) && isProcessRunning(pidNum)) {
-            console.log(`Skipping ${id} — process ${pidNum} still running`);
+            logger.info(`Skipping ${id} — process ${pidNum} still running`);
             continue;
         }
 
@@ -433,6 +434,7 @@ export async function finalizeJobStart(cacheKey: string): Promise<boolean> {
         job.finalOutputFile = addTimestampBeforeExtension(job.finalOutputFile, timestamp);
     }
 
+    logger.info(`📁 Moving file ${job.outputFile} to ${job.finalOutputFile}`);
     await fs.rename(job.outputFile, job.finalOutputFile); //todo: what if filename already exists... do we account for that?
 
     const info = { job, logs, status };
@@ -441,12 +443,12 @@ export async function finalizeJobStart(cacheKey: string): Promise<boolean> {
     await writeJsonFile(infoFilePath, info); // todo: make cleanupjob remove this file
     await writeJsonFile(infoFilePathForMedia, info); // this file should always exist for all recordings or jobs
 
-    console.log(`✅ Moved ${job.outputFile} to ${job.finalOutputFile}`);
+    logger.info(`🗑️ Jobfiles for cacheKey ${cacheKey}`);
 
     // Clean up the old files (logs, status, etc.)
     await deleteJobFiles(job);
 
-    console.log(`✅ Job info saved in: ${infoFilePath}`);
+    logger.info(`✅ Job info saved in: ${infoFilePath}`);
     return true; // Success
 }
 
@@ -564,7 +566,7 @@ async function cleanOldCacheFiles(maxAgeMs: number): Promise<void> {
         const fullPath = path.join(getCacheDir(), file);
         const stat = await fs.stat(fullPath);
         if (Date.now() - stat.mtimeMs > maxAgeMs && !usedKeys.has(file.replace(".json", ""))) {
-            console.log(`🪓🧊cache : ${fullPath}`);
+            logger.info(`🪓🧊cache : ${fullPath}`);
             await deleteFileAndForget(fullPath);
         }
     }
@@ -580,7 +582,7 @@ async function cleanOldJobInfoFiles(maxAgeMs: number): Promise<void> {
         const correspondingFinalFile = path.join(getMediaDir(), `${jobId}.json`);
 
         if (Date.now() - stat.mtimeMs > maxAgeMs && !(await fileExists(correspondingFinalFile))) {
-            console.log(`🪓💡Info  : ${fullPath}`);
+            logger.info(`🪓💡Info  : ${fullPath}`);
             await deleteFileAndForget(fullPath);
         }
     }
@@ -618,7 +620,7 @@ async function cleanOrphanedWorkFiles(maxAgeMs: number): Promise<void> {
             const baseWithExt = entry.name.replace(/\.(log|status|part)$/, ""); // e.g. download-foo.mkv
             const base = baseWithExt.replace(/\.\w+$/, ""); // strips .mkv/.mp4/.ts
             if (age > maxAgeMs && !trackedFinals.has(base)) {
-                console.log(`🪓 Orphan file: ${fullPath}`);
+                logger.info(`🪓 Orphan file: ${fullPath}`);
                 await deleteFileAndForget(fullPath);
             }
         }
@@ -627,7 +629,7 @@ async function cleanOrphanedWorkFiles(maxAgeMs: number): Promise<void> {
         if (entry.isDirectory() && entry.name.endsWith("_hls")) {
             const base = entry.name.replace(/-?playlist?_?hls$/, ""); // fallback regex
             if (age > maxAgeMs && !trackedFinals.has(base)) {
-                console.log(`🧹 Orphan HLS dir: ${fullPath}`);
+                logger.info(`🧹 Orphan HLS dir: ${fullPath}`);
                 await fs.rm(fullPath, { recursive: true, force: true });
             }
         }
@@ -647,7 +649,7 @@ async function cleanOrphanedMediaJson(maxAgeMs: number): Promise<void> {
         const correspondingMediaFile = fullPath.replace(/\.json$/, ""); // strip only last `.json`
 
         if (age > maxAgeMs && !(await fileExists(correspondingMediaFile))) {
-            console.log(`🪓🎬 Orphan media .json: ${fullPath}`);
+            logger.info(`🪓🎬 Orphan media .json: ${fullPath}`);
             await deleteFileAndForget(fullPath);
         }
     }
@@ -685,8 +687,8 @@ export async function deleteOldDanglingJobs(force: boolean = false): Promise<voi
 
     const maxAgeMs = force ? 0 : appConfig.minCleanupAgeMs;
     const cutoffDate = new Date(Date.now() - maxAgeMs);
-    console.log(`🧹 Cleaning up old dangling jobs older than ${maxAgeMs / (1000 * 60)} minutes...`);
-    console.log(`    - Files before ${cutoffDate.toLocaleString()}) will be deleted.`);
+    logger.info(`🧹 Cleaning up old dangling jobs older than ${maxAgeMs / (1000 * 60)} minutes...`);
+    logger.info(`    - Files before ${cutoffDate.toLocaleString()}) will be deleted.`);
 
     await Promise.all([
         cleanOldCacheFiles(maxAgeMs),
@@ -737,10 +739,10 @@ export async function deleteJobCompletely(job: RecordingJob | DownloadJob): Prom
 
     // Delete main job file (and .cache if needed)
     if (isDownload) {
-        console.log(`🗑️ deleteDownloadJob(${job.recordingId}, true);`); // TODO: remove line
+        logger.info(`🗑️ deleteDownloadJob(${job.recordingId}, true);`); // TODO: remove line
         await deleteDownloadJob(job.recordingId, true);
     } else {
-        console.log(`🗑️ deleteRecordingJob(${job.recordingId}, true);`); //TODO: remove line
+        logger.info(`🗑️ deleteRecordingJob(${job.recordingId}, true);`); //TODO: remove line
         await deleteRecordingJob(job.recordingId, true);
     }
 
@@ -750,10 +752,10 @@ export async function deleteJobCompletely(job: RecordingJob | DownloadJob): Prom
     for (const file of extras) {
         if (await fileExists(file)) {
             if (fsSync.statSync(file).isDirectory()) {
-                console.log(`🧨 Deleting directory (${file}`); // TODO: remove line
+                logger.info(`🧨 Deleting directory (${file}`); // TODO: remove line
                 await fs.rm(file, { recursive: true, force: true });
             } else {
-                console.log(`🧨🧨 file (${file}`); // TODO: remove line
+                logger.info(`🧨🧨 file (${file}`); // TODO: remove line
                 await deleteFileAndForget(file);
             }
         }
@@ -771,10 +773,10 @@ export async function cleanupFinishedJobs(force: boolean = false): Promise<void>
     const enrichedJobs = await expandAllJobs();
 
     for (const { job, reason, fullPath } of jobs) {
-        console.log(`🧹 Cleaning up job ${job.recordingId} due to: ${reason}`);
+        logger.info(`🧹 Cleaning up job ${job.recordingId} due to: ${reason}`);
         // make sure we do not delete jobs that are still scheduled
         if (enrichedJobs.some((j) => j.cacheKey === job.cacheKey)) {
-            console.log(`⚠️ Skipping job ${job.recordingId} because it is still scheduled.`);
+            logger.info(`⚠️ Skipping job ${job.recordingId} because it is still scheduled.`);
             continue;
         }
 
@@ -783,7 +785,7 @@ export async function cleanupFinishedJobs(force: boolean = false): Promise<void>
         // if delteJobCompletely did not delete the job file it self, we delete it here
 
         if (await fileExists(fullPath)) {
-            console.log(`🗑️ Deleting job file: ${fullPath}`);
+            logger.info(`🗑️ Deleting job file: ${fullPath}`);
             await deleteFileAndForget(fullPath);
         }
     }

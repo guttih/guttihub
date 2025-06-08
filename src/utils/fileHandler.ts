@@ -6,6 +6,7 @@ import { RecordingJob } from "@/types/RecordingJob";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 import { DownloadJobInfo } from "@/types/DownloadJobInfo";
 import { outDirectories } from "@/config";
+import { logger } from "./logger";
 
 /**
  * Resolves an absolute path to a script inside src/scripts/
@@ -210,4 +211,10 @@ export async function readStatusFile(filePath: string): Promise<Record<string, s
         console.warn(`⚠️ readStatusFile(${filePath}) failed`, err);
         return {}; // <– instead of throwing error, we return empty object
     }
+}
+
+export function log(message: string) {
+    const now = new Date();
+    const hhmmss = now.toTimeString().slice(0, 8).replace(/:/g, "");
+    logger.info(`[${hhmmss}] ${message}`);
 }

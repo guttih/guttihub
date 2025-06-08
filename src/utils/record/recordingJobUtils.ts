@@ -22,6 +22,7 @@ import { M3UEntry } from "@/types/M3UEntry";
 import { DownloadJob } from "@/types/DownloadJob";
 import { getMovieConsumers } from "@/utils/concurrency";
 import { EnrichedJob } from "@/types/EnrichedJob";
+import { logger } from "../logger";
 
 export async function readCashedEntryFile(cacheKey: string): Promise<M3UEntry | null> {
     const dir = getCacheDir();
@@ -170,7 +171,7 @@ export async function getActiveDownloadJobs(): Promise<DownloadJob[]> {
         }
         return jobs;
     } catch (err) {
-        console.error("❌ Error reading active downloads directory:", err);
+        logger.error("❌ Failed to read active download jobs:", err);
         return [];
     }
 }
@@ -351,7 +352,7 @@ export async function enrichRecordingJob(job: RecordingJob): Promise<EnrichedJob
 
     let finalStatus = status?.STATUS || "unknown";
     if (finalStatus === "recording" && !alive) {
-        // console.warn(`🧟 Zombie detected: job ${job.recordingId} is dead but status=recording`);
+        logger.warn(`🧟 Zombie detected: job ${job.recordingId} is dead but status=recording`);
         finalStatus = "error";
     }
 

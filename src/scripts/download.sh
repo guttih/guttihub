@@ -146,31 +146,9 @@ trap cleanup SIGINT SIGTERM
 # --- Start Download ---
 echo "Starting download from $URL..." >>"$LOG_FILE"
 
-# --- Preflight HEAD Check ---
-echo "Checking if URL is alive..." >>"$LOG_FILE"
-if ! curl --head --fail --silent --location "$URL" >/dev/null; then
-    echo "❌ Pre-download check failed for $URL" >>"$LOG_FILE"
-    echo "STATUS=error" >>"$STATUS_FILE"
-    ACTUAL_STOP=$(date -Iseconds)
-    echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
-    send_cleanup_report
-    exit 1
-fi
-
 # spawn curl into background
 (
-    MAX_RETRIES=6
-    RETRY_DELAY=5
-    TRIES=0
-    until curl --fail --location --progress-bar "$URL" --output "$TMP_OUTPUT_FILE"; do
-        TRIES=$((TRIES + 1))
-        echo "Retry #$TRIES failed..." >>"$LOG_FILE"
-        if [[ $TRIES -ge $MAX_RETRIES ]]; then
-            echo "Max retries reached. Giving up." >>"$LOG_FILE"
-            exit 1
-        fi
-        sleep $RETRY_DELAY
-    done
+    curl --fail --location --progress-bar "$URL" --output "$TMP_OUTPUT_FILE"
 ) >>"$LOG_FILE" 2>&1 &
 
 PID=$!

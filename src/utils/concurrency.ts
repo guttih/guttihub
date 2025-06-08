@@ -5,6 +5,7 @@ import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 import { MovieConsumerMeta } from "@/types/MovieConsumerMeta";
 import { M3UEntry } from "@/types/M3UEntry";
 import { readConsumers, writeConsumers } from "./fileMovieConsumerStore";
+import { logger } from "./logger";
 /**
  * Map of movie‐player consumerId → serviceId
  */
@@ -94,7 +95,7 @@ export function startMovieConsumerCleanup() {
 
         for (const [id, meta] of Object.entries(consumers)) {
             if (!meta.lastSeen || now - meta.lastSeen > TIMEOUT_MS) {
-                console.log(`💀 Movie consumer timed out: ${id}`);
+                logger.info(`💀 Movie consumer timed out: ${id}`);
                 delete consumers[id];
                 changed = true;
             }
@@ -105,5 +106,5 @@ export function startMovieConsumerCleanup() {
         }
     }, SCAN_INTERVAL_MS);
 
-    console.log(`🧼 Movie consumer cleanup started (every ${SCAN_INTERVAL_MS / 1000}s, timeout: ${TIMEOUT_MS / 1000}s)`);
+    logger.info(`🧼 Movie consumer cleanup started (every ${SCAN_INTERVAL_MS / 1000}s, timeout: ${TIMEOUT_MS / 1000}s)`);
 }
