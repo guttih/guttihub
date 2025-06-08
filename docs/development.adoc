@@ -26,7 +26,7 @@ find . -type f \( -name "StreamingService.ts" -o -name "M3UEntry.ts" -o -name "p
 ----
 echo "🕒 $(date '+%Y-%m-%d %H:%M:%S')  🕒:Current time, 🍼:Yonger than 8 hours, 💀:Older than 8 hours  " && \
 find . \
-  \( -path "./node_modules" -o -path "./.next" -o -path "./.vscode" -o -path "./.git"  -o -path "./scripts" -o -path "./public" -o -path "./html" \) -prune -false \
+  \( -path "./node_modules" -o -path "./.next" -o -path "./.vscode" -o -path "./.git"  -o -path "./scripts" -o -path "./html" \) -prune -false \
   -o -type f -name "*.json" \
   ! -path "./public/manifest.json" \
   ! -path "./package.json" \
