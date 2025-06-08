@@ -18,7 +18,9 @@ export default function HelpPage() {
                 <p>Use these filters in any input field where regex mode is enabled.</p>
 
                 <h3 className="mt-4 font-semibold">Exclude Common Languages</h3>
-                <RegexBlock title="Field: Group Title">^(?!.*\bspanish\b)(?!.*\bArabic\b)(?!.*\bFrançais\b)(?!.*\bGerman\b).*</RegexBlock>
+                <RegexBlock title="Field: Group Title">
+                    ^(?!.*\bPolskie\b)(?!.*\bTurkish\b)(?!.*\bDanish\b)(?!.*\bArabic\b)(?!.*\bFrançais\b)(?!.*\bPortugal\b)(?!.*\Português\b)(?!.*\bGerman\b)(?!.*\bSwedish\b)(?!.*\bSpanish\b)(?!.*\Português\b)(?=\S).*$
+                </RegexBlock>
 
                 <h3 className="mt-6 font-semibold">Whitelist Only Favorites</h3>
                 <p>Exclude nearly everything, then delete what you want to show:</p>

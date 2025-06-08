@@ -25,6 +25,7 @@ import path from "path";
 import { getBaseUrl } from "@/utils/resolverUtils";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 import { startMovieConsumerCleanup } from "@/utils/concurrency";
+import { logger } from "@/utils/logger";
 
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
     {
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             // }
 
             if (pagination?.offset && snapshotId && snapshotId !== chasedData.snapshotId) {
-                console.log("[CACHE] Snapshot ID mismatch. Fetching fresh data.");
+                logger.info("[CACHE] Snapshot ID mismatch. Fetching fresh data.");
                 return makeErrorResponse(`Your list is outdated, it was updated on ${chasedData.timeStamp}, refresh it to get new data`, 400);
             }
 
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             // does offset not need to be sent back to the client?
             // const paginated = filtered.slice(offset || 0, limit ? (offset || 0) + limit : filtered.length);
 
-            console.log(
+            logger.info(
                 `[Filtered = ${hasValidFilters(filters)}] Entries count: ${paginated.length}, of filtered ${filtered.length} and total ${
                     chasedData.entries.length
                 }`
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
                 years: extractYears(filtered),
             };
 
-            // console.log("Response:", makePrintableM3UResponse(response));
+            // logger.info("Response:", makePrintableM3UResponse(response));
 
             return makeSuccessResponse<M3UResponse>(response);
         } catch (err: unknown) {
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         const usingCache = !force && (await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs));
 
         if (usingCache && !service.hasFileAccess) {
-            console.log("[CACHE] Using cached file:", filePathCashed);
+            logger.info("[CACHE] Using cached file:", filePathCashed);
             return await readJsonFile<CashedEntries>(filePathCashed);
         }
 
@@ -165,8 +166,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             entries,
         };
 
-        console.log(`[CACHE] Writing new file:", ${filePathCashed} at ${cashed.timeStamp}`);
-        console.log("writing cashed entries:", {
+        logger.info(`[CACHE] Writing new file:", ${filePathCashed} at ${cashed.timeStamp}`);
+        logger.info("writing cashed entries:", {
             snapshotId: cashed.snapshotId,
             timeStamp: cashed.timeStamp,
             entriesCount: cashed.entries.length,
@@ -189,7 +190,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         //     console.log("[CACHE] Using cached file:", filePath);
         //     return await readFile(filePath);
         // }
-        console.log("[FETCH] Creating fresh .m3u");
+        logger.info("[FETCH] Creating fresh .m3u");
         const text = await makeM3UList(service);
         await writeFile(filePath, text); //why await?  we have the text already
         return text;
@@ -197,11 +198,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
     async function getCachedOrFreshM3U(url: string, filePath: string, force: boolean = false): Promise<string> {
         if (!force && (await isFileFresh(filePath, appConfig.playlistCacheTTLInMs))) {
-            console.log("[CACHE] Using cached file:", filePath);
+            logger.info("[CACHE] Using cached file:", filePath);
             return await readFile(filePath);
         }
 
-        console.log("[FETCH] Downloading fresh .m3u");
+        logger.info("[FETCH] Downloading fresh .m3u");
         const response = await fetch(url, {
             headers: { "User-Agent": "Mozilla/5.0" },
         });

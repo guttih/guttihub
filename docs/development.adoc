@@ -38,6 +38,7 @@ find . \
   ! -path "./.cache/movie-consumers.json" \
   ! -path "./src/config/authorizedUsers.json" \
   ! -path "./src/config/output-dirs.json" \
+  ! -path "./server/*" \
   -print0 | while IFS= read -r -d '' file; do
     mod_time=$(stat -c '%y' "$file" | cut -d'.' -f1)
     if [ "$(find "$file" -mmin +480)" ]; then
