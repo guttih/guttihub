@@ -3,15 +3,12 @@
 
 import { useState, useEffect } from "react";
 import { EnrichedScheduledJobCard } from "@/components/cards/EnrichedScheduledJobCard/EnrichedScheduledJobCard";
-import {
-    ScheduledJobEnriched,
-        SystemScheduledEnrichedUpdateJobResponse,
-    SystemScheduledErrorResponse,
-} from "@/types/ScheduledJob";
+import { ScheduledJobEnriched, SystemScheduledEnrichedUpdateJobResponse, SystemScheduledErrorResponse } from "@/types/ScheduledJob";
 import Link from "next/link";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { EnrichedUpdatePayload } from "@/types/AllowedJobUpdateFields";
 import { showMessageBox } from "@/components/ui/MessageBox";
+import { logger } from "@/utils/logger";
 
 export default function SchedulePage() {
     const [jobs, setJobs] = useState<ScheduledJobEnriched[]>([]);
@@ -65,7 +62,7 @@ export default function SchedulePage() {
     };
 
     const handleUpdate = async (payload: EnrichedUpdatePayload) => {
-        console.log("📝 Posting to /api/schedule/enriched", JSON.stringify(payload, null, 4));
+        logger.log("📝 Posting to /api/schedule/enriched", JSON.stringify(payload, null, 4));
         try {
             const res = await fetch("/api/schedule/enriched", {
                 method: "POST",
@@ -77,17 +74,36 @@ export default function SchedulePage() {
                 const newValues = (await res.json()) as SystemScheduledEnrichedUpdateJobResponse;
                 const updatedJob = newValues.jobEnriched;
                 setJobs((prev) => prev.map((job) => (job.systemJobId === payload.systemJobId ? updatedJob : job)));
-                return await showMessageBox({position:"bottom-right",  blocking:false, toast:true, variant: "success",  title: "Success!", message: "Everything saved perfectly.", displayTime: 3000 });
+                return await showMessageBox({
+                    position: "bottom-right",
+                    blocking: false,
+                    toast: true,
+                    variant: "success",
+                    title: "Success!",
+                    message: "Everything saved perfectly.",
+                    displayTime: 3000,
+                });
             } else {
                 const errorResponse = (await res.json()) as SystemScheduledErrorResponse;
                 if (res.status === 400) {
-                    return showMessageBox({ blocking:false, toast:true, variant: "warning", title: "Information", message: errorResponse.error || "Nothing to update", displayTime: 3000 });
+                    return showMessageBox({
+                        blocking: false,
+                        toast: true,
+                        variant: "warning",
+                        title: "Information",
+                        message: errorResponse.error || "Nothing to update",
+                        displayTime: 3000,
+                    });
                 }
-                return await showMessageBox({ variant: "error",  title: "Error",  message: errorResponse.error || "Failed to update job",  displayTime: 5000});
-                
+                return await showMessageBox({
+                    variant: "error",
+                    title: "Error",
+                    message: errorResponse.error || "Failed to update job",
+                    displayTime: 5000,
+                });
             }
         } catch {
-            await showMessageBox({variant: "error",  title: "Error", message: "Failed to update job", displayTime: 5000});
+            await showMessageBox({ variant: "error", title: "Error", message: "Failed to update job", displayTime: 5000 });
         }
     };
 

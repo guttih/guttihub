@@ -32,6 +32,8 @@ import { CleanupCandidate } from "@/types/CleanupCandidate";
 import { appConfig } from "@/config/index"; // Import appConfig if needed
 import { expandAllJobs } from "./JobctlMetaExpander";
 import { logger } from "./logger";
+import { promisify } from "util";
+import { exec } from "child_process";
 
 export function getBaseUrl(): string {
     const baseUrl = process.env.BASE_URL;
@@ -90,7 +92,7 @@ export async function readJobLogFile(logPath: string): Promise<string[]> {
         const text = await readFileRaw(logPath);
         return text.split(/\r?\n/).filter((l) => l.trim().length > 0);
     } catch (err) {
-        console.warn(`readRecordingLogFile: failed to read ${logPath}`, err);
+        logger.warn(`readRecordingLogFile: failed to read ${logPath}`, err);
         return [];
     }
 }
@@ -116,7 +118,7 @@ export async function readJobStatusFile(statusPath: string): Promise<Record<stri
             }
         }
     } catch (err) {
-        console.warn(`readRecordingStatusFile: failed to read ${statusPath}`, err);
+        logger.warn(`readRecordingStatusFile: failed to read ${statusPath}`, err);
     }
     return result;
 }
@@ -157,7 +159,7 @@ export async function cleanupStreamingJobs(targetJobId?: string): Promise<void> 
         try {
             job = await readJsonFile<RecordingJob>(path.join(jobDir, file));
         } catch (e) {
-            console.warn(`Cannot read job ${file}`, e);
+            logger.warn(`Cannot read job ${file}`, e);
             continue;
         }
 
@@ -254,7 +256,7 @@ export async function getRecordingIdByCacheKey(cacheKey: string): Promise<string
                 return job.recordingId;
             }
         } catch (err) {
-            console.warn(`⚠ Failed to read job file: ${file}`, err);
+            logger.warn(`⚠ Failed to read job file: ${file}`, err);
         }
     }
 
@@ -398,7 +400,7 @@ export async function getJobByCacheKey(cacheKey: string): Promise<RecordingJob |
         const job = await readJsonFile<RecordingJob | DownloadJob>(jobPath);
         return job;
     } catch (err) {
-        console.warn(`⚠️ Failed to parse job file for cacheKey ${cacheKey}:`, err);
+        logger.warn(`⚠️ Failed to parse job file for cacheKey ${cacheKey}:`, err);
         return null;
     }
 }
@@ -412,7 +414,7 @@ export async function finalizeJobStart(cacheKey: string): Promise<boolean> {
     const job = await getJobByCacheKey(cacheKey);
 
     if (!job) {
-        console.warn(`⚠️ finalizeJobStart: No job found for cacheKey ${cacheKey}`);
+        logger.warn(`⚠️ finalizeJobStart: No job found for cacheKey ${cacheKey}`);
         return false;
     }
 
@@ -655,6 +657,33 @@ async function cleanOrphanedMediaJson(maxAgeMs: number): Promise<void> {
     }
 }
 
+const execAsync = promisify(exec);
+
+export async function getFFMpegProcessCount(): Promise<number> {
+    try {
+        const { stdout } = await execAsync("pgrep -c ffmpeg");
+        const count = parseInt(stdout.trim(), 10);
+        if (isNaN(count)) {
+            logger.warn("pgrep returned NaN");
+            return 0;
+        }
+        return count;
+    } catch (err: unknown) {
+        // Check if it's a NodeJS ExecException (common in execAsync errors)
+        if (isExecException(err) && err.code === 1) {
+            // Exit code 1 means no processes found – not a real error
+            return 0;
+        }
+
+        logger.error("Error running pgrep -c ffmpeg", err);
+        throw err;
+    }
+}
+
+function isExecException(err: unknown): err is { code?: number | string } {
+    return typeof err === "object" && err !== null && "code" in err;
+}
+
 /**
  * Delete any .json file that is more than 8 hours old and does not point existing finalOutputFile
  *
@@ -690,6 +719,11 @@ export async function deleteOldDanglingJobs(force: boolean = false): Promise<voi
     logger.info(`🧹 Cleaning up old dangling jobs older than ${maxAgeMs / (1000 * 60)} minutes...`);
     logger.info(`    - Files before ${cutoffDate.toLocaleString()}) will be deleted.`);
 
+    const processCount = await getFFMpegProcessCount();
+    if (processCount > 0) {
+        logger.info(`😨 FFMpeg is currently running ${processCount} processe(s), no delete dangling⚠️`);
+        return;
+    }
     await Promise.all([
         cleanOldCacheFiles(maxAgeMs),
         cleanOldJobInfoFiles(maxAgeMs),
@@ -768,6 +802,11 @@ export async function cleanupFinishedJobs(force: boolean = false): Promise<void>
         return;
     }
 
+    const processCount = await getFFMpegProcessCount();
+    if (processCount > 0) {
+        logger.info(`😨 FFMpeg is currently running ${processCount} processe(s), no cleanup ⚠️`);
+        return;
+    }
     // Make sure we do not delete scheduled jobs
 
     const enrichedJobs = await expandAllJobs();

@@ -2,6 +2,7 @@
 
 import { NextRequest } from "next/server";
 import { removeMovieConsumer } from "@/utils/concurrency";
+import { logger } from "@/utils/logger";
 
 export async function POST(req: NextRequest) {
     try {
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
         await removeMovieConsumer(id);
         return new Response("OK");
     } catch (err) {
-        console.error("❌ Failed to unregister on tab close:", err);
+        logger.error("❌ Failed to unregister on tab close:", err);
         return new Response("Error", { status: 500 });
     }
 }

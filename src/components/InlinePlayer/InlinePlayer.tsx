@@ -8,6 +8,7 @@ import { detectStreamFormat, StreamFormat } from "@/types/StreamFormat";
 
 import Hls, { ErrorData } from "hls.js";
 import { M3UEntry } from "@/types/M3UEntry";
+import { logger } from "@/utils/logger";
 
 export interface InlinePlayerProps {
     url: string;
@@ -79,7 +80,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
                 }
                 await new Promise((r) => setTimeout(r, delayMs));
             }
-            console.error("[InlinePlayer] Timed out waiting for playlist");
+            logger.error("[InlinePlayer] Timed out waiting for playlist");
         };
 
         setCanPlay(false);
@@ -100,14 +101,14 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
                 hls.attachMedia(video);
                 hls.loadSource(finalUrl);
                 hls.on(Hls.Events.ERROR, (_event, data: ErrorData) => {
-                    console.error("HLS.js error:", data);
+                    logger.error("HLS.js error:", data);
                     if (data.fatal) hls.destroy();
                 });
                 return () => hls.destroy();
             } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
                 video.src = finalUrl;
             } else {
-                console.warn("No HLS support in browser");
+                logger.warn("No HLS support in browser");
             }
         } else {
             // MP4, MKV, etc.
@@ -133,7 +134,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
                         body: JSON.stringify({ id: consumerId.current, serviceId, entry }),
                     });
                 } catch (err) {
-                    console.error("Failed to register InlinePlayer:", err);
+                    logger.error("Failed to register InlinePlayer:", err);
                 }
             }
         };
@@ -148,7 +149,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
                         body: JSON.stringify({ id: consumerId.current }),
                     });
                 } catch (err) {
-                    console.error("Failed to unregister InlinePlayer:", err);
+                    logger.error("Failed to unregister InlinePlayer:", err);
                 }
             }
         };
@@ -157,7 +158,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
             try {
                 navigator.sendBeacon("/api/movie-consumers/on-player-close", JSON.stringify({ id: consumerId.current }));
             } catch (err) {
-                console.warn("sendBeacon failed:", err);
+                logger.warn("sendBeacon failed:", err);
             }
         };
 
@@ -305,7 +306,7 @@ function makeStreamProxyUrl(playUrl: string): string {
     if (playUrl.includes("/hls-stream") && playUrl.endsWith("/playlist")) {
         return playUrl;
     }
-    console.warn("[InlinePlayer] Using stream proxy for URL:", playUrl);
+    logger.warn("[InlinePlayer] Using stream proxy for URL:", playUrl);
     return `/api/stream-proxy?url=${playUrl}`;
 }
 

@@ -26,7 +26,7 @@ export const appConfig: AppConfigType = {
     hideCredentialsInUrl: false,
     maxEntryExportCount: 59,
     maxRecordingDuration: 60 * 60 * 6, // 6 hours
-    minCleanupAgeMs: 8 * 60 * 60 * 1000,
+    minCleanupAgeMs: 12 * 60 * 60 * 1000,
     playlistCacheTTLInMs: 1000 * 60 * 60 * 6, // 6 hours
 };
 

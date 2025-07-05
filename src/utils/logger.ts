@@ -1,37 +1,46 @@
 // src/utils/logger.ts
 
+// src/utils/logger.ts
+
 function getTimestamp(): string {
-    return new Date().toTimeString().slice(0, 8).replace(/:/g, "");
+    return new Date().toISOString();
 }
 
-function formatMessage(level: string, message: string, maybeError?: unknown): string {
+function formatMessage(level: string, args: unknown[]): string {
     const ts = getTimestamp();
-    const base = `[${ts}] [${level.toUpperCase()}] ${message}`;
+    const base = `[${ts}] [${level.toUpperCase()}]`;
 
-    if (maybeError instanceof Error && maybeError.stack) {
-        return `${base}\n${maybeError.stack}`;
-    }
+    const msg = args.map((arg) => {
+        if (arg instanceof Error && arg.stack) return arg.stack;
+        if (typeof arg === "object") {
+            try {
+                return JSON.stringify(arg, null, 2);
+            } catch {
+                return "[Circular]";
+            }
+        }
+        return String(arg);
+    });
 
-    if (typeof maybeError === "string") {
-        return `${base}\n${maybeError}`;
-    }
-
-    return base;
+    return `${base} ${msg.join(" ")}`;
 }
 
 export const logger = {
-    info(message: string, err?: unknown) {
-        console.log(formatMessage("info", message, err));
+    info(...args: unknown[]) {
+        console.log(formatMessage("info", args));
     },
-
-    warn(message: string, err?: unknown) {
-        console.warn(formatMessage("warn", message, err));
+    warn(...args: unknown[]) {
+        console.warn(formatMessage("warn", args));
     },
-
-    error(message: string, err?: unknown) {
-        console.error(formatMessage("error", message, err));
+    error(...args: unknown[]) {
+        console.error(formatMessage("error", args));
     },
-    log(message: string, err?: unknown) {
-        logger.info(message, err);
+    debug(...args: unknown[]) {
+        if (process.env.NODE_ENV === "development") {
+            console.debug(formatMessage("debug", args));
+        }
+    },
+    log(...args: unknown[]) {
+        logger.info(...args);
     },
 };

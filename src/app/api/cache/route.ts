@@ -4,8 +4,9 @@ import { NextResponse } from "next/server";
 import { writeJsonFile, ensureRecordingJobsDir, getCacheDir } from "@/utils/fileHandler";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
+import { logger } from "@/utils/logger";
 
-// Creates a cache entry 
+// Creates a cache entry
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
         await writeJsonFile(fullPath, entry);
         return NextResponse.json({ cacheKey, entry });
     } catch (err) {
-        console.error("Failed to cache entry", err);
+        logger.error("Failed to cache entry", err);
         return NextResponse.json({ error: "Failed to write file" }, { status: 500 });
     }
 }

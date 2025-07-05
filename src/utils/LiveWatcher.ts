@@ -33,7 +33,7 @@ export function startLiveWatcher() {
                 });
                 stop.unref();
             } catch (err) {
-                console.error(`❌ Failed to stop ${id}:`, err);
+                logger.error(`❌ Failed to stop ${id}:`, err);
             }
         }
     }, CHECK_INTERVAL_MS);

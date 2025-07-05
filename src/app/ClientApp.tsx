@@ -26,6 +26,7 @@ import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel/LiveMonitor
 import { hasRole, UserRole } from "@/utils/auth/accessControl";
 import { showMessageBox } from "@/components/ui/MessageBox";
 import { UserMenu } from "@/components/UserMenu/UserMenu";
+import { logger } from "@/utils/logger";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -166,7 +167,8 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) {
         if (!service) return;
-        console.log(`handleFetch called by : ${source}`);
+        logger.info(`handleFetch called by: ${source}`);
+
         // Validate each regex-enabled input
         if (
             (inputModes.searchName.isRegex && !isValidRegex(searchName)) ||
@@ -237,7 +239,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             setCategoriesFromServer(json.data.categories || []);
             setFormatsFromServer((json.data.formats ?? []) as StreamFormat[]);
         } catch (err) {
-            console.error("Fetch failed", err);
+            logger.error("Fetch failed", err);
         } finally {
             setLoading(false);
         }
@@ -256,7 +258,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     setLiveCount(json.count ?? 0);
                 })
                 .catch(() => {
-                    console.warn("Failed to poll liveCount");
+                    logger.warn("Failed to poll liveCount");
                     setLiveCount(0);
                 });
         };

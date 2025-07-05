@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     try {
         entry = await readJsonFile<M3UEntry>(entryPath);
     } catch (err) {
-        console.error("❌ Could not load cached entry:", err);
+        logger.error("❌ Could not load cached entry:", err);
         return NextResponse.json({ error: "Invalid or expired cache key" }, { status: 404 });
     }
 

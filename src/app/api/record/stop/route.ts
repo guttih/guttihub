@@ -1,9 +1,9 @@
-
 // src/app/api/record/schedule-org/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { ScheduleResolver } from "@/resolvers/ScheduleResolver";
+import { logger } from "@/utils/logger";
 
 export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
@@ -22,6 +22,6 @@ export async function GET(req: Request) {
     if (!status.success) {
         return NextResponse.json({ error: status.error }, { status: 500 });
     }
-    console.log("📦 stop-recording response:", status.success, status.message);
+    logger.log("📦 stop-recording response:", status.success, status.message);
     return NextResponse.json(status);
 }

@@ -131,7 +131,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             return makeSuccessResponse<M3UResponse>(response);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Unknown error";
-            console.error("[M3U FETCH ERROR]", msg);
+            logger.error("[M3U FETCH ERROR]", msg);
             return makeErrorResponse(msg, 500);
         }
     }

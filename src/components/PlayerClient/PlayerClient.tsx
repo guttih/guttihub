@@ -7,6 +7,7 @@ import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 import { appConfig } from "@/config";
 import { detectStreamFormat, StreamFormat } from "@/types/StreamFormat";
 import Hls from "hls.js";
+import { logger } from "@/utils/logger";
 
 interface PlayerProps {
     url: string;
@@ -33,7 +34,7 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
             const resolved = normalizeUrl(url, consumerId.current);
             setNormalizedUrl(resolved);
         } catch (err) {
-            console.error("PlayerClient: normalize URL failed", err);
+            logger.error("PlayerClient: normalize URL failed", err);
             setUnsupported(true);
         }
     }, [url]);
@@ -49,7 +50,7 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
             if (Hls.isSupported()) {
                 const hls = new Hls();
                 hls.on(Hls.Events.ERROR, (_evt, data) => {
-                    console.error("HLS.js error:", data);
+                    logger.error("HLS.js error:", data);
                     if (data.fatal) {
                         hls.destroy();
                         setUnsupported(true);
@@ -89,9 +90,9 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ id, serviceId: resolvedServiceId }),
                     });
-                    console.debug(`[PlayerClient] Registered: ${id}`);
+                    logger.debug(`[PlayerClient] Registered: ${id}`);
                 } catch (err) {
-                    console.error("Register failed:", err);
+                    logger.error("Register failed:", err);
                 }
             }
         };
@@ -113,7 +114,7 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
         // };
 
         const handlePlay = () => {
-            console.debug("🔥 PLAY triggered!");
+            logger.debug("🔥 PLAY triggered!");
             register();
         };
         // const handleStop = () => {
@@ -132,7 +133,7 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
         const id = consumerId.current;
 
         const onBeforeUnload = () => {
-            console.debug("🚪 beforeunload: unregistering", id);
+            logger.debug("🚪 beforeunload: unregistering", id);
 
             // This works in Chrome, Firefox, Safari with `keepalive`
             fetch("/api/live/consumers", {
@@ -141,7 +142,7 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
                 body: JSON.stringify({ id }),
                 keepalive: true,
             }).catch((err) => {
-                console.warn("❌ beforeunload DELETE failed:", err);
+                logger.warn("❌ beforeunload DELETE failed:", err);
             });
         };
 
@@ -194,13 +195,13 @@ function normalizeUrl(playUrl: string, consumerId: string): string {
 
     const vals = StreamingServiceResolver.splitStreamingSearchUrl(playUrl);
     if (!vals) {
-        console.warn("PlayerClient::normalizeUrl missing service info");
+        logger.warn("PlayerClient::normalizeUrl missing service info");
         return proxyUrl;
     }
 
     const svc = new StreamingServiceResolver().findByServer(vals.server);
     if (!svc) {
-        console.warn("PlayerClient::normalizeUrl service not found");
+        logger.warn("PlayerClient::normalizeUrl service not found");
         return proxyUrl;
     }
 

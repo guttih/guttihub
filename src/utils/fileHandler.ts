@@ -64,7 +64,7 @@ export async function deleteFile(filePath: string): Promise<void> {
     try {
         await fs.unlink(filePath);
     } catch (err) {
-        console.error("❌ Failed to delete file:", filePath, err);
+        logger.error("❌ Failed to delete file:", filePath, err);
         throw err;
     }
 }
@@ -72,7 +72,7 @@ export async function deleteFile(filePath: string): Promise<void> {
 export function deleteFileAndForget(filePath: string): Promise<void> {
     if (filePath.endsWith(".mp4") || filePath.endsWith(".mkv")) {
         // If it's a media file, we don't want to delete it silently
-        console.warn(`⚠️ Deleting media file ${filePath} silently is not recommended.`);
+        logger.warn(`⚠️ Deleting media file ${filePath} silently is not recommended.`);
     }
 
     return fs.unlink(filePath).catch(() => {
@@ -179,7 +179,7 @@ export async function renameFile(oldPath: string, newPath: string): Promise<void
     try {
         await fs.rename(oldPath, newPath);
     } catch (error) {
-        console.error(`❌ Error renaming file from ${oldPath} to ${newPath}:`, error);
+        logger.error(`❌ Error renaming file from ${oldPath} to ${newPath}:`, error);
         throw error;
     }
 }
@@ -208,7 +208,7 @@ export async function readStatusFile(filePath: string): Promise<Record<string, s
         }
         return obj;
     } catch (err) {
-        console.warn(`⚠️ readStatusFile(${filePath}) failed`, err);
+        logger.warn(`⚠️ readStatusFile(${filePath}) failed`, err);
         return {}; // <– instead of throwing error, we return empty object
     }
 }

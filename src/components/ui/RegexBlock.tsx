@@ -3,6 +3,7 @@
 
 import React, { useState } from "react";
 import { regexBlockClasses } from "@/utils/ui/classNames";
+import { logger } from "@/utils/logger";
 
 interface Props {
     title?: string;
@@ -18,7 +19,7 @@ export const RegexBlock = ({ title, children }: Props) => {
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
         } catch (err) {
-            console.error("Failed to copy:", err);
+            logger.error("Failed to copy:", err);
         }
     };
 

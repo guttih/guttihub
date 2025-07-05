@@ -2,6 +2,7 @@
 "use client";
 
 import { showMessageBox } from "@/components/ui/MessageBox";
+import { logger } from "@/utils/logger";
 
 export const RunCleanupButton = () => {
     const runCleanup = async () => {
@@ -29,7 +30,7 @@ export const RunCleanupButton = () => {
                 toast: true,
                 blocking: true,
             });
-            console.error("Cleanup error:", err);
+            logger.error("Cleanup error:", err);
         }
     };
 

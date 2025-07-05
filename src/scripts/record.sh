@@ -299,5 +299,5 @@ if [[ $EXIT_CODE -eq 124 || $EXIT_CODE -eq 130 || $EXIT_CODE -eq 255 ]]; then
     echo "STATUS=stopped" >>"$STATUS_FILE"
 fi
 
-finalize_recording || echo "finalize_recording FAILED" >>"$LOG_FILE"
+finalize_recording || echo "⚠️ finalize_recording exited with error status — check logs for details" >>"$LOG_FILE"
 send_cleanup_report

@@ -9,6 +9,7 @@ import { hasRole } from "@/utils/auth/accessControl";
 import { UserRole } from "@/types/UserRole";
 import { showMessageBox } from "@/components/ui/MessageBox";
 import { MediaStreamButton, MediaPlayButton, MediaDownloadButton, MediaRecordButton, MediaDeleteButton } from "@/components/ui/MediaButtons";
+import { logger } from "@/utils/logger";
 
 interface Props {
     userName?: string;
@@ -67,13 +68,13 @@ export function StreamCard({
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
         } catch (err) {
-            console.error("Failed to copy URL", err);
+            logger.error("Failed to copy URL", err);
         }
     };
 
     const handleRecord = async () => {
         try {
-            console.log("Posting to /api/cache");
+            logger.log("Posting to /api/cache");
             setIsStartingRecording(true);
             const res = await fetch("/api/cache", {
                 method: "POST",
@@ -82,7 +83,7 @@ export function StreamCard({
             });
 
             if (!res.ok) {
-                console.error("Failed to cache entry for recording");
+                logger.error("Failed to cache entry for recording");
                 setIsStartingRecording(false);
                 return;
             }
@@ -92,7 +93,7 @@ export function StreamCard({
             await new Promise((resolve) => setTimeout(resolve, 10000));
             setIsStartingRecording(false);
         } catch (err) {
-            console.error("Error caching entry for recording:", err);
+            logger.error("Error caching entry for recording:", err);
             setIsStartingRecording(false);
         }
     };
@@ -135,7 +136,7 @@ export function StreamCard({
                 setIsStartingStreaming(false);
             } catch (err) {
                 setIsStartingStreaming(false);
-                console.error("Live stream error:", err);
+                logger.error("Live stream error:", err);
             }
         } else {
             setIsStartingPlaying(true);
@@ -167,16 +168,16 @@ export function StreamCard({
             });
 
             if (!startRes.ok) {
-                console.error("Failed to start download");
+                logger.error("Failed to start download");
                 setIsStartingDownloading(false);
                 return;
             }
 
             const { recordingId } = await startRes.json(); // 🛠 Correct: startRes.json() not res.json()!
 
-            console.log("✅ Started download job:", recordingId);
+            logger.log("✅ Started download job:", recordingId);
         } catch (err) {
-            console.error("❌ Error starting download:", err);
+            logger.error("❌ Error starting download:", err);
         } finally {
             setIsStartingDownloading(false); // 🛠 You had `setIsStartingRecording(false)` typo before
         }
@@ -193,7 +194,7 @@ export function StreamCard({
                 showMessageBox({ variant: "error", title: "Error", message: error || "Failed to delete entry" });
             }
         } catch (err) {
-            console.error("Delete failed:", err);
+            logger.error("Delete failed:", err);
             showMessageBox({ variant: "error", title: "Error", message: "Something went wrong while deleting." });
         } finally {
             setIsStartingDelete(false); // Re-enable button

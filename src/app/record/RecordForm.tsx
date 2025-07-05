@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { appConfig } from "@/config";
 import { Button } from "@/components/ui/Button/Button";
+import { logger } from "@/utils/logger";
 
 interface Props {
     entry: M3UEntry;
@@ -65,14 +66,14 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
         form.append("baseUrl", window.location.origin);
 
         try {
-            console.log("Sending cacheKey from RecordForm", cacheKey);
+            logger.log("Sending cacheKey from RecordForm", cacheKey);
             const res = await fetch("/api/record/schedule-org", {
                 method: "POST",
                 body: form,
             });
 
             const json = await res.json();
-            console.log("Server responded:", json);
+            logger.log("Server responded:", json);
             if (res.ok) {
                 const { cacheKey, recordingId } = json;
                 const params = new URLSearchParams({
@@ -81,7 +82,7 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
                 });
 
                 const target = recordNow ? `/record/status?${params.toString()}` : `/schedule`;
-                console.log("Would have redirected to Redirecting to:", target);
+                logger.log("Would have redirected to Redirecting to:", target);
                 window.location.href = target;
             } else {
                 setStatus({ type: "error", message: json.error || "Unknown error" });
