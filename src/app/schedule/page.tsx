@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import { EnrichedScheduledJobCard } from "@/components/cards/EnrichedScheduledJobCard/EnrichedScheduledJobCard";
 import { ScheduledJobEnriched, SystemScheduledEnrichedUpdateJobResponse, SystemScheduledErrorResponse } from "@/types/ScheduledJob";
-import Link from "next/link";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { EnrichedUpdatePayload } from "@/types/AllowedJobUpdateFields";
 import { showMessageBox } from "@/components/ui/MessageBox";
