@@ -62,8 +62,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Validation ---
-[[ -z "${BASE_URL:-}" ]] && echo "❌ Missing --url" >&2 && exit 1
-[[ -z "${CACHE_KEY:-}" ]] && echo "❌ Missing --url" >&2 && exit 1
+[[ -z "${BASE_URL:-}" ]] && echo "❌ Missing --baseUrl" >&2 && exit 1
+[[ -z "${CACHE_KEY:-}" ]] && echo "❌ Missing --cacheKey" >&2 && exit 1
 [[ -z "${STREAM_URL:-}" ]] && echo "❌ Missing --url" && exit 1
 [[ -z "${DURATION:-}" ]] && echo "❌ Missing --duration" && exit 1
 [[ -z "${USER:-}" ]] && echo "❌ Missing --user" && exit 1

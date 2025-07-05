@@ -130,9 +130,9 @@ export default function SchedulePage() {
                 </div>
             )}
 
-            <Link href="/record" className="underline text-sm block pt-4">
+            {/* <Link href="/record" className="underline text-sm block pt-4">
                 ← Back to Record
-            </Link>
+            </Link> */}
         </div>
     );
 }

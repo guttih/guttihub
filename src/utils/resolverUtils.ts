@@ -590,22 +590,6 @@ async function cleanOldJobInfoFiles(maxAgeMs: number): Promise<void> {
     }
 }
 
-// async function cleanOrphanedWorkFiles(maxAgeMs: number): Promise<void> {
-//     const files = await fs.readdir(getWorkDir());
-//     const trackedFinals = new Set((await fs.readdir(getJobsDir())).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")));
-
-//     for (const file of files) {
-//         if (!/\.(log|status|part)$/.test(file)) continue;
-//         const fullPath = path.join(getWorkDir(), file);
-//         const stat = await fs.stat(fullPath);
-//         const base = file.replace(/\.(log|status|part)$/, "");
-//         if (Date.now() - stat.mtimeMs > maxAgeMs && !trackedFinals.has(base)) {
-//             console.log(`🪓🚧Orphan: ${fullPath}`);
-//             await deleteFileAndForget(fullPath);
-//         }
-//     }
-// }
-
 async function cleanOrphanedWorkFiles(maxAgeMs: number): Promise<void> {
     const dir = getWorkDir();
     const entries = await fs.readdir(dir, { withFileTypes: true });
