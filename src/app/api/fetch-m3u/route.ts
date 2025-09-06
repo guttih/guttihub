@@ -27,6 +27,45 @@ import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 import { startMovieConsumerCleanup } from "@/utils/concurrency";
 import { logger } from "@/utils/logger";
 
+// Minimal types for Xtream JSON API responses used below
+interface XtreamLiveItem {
+    stream_id?: number | string;
+    name?: string;
+    stream_icon?: string;
+}
+
+interface XtreamVodItem {
+    stream_id?: number | string;
+    name?: string;
+    stream_icon?: string;
+    cover?: string;
+    container_extension?: string;
+}
+
+interface XtreamSeriesItem {
+    series_id?: number | string;
+    seriesId?: number | string; // some APIs use seriesId
+    id?: number | string;       // fallback key
+    name?: string;
+    cover?: string;
+}
+
+interface XtreamEpisodeInfo {
+    movie_image?: string;
+}
+
+interface XtreamEpisode {
+    id?: number | string;
+    title?: string;
+    container_extension?: string;
+    info?: XtreamEpisodeInfo;
+}
+
+interface XtreamSeriesInfo {
+    info?: { name?: string; cover?: string };
+    episodes?: Record<string, XtreamEpisode[] | XtreamEpisode>;
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M3UResponse>>> {
     {
         const { url, snapshotId, pagination, filters }: FetchM3URequest = await req.json();
@@ -218,10 +257,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         logger.info(`[FETCH:XTREAM] Fetching JSON for ${service.name} ${limits?.prime ? "(prime)" : ""}`);
 
         // Fetch JSON lists (live, vod, series)
-        let [live, vod, slist] = await Promise.all([
-            fetchJson(`${base}/player_api.php?username=${u}&password=${p}&action=get_live_streams`),
-            fetchJson(`${base}/player_api.php?username=${u}&password=${p}&action=get_vod_streams`),
-            fetchJson(`${base}/player_api.php?username=${u}&password=${p}&action=get_series`),
+        let [live, vod, slist] = await Promise.all<[
+            unknown,
+            unknown,
+            unknown
+        ]>([
+            fetchJson<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_live_streams`),
+            fetchJson<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_vod_streams`),
+            fetchJson<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_series`),
         ]);
 
         if (Array.isArray(live) && limits?.maxLive) live = live.slice(0, limits.maxLive);
@@ -230,12 +273,16 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
         // Series episodes (optional but valuable). Fetch sequentially to keep it simple and robust.
         const seriesEntries: M3UEntry[] = [];
-        for (const s of (Array.isArray(slist) ? slist : []) as any[]) {
+        for (const s of (Array.isArray(slist) ? (slist as XtreamSeriesItem[]) : [])) {
             const sid = s?.series_id ?? s?.seriesId ?? s?.id;
             if (!sid) continue;
             try {
-                const info = await fetchJson(`${base}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${sid}`);
-                let eps = (info?.episodes && typeof info.episodes === "object") ? (Object.values(info.episodes).flat() as any[]) : [];
+                const info = await fetchJson<XtreamSeriesInfo>(`${base}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${sid}`);
+                let eps: XtreamEpisode[] = [];
+                if (info?.episodes && typeof info.episodes === "object") {
+                    const episodesObj = info.episodes as Record<string, XtreamEpisode[] | XtreamEpisode>;
+                    eps = Object.values(episodesObj).flatMap((v) => (Array.isArray(v) ? v : [v]));
+                }
                 if (limits?.maxEpisodesPerSeries && Array.isArray(eps)) eps = eps.slice(0, limits.maxEpisodesPerSeries);
                 const titlePrefix = s?.name || info?.info?.name || "";
                 for (const e of eps) {
@@ -256,7 +303,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         }
 
         // Live entries
-        const liveEntries: M3UEntry[] = (Array.isArray(live) ? live : []).map((it: any) => {
+        const liveEntries: M3UEntry[] = (Array.isArray(live) ? (live as XtreamLiveItem[]) : []).map((it) => {
             const sid = it?.stream_id;
             const url = `${base}/live/${service.username}/${service.password}/${sid}.m3u8`;
             return toEntry({
@@ -268,7 +315,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         });
 
         // VOD entries (movies)
-        const vodEntries: M3UEntry[] = (Array.isArray(vod) ? vod : []).map((it: any) => {
+        const vodEntries: M3UEntry[] = (Array.isArray(vod) ? (vod as XtreamVodItem[]) : []).map((it) => {
             const sid = it?.stream_id;
             const extRaw = (it?.container_extension || "m3u8").toString();
             const ext = extRaw.startsWith(".") ? extRaw.slice(1) : extRaw;
@@ -297,12 +344,12 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         return cashed;
     }
 
-    async function fetchJson(url: string): Promise<any> {
+    async function fetchJson<T>(url: string): Promise<T> {
         const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
         if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
         const txt = await res.text();
         try {
-            return JSON.parse(txt);
+            return JSON.parse(txt) as T;
         } catch (e) {
             logger.warn(`[FETCH:XTREAM] Non-JSON response for ${url.substring(0, 80)}...`);
             throw e;

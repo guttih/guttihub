@@ -7,7 +7,8 @@ import outputDirs from "./output-dirs.json";
 
 // --- Static config: always safe to export ---
 // Normalize JSON into strongly-typed services, ensuring `apiType` matches the union
-const services: StreamingService[] = (servicesJson as any[]).map((s) => ({
+type RawStreamingService = Omit<StreamingService, "apiType"> & { apiType?: string };
+const services: StreamingService[] = (servicesJson as RawStreamingService[]).map((s) => ({
     ...s,
     apiType: s.apiType === "m3u" || s.apiType === "xtream" ? s.apiType : undefined,
 }));
@@ -31,7 +32,7 @@ export const appConfig: AppConfigType = {
     maxEntryExportCount: 59,
     maxRecordingDuration: 60 * 60 * 6, // 6 hours
     minCleanupAgeMs: 12 * 60 * 60 * 1000,
-    playlistCacheTTLInMs: 1000 * 60 * 60 * 6, // 6 hours
+    playlistCacheTTLInMs: 1000 * 60 * 60 * 24, // 24 hours
 };
 
 export { services };
