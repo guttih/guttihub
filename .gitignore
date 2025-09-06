@@ -59,3 +59,5 @@ tmp/
 public/videos/*
 !public/videos/recordings/README.md
 
+
+.venv

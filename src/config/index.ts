@@ -6,7 +6,11 @@ import servicesJson from "./services.json";
 import outputDirs from "./output-dirs.json";
 
 // --- Static config: always safe to export ---
-const services: StreamingService[] = servicesJson;
+// Normalize JSON into strongly-typed services, ensuring `apiType` matches the union
+const services: StreamingService[] = (servicesJson as any[]).map((s) => ({
+    ...s,
+    apiType: s.apiType === "m3u" || s.apiType === "xtream" ? s.apiType : undefined,
+}));
 const outDirectories: OutputDirectory[] = outputDirs;
 interface AppConfigType {
     appName: string;

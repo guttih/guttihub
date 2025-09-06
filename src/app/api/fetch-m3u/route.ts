@@ -31,6 +31,20 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
     {
         const { url, snapshotId, pagination, filters }: FetchM3URequest = await req.json();
         const force = req.nextUrl.searchParams.get("force") === "true";
+        const prime = req.nextUrl.searchParams.get("prime") === "true";
+        const n = (k: string, d?: number) => {
+            const v = req.nextUrl.searchParams.get(k);
+            if (!v) return d;
+            const i = parseInt(v, 10);
+            return Number.isFinite(i) && i > 0 ? i : d;
+        };
+        const limits = {
+            prime,
+            maxLive: n("maxLive", prime ? 50 : undefined),
+            maxVod: n("maxVod", prime ? 50 : undefined),
+            maxSeries: n("maxSeries", prime ? 10 : undefined),
+            maxEpisodesPerSeries: n("maxEpisodes", prime ? 20 : undefined),
+        } as const;
 
         startMovieConsumerCleanup(); // timer to gard movie consumer players
 
@@ -79,7 +93,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
             //     chasedData = json.data as CashedEntries;
             // } else {
-            const chasedData = await getCachedOrFreshData(service, url, force);
+            const chasedData = await getCachedOrFreshData(service, url, force, limits);
             // }
 
             if (pagination?.offset && snapshotId && snapshotId !== chasedData.snapshotId) {
@@ -136,7 +150,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         }
     }
 
-    async function getCachedOrFreshData(service: StreamingService, url: string, force: boolean): Promise<CashedEntries> {
+    type XtreamLimits = { prime?: boolean; maxLive?: number; maxVod?: number; maxSeries?: number; maxEpisodesPerSeries?: number };
+    async function getCachedOrFreshData(service: StreamingService, url: string, force: boolean, limits?: XtreamLimits): Promise<CashedEntries> {
         const username = service.username;
         const serviceName = service.name;
         const filePathCashed = getCacheFilePath(username, serviceName, "cashedEntries");
@@ -148,7 +163,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             return await readJsonFile<CashedEntries>(filePathCashed);
         }
 
-        // We need to a fresh m3u file and parse it
+        // If the service uses Xtream JSON API (e.g., best-smarter), build entries from JSON
+        if (isXtreamJsonApi(service)) {
+            const cashed = await getFromXtreamJsonApi(service, filePathCashed, limits);
+            return cashed;
+        }
+
+        // We need a fresh m3u file and parse it
 
         const cacheFilePathM3U = getCacheFilePath(username, serviceName, "m3u");
 
@@ -180,6 +201,112 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         await writeJsonFile(filePathCashed, cashed);
 
         return cashed;
+    }
+
+    function isXtreamJsonApi(service: StreamingService): boolean {
+        // Prefer explicit config flag; keep hostname as safe fallback
+        if (service.apiType === "xtream") return true;
+        const host = service.server.toLowerCase();
+        return host.includes("best-smarter.me");
+    }
+
+    async function getFromXtreamJsonApi(service: StreamingService, filePathCashed: string, limits?: XtreamLimits): Promise<CashedEntries> {
+        const base = service.server.replace(/\/$/, "");
+        const u = encodeURIComponent(service.username);
+        const p = encodeURIComponent(service.password);
+
+        logger.info(`[FETCH:XTREAM] Fetching JSON for ${service.name} ${limits?.prime ? "(prime)" : ""}`);
+
+        // Fetch JSON lists (live, vod, series)
+        let [live, vod, slist] = await Promise.all([
+            fetchJson(`${base}/player_api.php?username=${u}&password=${p}&action=get_live_streams`),
+            fetchJson(`${base}/player_api.php?username=${u}&password=${p}&action=get_vod_streams`),
+            fetchJson(`${base}/player_api.php?username=${u}&password=${p}&action=get_series`),
+        ]);
+
+        if (Array.isArray(live) && limits?.maxLive) live = live.slice(0, limits.maxLive);
+        if (Array.isArray(vod) && limits?.maxVod) vod = vod.slice(0, limits.maxVod);
+        if (Array.isArray(slist) && limits?.maxSeries) slist = slist.slice(0, limits.maxSeries);
+
+        // Series episodes (optional but valuable). Fetch sequentially to keep it simple and robust.
+        const seriesEntries: M3UEntry[] = [];
+        for (const s of (Array.isArray(slist) ? slist : []) as any[]) {
+            const sid = s?.series_id ?? s?.seriesId ?? s?.id;
+            if (!sid) continue;
+            try {
+                const info = await fetchJson(`${base}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${sid}`);
+                let eps = (info?.episodes && typeof info.episodes === "object") ? (Object.values(info.episodes).flat() as any[]) : [];
+                if (limits?.maxEpisodesPerSeries && Array.isArray(eps)) eps = eps.slice(0, limits.maxEpisodesPerSeries);
+                const titlePrefix = s?.name || info?.info?.name || "";
+                for (const e of eps) {
+                    const eid = e?.id;
+                    if (!eid) continue;
+                    const ext = (e?.container_extension || "m3u8").toString().replace(/^\./, "");
+                    const url = `${base}/series/${service.username}/${service.password}/${eid}.${ext}`;
+                    seriesEntries.push(toEntry({
+                        id: String(eid),
+                        name: e?.title ? `${titlePrefix ? titlePrefix + " - " : ""}${e.title}` : (titlePrefix || String(eid)),
+                        logo: e?.info?.movie_image || s?.cover || info?.info?.cover || appConfig.fallbackImage,
+                        url,
+                    }));
+                }
+            } catch (err) {
+                logger.warn(`[FETCH:XTREAM] series_info failed for series_id=${sid}`, err);
+            }
+        }
+
+        // Live entries
+        const liveEntries: M3UEntry[] = (Array.isArray(live) ? live : []).map((it: any) => {
+            const sid = it?.stream_id;
+            const url = `${base}/live/${service.username}/${service.password}/${sid}.m3u8`;
+            return toEntry({
+                id: String(sid ?? ""),
+                name: it?.name || String(sid ?? ""),
+                logo: it?.stream_icon || appConfig.fallbackImage,
+                url,
+            });
+        });
+
+        // VOD entries (movies)
+        const vodEntries: M3UEntry[] = (Array.isArray(vod) ? vod : []).map((it: any) => {
+            const sid = it?.stream_id;
+            const extRaw = (it?.container_extension || "m3u8").toString();
+            const ext = extRaw.startsWith(".") ? extRaw.slice(1) : extRaw;
+            const url = `${base}/movie/${service.username}/${service.password}/${sid}.${ext}`;
+            return toEntry({
+                id: String(sid ?? ""),
+                name: it?.name || String(sid ?? ""),
+                logo: it?.stream_icon || it?.cover || appConfig.fallbackImage,
+                url,
+            });
+        });
+
+        const entries = [...liveEntries, ...vodEntries, ...seriesEntries];
+        const snapshotId = crypto.createHash("sha1").update(JSON.stringify(entries)).digest("hex");
+        const cashed: CashedEntries = {
+            snapshotId,
+            timeStamp: new Date().toISOString(),
+            formats: extractFormats(entries),
+            categories: extractCategories(entries),
+            servers: [service.name],
+            entries,
+        };
+
+        await writeJsonFile(filePathCashed, cashed);
+        logger.info(`[CACHE:XTREAM] Wrote ${entries.length} entries to ${filePathCashed}`);
+        return cashed;
+    }
+
+    async function fetchJson(url: string): Promise<any> {
+        const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+        const txt = await res.text();
+        try {
+            return JSON.parse(txt);
+        } catch (e) {
+            logger.warn(`[FETCH:XTREAM] Non-JSON response for ${url.substring(0, 80)}...`);
+            throw e;
+        }
     }
 
     async function getCachedOrFreshM3UFromLocal(service: StreamingService): Promise<string> {
@@ -311,4 +438,16 @@ function makeM3UEmptyEntry(serviceId: string, filePath: string): M3UEntry {
     };
 
     return entry;
+}
+
+function toEntry(p: { id: string; name: string; logo: string | undefined; url: string }): M3UEntry {
+    const { id, name, logo, url } = p;
+    return {
+        tvgId: id || "",
+        tvgName: name || "",
+        tvgLogo: logo || appConfig.fallbackImage,
+        groupTitle: inferContentCategory(url),
+        name: name || id || url,
+        url,
+    };
 }
