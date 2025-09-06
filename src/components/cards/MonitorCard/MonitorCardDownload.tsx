@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button/Button";
 import { MonitorCardBase } from "./MonitorCardBase";
 import ProgressBarPercent from "@/components/ProgressBarPercent/ProgressBarPercent";
+import { logger } from "@/utils/logger";
 
 interface MonitorCardDownloadProps {
     name: string;
@@ -38,7 +39,7 @@ export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, st
                     }
                 }
             } catch (err) {
-                console.warn("Failed to fetch download progress", err);
+                logger.warn("Failed to fetch download progress", err);
             }
         };
 

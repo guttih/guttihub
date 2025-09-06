@@ -1,5 +1,6 @@
 // src/app/api/stream-proxy/route.ts
 
+import { logger } from "@/utils/logger";
 import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
         });
     } catch (err) {
         clearTimeout(timeout);
-        console.error("❌ Stream proxy error:", err);
+        logger.error("❌ Stream proxy error:", err);
         return new Response("Proxy error or stream blocked", { status: 502 });
     }
 }

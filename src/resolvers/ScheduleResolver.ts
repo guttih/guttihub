@@ -8,6 +8,7 @@ import { runJobctl } from "@/utils/jobctl";
 import { buildRecordingId, cleanupStreamingJobs, getBaseUrl, getFinalOutputFilename } from "@/utils/resolverUtils";
 import { M3UEntry } from "@/types/M3UEntry";
 import { Job, JobctlAddSuccess } from "@/types/Jobctl";
+import { logger } from "@/utils/logger";
 
 export class ScheduleResolver {
     static scriptStartRecording = getScriptPath("record.sh");
@@ -90,21 +91,21 @@ export class ScheduleResolver {
             params.cacheKey,
         ];
 
-        console.log("📝 Writing recording job metadata:", job);
+        logger.log("📝 Writing recording job metadata:", job);
         ensureMediaDir();
         await writeRecordingJobFile(job, true);
 
         if (params.recordNow) {
-            console.log("Entire command:", ScheduleResolver.scriptStartRecording, ...args);
+            logger.log("Entire command:", ScheduleResolver.scriptStartRecording, ...args);
             spawn("bash", [ScheduleResolver.scriptStartRecording, ...args], {
                 detached: true,
                 stdio: "ignore",
             }).unref();
 
             // Lets console.log the whole command so we can test it in the terminal
-            console.log(" -------------      Command given      -------------");
-            console.log("bash", ScheduleResolver.scriptStartRecording, ...args);
-            console.log("----------------------------------------------------");
+            logger.log(" -------------      Command given      -------------");
+            logger.log("bash", ScheduleResolver.scriptStartRecording, ...args);
+            logger.log("----------------------------------------------------");
 
             return {
                 success: true,

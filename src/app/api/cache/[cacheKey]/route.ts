@@ -5,9 +5,10 @@ import { getCacheDir, fileExists, readJsonFile } from "@/utils/fileHandler";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { M3UEntry } from "@/types/M3UEntry";
+import { logger } from "@/utils/logger";
 
 // GET /api/cache/:cacheKey
-export async function GET(request: NextRequest, { params }: { params: Promise<{ cacheKey: string; }> }): Promise<NextResponse> {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ cacheKey: string }> }): Promise<NextResponse> {
     const session = await getServerSession(authOptions);
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,21 +25,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const entryPath = `${dir}/${cacheKey}.json`;
 
     try {
-        let entry: M3UEntry|null = null;
+        let entry: M3UEntry | null = null;
         if (await fileExists(recordingPath)) {
-            console.log("🔍 Found recording file:", recordingPath);
+            logger.info("🔍 Found recording file:", recordingPath);
             entry = await readJsonFile<M3UEntry>(recordingPath);
         } else if (await fileExists(entryPath)) {
-            console.log("🔍 Found entry file:", entryPath);
+            logger.info("🔍 Found entry file:", entryPath);
             entry = await readJsonFile<M3UEntry>(entryPath);
         } else {
-            console.warn("❌ No cache file found for:", cacheKey);
+            logger.warn("❌ No cache file found for:", cacheKey);
             return NextResponse.json({ error: "Cache entry not found" }, { status: 404 });
         }
-        
+
         return NextResponse.json({ entry, email: session.user?.email ?? "unknown" });
     } catch (err) {
-        console.error("❌ Error reading entry file", err);
+        logger.error("❌ Error reading entry file", err);
         return NextResponse.json({ error: "Failed to read entry" }, { status: 500 });
     }
 }

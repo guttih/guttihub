@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { getRecordingJobInfo } from "@/utils/resolverUtils";
+import { logger } from "@/utils/logger";
 
 export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
@@ -17,7 +18,6 @@ export async function GET(req: Request) {
     }
 
     try {
-        
         const info = await getRecordingJobInfo(cacheKey, recordingId);
 
         // 1) flatten any arrays to their last value
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
         // 3) return a pure Record<string,string>
         return NextResponse.json(flatStatus);
     } catch (err) {
-        console.warn("❌ Failed to get status for", recordingId, err);
+        logger.warn("❌ Failed to get status for", recordingId, err);
         return NextResponse.json({ STATUS: "unknown", ERROR: "Status unavailable" }, { status: 404 });
     }
 }

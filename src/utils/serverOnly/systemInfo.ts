@@ -2,6 +2,7 @@ import * as path from "path";
 import * as os from "os";
 import checkDiskSpace from "check-disk-space";
 import { formatBytes } from "../downloadStatusParser";
+import { logger } from "../logger";
 
 export async function checkSystemInfo(): Promise<{
     success: boolean;
@@ -21,7 +22,7 @@ export async function checkSystemInfo(): Promise<{
         output["disk_total_space"] = formatBytes(total);
         output["disk_available_space"] = formatBytes(free);
     } catch (err: unknown) {
-        console.error("❌ Disk space check failed:", err);
+        logger.error("❌ Disk space check failed:", err);
         missing.push("diskusage");
     }
 
@@ -32,7 +33,7 @@ export async function checkSystemInfo(): Promise<{
         output["memory_total"] = formatBytes(os.totalmem());
         output["memory_free"] = formatBytes(os.freemem());
     } catch (err: unknown) {
-        console.error("❌ OS memory check failed:", err);
+        logger.error("❌ OS memory check failed:", err);
         missing.push("os-info");
     }
 
@@ -46,7 +47,7 @@ export async function checkSystemInfo(): Promise<{
 
         output["external_ip"] = externalIP || "Not available";
     } catch (err: unknown) {
-        console.error("❌ Network check failed:", err);
+        logger.error("❌ Network check failed:", err);
         missing.push("network");
     }
 

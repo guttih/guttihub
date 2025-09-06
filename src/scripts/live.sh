@@ -35,12 +35,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Validate required values ---
-[[ -z "${BASE_URL:-}" ]] && echo "❌ Missing --url" >&2 && exit 1
-[[ -z "${CACHE_KEY:-}" ]] && echo "❌ Missing --url" >&2 && exit 1
+[[ -z "${BASE_URL:-}" ]] && echo "❌ Missing --baseUrl" >&2 && exit 1
+[[ -z "${CACHE_KEY:-}" ]] && echo "❌ Missing --cacheKey" >&2 && exit 1
 [[ -z "${STREAM_URL}" ]] && echo "Missing --url" >&2 && exit 1
-[[ -z "${STREAM_URL}" ]] && echo "Missing stream URL" >&2 && exit 1
-[[ -z "${USER}" ]] && echo "Missing user name" >&2 && exit 1
-[[ -z "${OUTPUT_FILE}" ]] && echo "Missing output file name" >&2 && exit 1
+[[ -z "${USER}" ]] && echo "Missing --user -> name" >&2 && exit 1
+[[ -z "${OUTPUT_FILE}" ]] && echo "Missing --outputFile -> file name" >&2 && exit 1
 LOGLEVEL="${LOGLEVEL:-error}"
 
 sanitize_path_param() {

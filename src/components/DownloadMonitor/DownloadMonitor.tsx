@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge/StatusBadge";
 import ProgressBarPercent from "../ProgressBarPercent/ProgressBarPercent";
 import { formatBytes } from "@/utils/downloadStatusParser";
+import { logger } from "@/utils/logger";
 
 export interface DownloadMonitorData {
     cacheKey: string;
@@ -57,7 +58,7 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
                     }
                 }
             } catch (err) {
-                console.error("❌ Download monitor fetch failed:", err);
+                logger.error("❌ Download monitor fetch failed:", err);
                 if (mounted) setError((err as Error).message);
             }
         };

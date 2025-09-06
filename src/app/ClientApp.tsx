@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { M3UEntryFieldLabel } from "@/types/M3UEntryFieldLabel";
 import { StreamingService } from "@/types/StreamingService";
@@ -26,6 +26,7 @@ import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel/LiveMonitor
 import { hasRole, UserRole } from "@/utils/auth/accessControl";
 import { showMessageBox } from "@/components/ui/MessageBox";
 import { UserMenu } from "@/components/UserMenu/UserMenu";
+import { logger } from "@/utils/logger";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -70,6 +71,8 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const [totalEntries, setTotalEntries] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [yearsFromServer, setYearsFromServer] = useState<string[]>([]);
+    const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
+    const [hasCache, setHasCache] = useState<boolean | null>(null);
     const [inputModes, setInputModes] = useState<Record<string, { isRegex: boolean; isCaseSensitive: boolean }>>({
         searchName: { isRegex: false, isCaseSensitive: false },
         searchGroup: { isRegex: false, isCaseSensitive: false },
@@ -86,7 +89,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         if (!loading && focusedInput) {
             restoreFocus(focusedInput);
         }
-    }, [loading, focusedInput]);
+    }, [loading, focusedInput, restoreFocus]);
 
     const debouncedFilters = useMemo(
         () => ({
@@ -164,9 +167,10 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
 
     const buttonBaseClasses = "bg-gray-700 text-white px-4 py-2 rounded transition-colors duration-150 hover:bg-gray-600 disabled:opacity-50";
 
-    async function handleFetch(service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) {
+    const handleFetch = useCallback(async (service: StreamingService | null = activeService, source: string = "unknown", force: boolean = false) => {
         if (!service) return;
-        console.log(`handleFetch called by : ${source}`);
+        logger.info(`handleFetch called by: ${source}`);
+
         // Validate each regex-enabled input
         if (
             (inputModes.searchName.isRegex && !isValidRegex(searchName)) ||
@@ -237,11 +241,11 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
             setCategoriesFromServer(json.data.categories || []);
             setFormatsFromServer((json.data.formats ?? []) as StreamFormat[]);
         } catch (err) {
-            console.error("Fetch failed", err);
+            logger.error("Fetch failed", err);
         } finally {
             setLoading(false);
         }
-    }
+    }, [activeService, inputModes, searchName, searchGroup, searchTvgId, snapshotId, currentPage, pageSize, debouncedFilters]);
     const mergedYears = useMemo(() => {
         return Array.from(new Set([...yearsFromServer, ...selectedYears])).sort((a, b) => parseInt(b) - parseInt(a));
     }, [yearsFromServer, selectedYears]);
@@ -256,7 +260,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     setLiveCount(json.count ?? 0);
                 })
                 .catch(() => {
-                    console.warn("Failed to poll liveCount");
+                    logger.warn("Failed to poll liveCount");
                     setLiveCount(0);
                 });
         };
@@ -265,6 +269,27 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
         const intervalId = setInterval(fetchCount, 5000);
         return () => clearInterval(intervalId);
     }, [activeService]);
+
+    // Poll background refresh status for the active service
+    useEffect(() => {
+        const poll = async () => {
+            if (!activeService) return;
+            try {
+                const res = await fetch(`/api/fetch-m3u/refresh-status?serviceId=${activeService.id}`);
+                if (res.ok) {
+                    const json: { refreshing: boolean; hasCache?: boolean } = await res.json();
+                    setIsBackgroundRefreshing(Boolean(json?.refreshing));
+                    if (typeof json?.hasCache === "boolean") setHasCache(json.hasCache);
+                }
+            } catch {
+                // ignore
+            }
+        };
+
+        poll();
+        const id = setInterval(poll, 4000);
+        return () => clearInterval(id);
+    }, [activeService, userRole]);
 
     useEffect(() => {
         if (!loading && focusedInput) {
@@ -279,7 +304,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
     useEffect(() => {
         if (!activeService) return;
         handleFetch(activeService, "useEffect:... [currentPage, activeService, debouncedFilters, handleFetch])");
-    }, [currentPage, activeService, debouncedFilters]);
+    }, [currentPage, activeService, debouncedFilters, handleFetch]);
 
     useEffect(() => {
         if (!activeService) return;
@@ -355,30 +380,55 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     {/* Select Service */}
                     <label htmlFor="serviceSelect" className="text-sm text-white flex flex-col">
                         Select Service:
-                        <select
-                            id="serviceSelect"
-                            value={activeService?.id ?? ""}
-                            onChange={(e) => {
-                                const selected = services.find((s) => s.id === e.target.value);
-                                if (selected) {
-                                    setActiveService(selected);
-                                    setCurrentPage(1);
-                                    // console.log("🌀 Switching to service:", selected);
-                                    // handleFetch(selected, "onChange: serviceSelect");
-                                }
-                            }}
-                            disabled={loading}
-                            className="bg-gray-800 text-white px-3 py-2 border border-gray-600 rounded mt-1 min-w-[200px]"
-                        >
-                            <option value="" disabled>
-                                Select a service...
-                            </option>
-                            {services.map((service) => (
-                                <option key={service.id} value={service.id}>
-                                    {service.name}
+                        <div className="flex items-center gap-2 mt-1">
+                            <select
+                                id="serviceSelect"
+                                value={activeService?.id ?? ""}
+                                onChange={(e) => {
+                                    const selected = services.find((s) => s.id === e.target.value);
+                                    if (selected) {
+                                        setActiveService(selected);
+                                        setCurrentPage(1);
+                                        // console.log("🌀 Switching to service:", selected);
+                                        // handleFetch(selected, "onChange: serviceSelect");
+                                    }
+                                }}
+                                disabled={loading}
+                                className="bg-gray-800 text-white px-3 py-2 border border-gray-600 rounded min-w-[200px]"
+                            >
+                                <option value="" disabled>
+                                    Select a service...
                                 </option>
-                            ))}
-                        </select>
+                                {services.map((service) => (
+                                    <option key={service.id} value={service.id}>
+                                        {service.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {(() => {
+                                type Kind = "updating" | "building" | "refreshing";
+                                let kind: Kind | null = null;
+                                if (isBackgroundRefreshing) kind = "updating";
+                                else if (loading && hasCache === false) kind = "building";
+                                else if (loading && hasCache === true) kind = "refreshing";
+                                if (!kind) return null;
+                                const cfg: Record<Kind, { dot: string; title: string }> = {
+                                    updating: { dot: "bg-yellow-400", title: "Updating… (background)" },
+                                    building: { dot: "bg-blue-400", title: "Building… (first load)" },
+                                    refreshing: { dot: "bg-teal-400", title: "Refreshing…" },
+                                };
+                                const c = cfg[kind];
+                                return (
+                                    <span
+                                        className="inline-block w-2 h-2 rounded-full ml-1 align-middle animate-pulse"
+                                        style={{ boxShadow: "0 0 0 2px rgba(0,0,0,0.3)" }}
+                                        title={c.title}
+                                    >
+                                        <span className={`block w-full h-full rounded-full ${c.dot}`} />
+                                    </span>
+                                );
+                            })()}
+                        </div>
                     </label>
                 </div>
                 {/* Right Group: Card Style + Player Mode */}

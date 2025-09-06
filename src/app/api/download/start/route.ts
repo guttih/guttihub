@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { DownloadResolver } from "@/resolvers/DownloadResolver";
 import { M3UEntry } from "@/types/M3UEntry";
+import { logger } from "@/utils/logger";
 
 export async function POST(req: Request) {
     try {
@@ -20,11 +21,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: result.error || "Failed to start download" }, { status: 500 });
         }
 
-        console.log(`🚀 Started download ${result.recordingId}`);
+        logger.log(`🚀 Started download ${result.recordingId}`);
 
         return NextResponse.json({ recordingId: result.recordingId });
     } catch (err) {
-        console.error("❌ Error starting download:", err);
+        logger.error("❌ Error starting download:", err);
         return NextResponse.json({ error: "Failed to start download" }, { status: 500 });
     }
 }

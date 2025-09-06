@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { showMessageBox } from "../../ui/MessageBox";
 import { MonitorCardDownload, MonitorCardRecording, MonitorCardStream, MonitorCardMovie } from "@/components/cards/MonitorCard";
 import { EnrichedJob } from "@/types/EnrichedJob";
+import { logger } from "@/utils/logger";
 
 interface LiveMonitorPanelProps {
     hideIfNone?: boolean;
@@ -43,7 +44,7 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
                 setJobs(json);
                 setError(null); // ✅ Clear error if fetch succeeds
             } catch (err) {
-                console.error("Error fetching live jobs:", err);
+                logger.error("Error fetching live jobs:", err);
                 setError((err as Error).message);
             } finally {
                 setLoading(false);
@@ -56,7 +57,7 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
     }, []);
 
     function handleKill(cacheKey: string) {
-        console.log("Stopping job with cacheKey:", cacheKey);
+        logger.log("Stopping job with cacheKey:", cacheKey);
         fetch("/api/live/stop", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

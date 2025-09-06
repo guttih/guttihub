@@ -4,12 +4,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { cleanupFinishedJobs, deleteOldDanglingJobs, finalizeJobStart } from "@/utils/resolverUtils";
+import { logger } from "@/utils/logger";
 
 // Corrected POST function signature with dynamic params
 export async function POST(req: NextRequest) {
     try {
         const { cacheKey } = await req.json();
-        console.log("🧨 Targeted cleanup for job:", cacheKey);
+        logger.log("🧨 Targeted cleanup for job:", cacheKey);
         // Finalize the job first (move file, create info.json, delete temp files)
         const jobFinalized = await finalizeJobStart(cacheKey);
         if (!jobFinalized) {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
             message: `Cleanup for job ${cacheKey} complete.`,
         });
     } catch (err) {
-        console.error("🧨 Targeted cleanup failed:", err);
+        logger.error("🧨 Targeted cleanup failed:", err);
         return NextResponse.json({ success: false, error: "Targeted cleanup failed" }, { status: 500 });
     }
 }

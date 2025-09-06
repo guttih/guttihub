@@ -6,6 +6,7 @@ import { Readable } from "stream";
 import fs from "fs";
 import { promisify } from "util";
 import { deleteFileAndForget, fileExists } from "@/utils/fileHandler";
+import { logger } from "@/utils/logger";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ serviceId: string; filename: string[] }> }): Promise<NextResponse> {
     const { serviceId, filename } = await params;
@@ -82,10 +83,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         }
     } catch (err) {
         if (err instanceof Error) {
-            console.error("❌ Failed to serve video:", err);
+            logger.error("❌ Failed to serve video:", err);
             return NextResponse.json({ error: "Failed to serve video" }, { status: 500 });
         } else {
-            console.error("❌ Unknown error:", err);
+            logger.error("❌ Unknown error:", err);
             return NextResponse.json({ error: "Unknown error" }, { status: 500 });
         }
     }
@@ -136,10 +137,10 @@ export async function DELETE(
 
         const infoPath = `${filePath}.json`;
         if (await fileExists(infoPath)) deleteFileAndForget(infoPath); //always delete the info file
-        console.log("Media file deleting:", filePath);
+        logger.log("Media file deleting:", filePath);
 
         await unlink(filePath); //this could fail, but, hey, we at least removed the info file
-        console.log("Media file deleting done:");
+        logger.log("Media file deleting done:");
         return NextResponse.json({ message: "File deleted successfully" });
     } catch {
         return NextResponse.json({ error: "Unable to delete File" }, { status: 404 });

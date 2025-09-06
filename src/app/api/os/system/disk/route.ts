@@ -2,32 +2,33 @@
 
 import { NextResponse } from "next/server";
 import { checkSystemInfo } from "@/utils/serverOnly/systemInfo";
+import { logger } from "@/utils/logger";
 
 export async function GET() {
-  try {
-    const results = await checkSystemInfo();
+    try {
+        const results = await checkSystemInfo();
 
-    return NextResponse.json({
-      ok: results.success,
-      results,
-    });
-  } catch (error) {
-    console.error("System check route error:", error);
-    
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Unexpected Server Error",
-        reason: "An unexpected error occurred while running system check.",
-        results: {
-          success: false,
-          missing: [],
-          output: {},
-        },
-      },
-      {
-        status: 500,
-      }
-    );
-  }
+        return NextResponse.json({
+            ok: results.success,
+            results,
+        });
+    } catch (error) {
+        logger.error("System check route error:", error);
+
+        return NextResponse.json(
+            {
+                ok: false,
+                error: "Unexpected Server Error",
+                reason: "An unexpected error occurred while running system check.",
+                results: {
+                    success: false,
+                    missing: [],
+                    output: {},
+                },
+            },
+            {
+                status: 500,
+            }
+        );
+    }
 }

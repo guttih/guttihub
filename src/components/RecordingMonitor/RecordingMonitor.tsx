@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge/StatusBadge";
 import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
 import { BaseButton } from "@/components/ui/BaseButton/BaseButton";
+import { logger } from "@/utils/logger";
 
 export interface MonitorData {
     cacheKey: string;
@@ -28,7 +29,6 @@ interface RecordingMonitorProps {
     intervalMs?: number;
     onStopRecording?: () => void;
     onStatusChange?: (status: string) => void;
-
 }
 
 export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRecording, onStatusChange }: RecordingMonitorProps) {
@@ -37,14 +37,13 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
     const lastStatus = useRef<string | null>(null);
 
     const [stopCountdown, setStopCountdown] = useState<number | null>(null);
-    
+
     useEffect(() => {
         let mounted = true;
-        console.log("🎥 RecordingMonitor mounted", { cacheKey });
+        logger.log("🎥 RecordingMonitor mounted", { cacheKey });
         const fetchMonitorData = async () => {
             try {
-
-                console.log("fetchMonitorData is executing");
+                logger.log("fetchMonitorData is executing");
                 const params = new URLSearchParams();
                 if (cacheKey) params.set("cacheKey", cacheKey);
                 const res = await fetch(`/api/record/monitor?${params.toString()}`);
@@ -56,11 +55,11 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
 
                     const newStatus = json.currentStatus?.toLowerCase();
                     if (newStatus && newStatus !== lastStatus.current) {
-                      lastStatus.current = newStatus;
-                      onStatusChange?.(newStatus);
+                        lastStatus.current = newStatus;
+                        onStatusChange?.(newStatus);
                     }
-                    
-                    if (["done", "stopped", "error"].includes(newStatus )) {
+
+                    if (["done", "stopped", "error"].includes(newStatus)) {
                         if (stopCountdown === null) {
                             setStopCountdown(5); // start 5 pulls grace period
                         }
@@ -69,7 +68,7 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
                     }
                 }
             } catch (err) {
-                console.error("❌ Monitor fetch failed:", err);
+                logger.error("❌ Monitor fetch failed:", err);
                 if (mounted) setError((err as Error).message);
             }
         };
@@ -78,10 +77,10 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
 
         const interval = setInterval(() => {
             if (stopCountdown !== null && stopCountdown <= 0) {
-                console.log("Stopping monitor fetch due to countdown");
+                logger.log("Stopping monitor fetch due to countdown");
                 clearInterval(interval);
             } else {
-                console.log("Fetching monitor data...");
+                logger.log("Fetching monitor data...");
                 fetchMonitorData();
                 if (stopCountdown !== null) {
                     setStopCountdown((prev) => (prev !== null ? prev - 1 : null));
@@ -146,7 +145,7 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
                     monitorData.expectedStop &&
                     monitorData.serverTime &&
                     "recording" === monitorData?.currentStatus.toLowerCase() && (
-                    // !["done", "error", "stopped"].includes(monitorData?.currentStatus.toLowerCase()) && (
+                        // !["done", "error", "stopped"].includes(monitorData?.currentStatus.toLowerCase()) && (
                         <ProgressBarTime start={monitorData.startedAt} end={monitorData.expectedStop} now={monitorData.serverTime} showTime />
                     )}
 
@@ -173,7 +172,6 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
                 ) : (
                     <div className="text-gray-400 italic">📜 No status history yet...</div>
                 )}
-                
             </div>
 
             {/* Live Log */}

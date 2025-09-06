@@ -2,6 +2,7 @@
 "use client";
 
 import { showMessageBox } from "@/components/ui/MessageBox";
+import { logger } from "@/utils/logger";
 
 export const SystemCheckButton = () => {
     const runSystemCheck = async () => {
@@ -35,7 +36,7 @@ export const SystemCheckButton = () => {
                 blocking: true,
                 preserveLineBreaks: true,
             });
-            console.error("System check failed:", err);
+            logger.error("System check failed:", err);
         }
     };
 

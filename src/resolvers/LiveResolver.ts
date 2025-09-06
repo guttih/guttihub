@@ -5,6 +5,7 @@ import { RecordingJob } from "@/types/RecordingJob";
 import { getScriptPath, getWorkDir, readRecordingJobFile, writeRecordingJobFile } from "@/utils/fileHandler";
 import { buildRecordingId, getBaseUrl, quoteShellArg } from "@/utils/resolverUtils";
 import { M3UEntry } from "@/types/M3UEntry";
+import { logger } from "@/utils/logger";
 
 export class LiveResolver {
     static startStreamScript = getScriptPath("live.sh");
@@ -24,7 +25,7 @@ export class LiveResolver {
 
             return { success: true };
         } catch (err) {
-            console.error("❌ LiveResolver.stopStream failed", err);
+            logger.error("❌ LiveResolver.stopStream failed", err);
             return { success: false, error: (err as Error).message };
         }
     }
@@ -38,7 +39,7 @@ export class LiveResolver {
         const fileName = buildRecordingId("live-", new Date(), entry.url);
         const outputFile = LiveResolver.makeStreamFilePath(getWorkDir(), fileName);
 
-        console.log("📦 Spaning live stream at ", outputFile);
+        logger.log("📦 Spaning live stream at ", outputFile);
         const job: RecordingJob = {
             recordingId: fileName,
             cacheKey,
@@ -70,20 +71,20 @@ export class LiveResolver {
             "info",
         ];
 
-        console.log("📝 Writing recording job metadata:", job);
+        logger.log("📝 Writing recording job metadata:", job);
         await writeRecordingJobFile(job, true);
         //Now when we have created the a cashe?.json file with RecodingJob data added instead of only the entry data, we can remove the the old one, if it exists
 
-        console.log("Entire command:", LiveResolver.startStreamScript, ...args);
+        logger.log("Entire command:", LiveResolver.startStreamScript, ...args);
         // 🚀 Spawn the bash script in background (non-blocking)
         spawn("bash", [LiveResolver.startStreamScript, ...args], {
             detached: true,
             stdio: "ignore", // Don't wait on stdout/stderr
         }).unref();
 
-        console.log(" -------------      Command given      -------------");
-        console.log("bash", LiveResolver.startStreamScript, ...args);
-        console.log("----------------------------------------------------");
+        logger.log(" -------------      Command given      -------------");
+        logger.log("bash", LiveResolver.startStreamScript, ...args);
+        logger.log("----------------------------------------------------");
 
         return { recordingId: job.recordingId };
     }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { M3UEntry } from "@/types/M3UEntry";
 import { appConfig } from "@/config";
 import { Button } from "@/components/ui/Button/Button";
+import { logger } from "@/utils/logger";
 
 interface Props {
     entry: M3UEntry;
@@ -13,8 +14,16 @@ interface Props {
 
 export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
     const maximumDurationSeconds = appConfig.maxRecordingDuration;
-    const defaultStart = new Date();
-    defaultStart.setHours(defaultStart.getHours() + 1);
+
+    const [serverTimeOffsetMs, setServerTimeOffsetMs] = useState(0);
+    const [startTime, setStartTime] = useState<string | null>(null);
+    const [durationSeconds, setDurationSeconds] = useState(180);
+    const [liveNow, setLiveNow] = useState<Date | null>(null);
+    const [recordNow, setRecordNow] = useState(true);
+    const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const getServerNow = () => new Date(Date.now() + serverTimeOffsetMs);
 
     const formatDateTime = (date: Date) => date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
     const formatDuration = (seconds: number): string => {
@@ -24,26 +33,42 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
         return [hrs, mins, secs].map((v) => String(v).padStart(2, "0")).join(":");
     };
 
-    const [startTime, setStartTime] = useState(formatDateTime(defaultStart));
-    const [durationSeconds, setDurationSeconds] = useState(180);
-    const [liveNow, setLiveNow] = useState(new Date());
-    const [recordNow, setRecordNow] = useState(true);
-    const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    // Fetch server time on mount
+    useEffect(() => {
+        const fetchServerTime = async () => {
+            try {
+                const res = await fetch("/api/status/server");
+                const data = await res.json();
+                const server = new Date(data.serverTime);
+                const offset = server.getTime() - Date.now();
+                setServerTimeOffsetMs(offset);
+
+                const defaultStart = new Date(server.getTime());
+                defaultStart.setHours(defaultStart.getHours() + 1);
+                setStartTime(formatDateTime(defaultStart));
+
+                setLiveNow(server);
+
+                const interval = setInterval(() => {
+                    setLiveNow(new Date(Date.now() + offset));
+                }, 1000);
+
+                return () => clearInterval(interval);
+            } catch (err) {
+                console.error("Failed to fetch server time:", err);
+            }
+        };
+
+        fetchServerTime();
+    }, []);
+
+    const calculatedEndTime = useMemo(() => {
+        const start = recordNow ? getServerNow() : startTime ? new Date(startTime) : getServerNow(); // fallback if startTime is still null
+
+        return new Date(start.getTime() + durationSeconds * 1000);
+    }, [recordNow, startTime, durationSeconds, serverTimeOffsetMs]);
 
     const isDurationTooLong = durationSeconds > maximumDurationSeconds;
-
-    // 🧠 Calculate end time on the fly
-    const calculatedEndTime = (() => {
-        const start = recordNow ? liveNow : new Date(startTime);
-        return new Date(start.getTime() + durationSeconds * 1000);
-    })();
-
-    useEffect(() => {
-        if (!recordNow) return;
-        const timer = setInterval(() => setLiveNow(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, [recordNow]);
 
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -58,21 +83,21 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
 
         const form = new FormData();
         form.append("cacheKey", cacheKey);
-        form.append("startTime", recordNow ? liveNow.toISOString() : startTime);
+        form.append("startTime", recordNow ? getServerNow().toISOString() : startTime || "");
         form.append("duration", durationSeconds.toString());
         form.append("email", userEmail);
         form.append("recordNow", recordNow ? "true" : "false");
         form.append("baseUrl", window.location.origin);
 
         try {
-            console.log("Sending cacheKey from RecordForm", cacheKey);
+            logger.log("Sending cacheKey from RecordForm", cacheKey);
             const res = await fetch("/api/record/schedule-org", {
                 method: "POST",
                 body: form,
             });
 
             const json = await res.json();
-            console.log("Server responded:", json);
+            logger.log("Server responded:", json);
             if (res.ok) {
                 const { cacheKey, recordingId } = json;
                 const params = new URLSearchParams({
@@ -81,7 +106,6 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
                 });
 
                 const target = recordNow ? `/record/status?${params.toString()}` : `/schedule`;
-                console.log("Would have redirected to Redirecting to:", target);
                 window.location.href = target;
             } else {
                 setStatus({ type: "error", message: json.error || "Unknown error" });
@@ -92,6 +116,10 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
             setIsSubmitting(false);
         }
     };
+
+    if (!startTime || !liveNow) {
+        return <p className="text-center text-gray-400">⏳ Syncing with server time...</p>;
+    }
 
     return (
         <div className="max-w-3xl mx-auto p-6">
@@ -111,7 +139,10 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
                     </div>
                 </div>
 
-                {/* Checkbox row - right aligned */}
+                {/* Server time display */}
+                <p className="text-sm text-right text-gray-400 font-mono">🕒 Server Time: {liveNow.toLocaleString(undefined, { hour12: false })}</p>
+
+                {/* Checkbox row */}
                 <div className="flex justify-end">
                     <label className="inline-flex items-center space-x-2">
                         <input
@@ -125,7 +156,7 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
                     </label>
                 </div>
 
-                {/* Start time and Duration row */}
+                {/* Start + Duration */}
                 <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
                     {/* Start Time */}
                     <div className="flex-1 space-y-2">
@@ -148,12 +179,11 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
                         <label className="text-sm font-medium text-white">Duration</label>
                         <input
                             type="time"
-                            step="60" // ⏱️ no seconds
-                            value={new Date(durationSeconds * 1000).toISOString().substr(11, 5)} // "HH:MM"
+                            step="60"
+                            value={new Date(durationSeconds * 1000).toISOString().substr(11, 5)}
                             onChange={(e) => {
                                 const [h, m] = e.target.value.split(":").map(Number);
-                                const newSeconds = h * 3600 + m * 60;
-                                setDurationSeconds(newSeconds);
+                                setDurationSeconds(h * 3600 + m * 60);
                             }}
                             className="w-full bg-gray-800 text-white p-2 rounded border border-gray-600"
                         />
@@ -164,19 +194,14 @@ export default function RecordForm({ entry, cacheKey, userEmail }: Props) {
                     </div>
                 </div>
 
-                {/* Schedule Button */}
+                {/* Button */}
                 <div>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={isSubmitting || durationSeconds > maximumDurationSeconds}
-                        variant="default"
-                        className="w-full"
-                    >
+                    <Button onClick={handleSubmit} disabled={isSubmitting || isDurationTooLong} variant="default" className="w-full">
                         {isSubmitting ? "Scheduling..." : recordNow ? "Record now" : "Schedule Recording"}
                     </Button>
                 </div>
 
-                {/* Status Message */}
+                {/* Status */}
                 {status && <p className={`text-sm ${status.type === "success" ? "text-green-400" : "text-red-400"}`}>{status.message}</p>}
             </div>
         </div>

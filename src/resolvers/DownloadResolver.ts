@@ -5,6 +5,7 @@ import { buildRecordingId, getBaseUrl, getExtensionFromUrl, getFinalOutputFilena
 import { ensureMediaDir, getMediaDir, getScriptPath, getWorkDir, readDownloadJobFile, writeDownloadingJobFile } from "@/utils/fileHandler";
 import { M3UEntry } from "@/types/M3UEntry";
 import { DownloadJob } from "@/types/DownloadJob";
+import { logger } from "@/utils/logger";
 
 export class DownloadResolver {
     static scriptDownload = getScriptPath("download.sh");
@@ -22,7 +23,7 @@ export class DownloadResolver {
             const workDir = `${getWorkDir()}`;
             const outputFile = `${workDir}/${recordingId}`;
             const finalOutputFile = `${getMediaDir()}/${getFinalOutputFilename(params.entry, "ts", true)}`;
-            console.log(`🚀 Starting download job: ${recordingId}`);
+            logger.log(`🚀 Starting download job: ${recordingId}`);
 
             const job: DownloadJob = {
                 recordingId,
@@ -63,11 +64,11 @@ export class DownloadResolver {
                 stdio: "ignore",
             }).unref();
 
-            console.log(" -------------      Command given      -------------");
-            console.log("bash", DownloadResolver.scriptDownload, ...args);
-            console.log("----------------------------------------------------");
+            logger.log(" -------------      Command given      -------------");
+            logger.log("bash", DownloadResolver.scriptDownload, ...args);
+            logger.log("----------------------------------------------------");
 
-            console.log("✅ Download job launched");
+            logger.log("✅ Download job launched");
 
             return {
                 success: true,
@@ -76,7 +77,7 @@ export class DownloadResolver {
                 recordingId,
             };
         } catch (err) {
-            console.error("❌ DownloadResolver.startDownload failed", err);
+            logger.error("❌ DownloadResolver.startDownload failed", err);
             return { success: false, error: (err as Error).message };
         }
     }
@@ -93,11 +94,11 @@ export class DownloadResolver {
                 stdio: "ignore", // Don't block on stdout/stderr
             }).unref();
 
-            console.log(`✅ Sent stop signal to download job ${job.recordingId}`);
+            logger.log(`✅ Sent stop signal to download job ${job.recordingId}`);
 
             return { success: true, message: `Download ${job.recordingId} stopped.` };
         } catch (err) {
-            console.error("❌ DownloadResolver.stopDownload failed", err);
+            logger.error("❌ DownloadResolver.stopDownload failed", err);
             return { success: false, error: (err as Error).message };
         }
     }

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { cleanupFinishedJobs, deleteOldDanglingJobs } from "@/utils/resolverUtils";
 import { hasUserAccessLevelServerOnly } from "@/utils/serverOnly/hasUserAccessLevel";
+import { logger } from "@/utils/logger";
 
 export async function POST(req: Request) {
     try {
@@ -11,12 +12,12 @@ export async function POST(req: Request) {
         if (force && !(await hasUserAccessLevelServerOnly("admin"))) {
             return NextResponse.json({ success: false, error: "You are not allowed to force cleanup." }, { status: 403 });
         }
-        const validForce = !!force;
-        await cleanupFinishedJobs({ force: validForce });
-        await deleteOldDanglingJobs(validForce);
-        return NextResponse.json({ success: true, message: `Cleanup complete${force ? " (forced)" : ""}.` });
+        const isForced = !!force;
+        await cleanupFinishedJobs(isForced);
+        await deleteOldDanglingJobs(isForced);
+        return NextResponse.json({ success: true, message: `Cleanup complete${isForced ? " (forced)" : ""}.` });
     } catch (err) {
-        console.error("🧨 Cleanup failed:", err);
+        logger.error("🧨 Cleanup failed:", err);
         return NextResponse.json({ success: false, error: "Cleanup failed" }, { status: 500 });
     }
 }

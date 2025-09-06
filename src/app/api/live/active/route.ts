@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { getActiveLiveJobs, enrichJob } from "@/utils/record/recordingJobUtils";
+import { logger } from "@/utils/logger";
 
 // import { cleanupFinishedJobs } from "@/utils/resolverUtils";
 
@@ -37,7 +38,7 @@ export async function GET() {
         // const uniqueJobs = Array.from(new Map(combined.map((job) => [job.cacheKey, job])).values());
         return NextResponse.json(enrichedJobs);
     } catch (err) {
-        console.error("❌ Failed to list active jobs:", err);
+        logger.error("❌ Failed to list active jobs:", err);
         return NextResponse.json({ error: "Could not load live jobs" }, { status: 500 });
     }
 }

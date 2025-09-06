@@ -6,6 +6,7 @@ import StatusClient from "./StatusClient";
 import { useEffect, useState } from "react";
 import { RecordingJob } from "@/types/RecordingJob";
 import { showMessageBox } from "@/components/ui/MessageBox";
+import { logger } from "@/utils/logger";
 
 function StatusPageContent() {
     const searchParams = useSearchParams();
@@ -24,19 +25,18 @@ function StatusPageContent() {
                 blocking: true,
                 toast: false,
                 position: "center",
-                buttonText: "OK"
+                buttonText: "OK",
             }).then(() => {
                 // Optional: Redirect the user to a safe fallback page
                 // router.push("/schedule");
             });
-    
+
             setHasShownError(true);
             return;
         }
-    
+
         setCacheKey(key);
     }, [searchParams, hasShownError]);
-    
 
     const [job, setJob] = useState<RecordingJob | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,7 @@ function StatusPageContent() {
             try {
                 const jobRes = await fetch(`/api/record/job?cacheKey=${cacheKey}`);
                 const jobJson = await jobRes.json();
-                console.log(`-> /api/record/job?cacheKey=${cacheKey}`, jobJson);
+                logger.log(`-> /api/record/job?cacheKey=${cacheKey}`, jobJson);
 
                 if (!jobRes.ok || !jobJson?.cacheKey) throw new Error("Invalid job data");
 
@@ -65,7 +65,6 @@ function StatusPageContent() {
         fetchData();
     }, [cacheKey]);
 
-
     if (error) return <div className="p-6 text-red-400">{error}</div>;
     if (!job) return <div className="p-6 text-gray-400">Loading recording job info...</div>;
 
@@ -78,4 +77,4 @@ export default function StatusPage() {
             <StatusPageContent />
         </Suspense>
     );
-} 
+}
