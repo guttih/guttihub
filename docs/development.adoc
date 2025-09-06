@@ -1,5 +1,10 @@
 :toc:
 :toclevels: 4
+:stylesdir: styles
+:stylesheet: dark.css
+:linkcss:
+
+
 = Development
 
 This document is intended for developers working on this project. It includes useful tips, scripts, and conventions to support local development and testing.
@@ -13,7 +18,7 @@ include::next.adoc[]
 .List all relevant project files (excluding build and cache directories)
 [source,sh]
 ----
-find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/*" ! -path "./html/*" -print
+find . -type f ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.env.local" ! -path "./.vscode/*" ! -path "./.git/*" ! -path "./public/*" ! -path "./html/*" ! -path "./scripts/database/*" -print
 ----
 .List and display specific files
 [source,sh]
@@ -362,3 +367,11 @@ atq
 ----
 
 If this command fails, scheduling recordings will not work.
+
+== Creating help from this document
+
+If you have fetched the docker asciidoctor image, you can generate a help file from this document with:
+[source,sh]
+----
+docker run --rm   -v "$(pwd)":/documents -w /documents   asciidoctor/docker-asciidoctor   asciidoctor docs/development.adoc
+----
