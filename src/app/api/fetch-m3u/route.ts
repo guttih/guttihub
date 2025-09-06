@@ -1,7 +1,7 @@
 // src/app/api/fetch-m3u/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { parseM3U } from "@/utils/parseM3U";
-import { ensureCacheDir, getCacheFilePath, getMediaDir, isFileFresh, readFile, readJsonFile, writeFile, writeJsonFile } from "@/utils/fileHandler";
+import { ensureCacheDir, getCacheFilePath, getMediaDir, isFileFresh, readFile, readJsonFile, writeFile, writeJsonFile, fileExists, deleteFileAndForget } from "@/utils/fileHandler";
 import { inferContentCategory, ContentCategoryFieldLabel } from "@/types/ContentCategoryFieldLabel";
 import { M3UResponse } from "@/types/M3UResponse";
 import { sanitizeM3UUrls } from "@/utils/urlSanitizer";
@@ -26,6 +26,9 @@ import { getBaseUrl } from "@/utils/resolverUtils";
 import { RecordingJobInfo } from "@/types/RecordingJobInfo";
 import { startMovieConsumerCleanup } from "@/utils/concurrency";
 import { logger } from "@/utils/logger";
+
+// Track background refresh tasks to avoid duplicate work per cache file
+const activeRefreshes = new Set<string>();
 
 // Minimal types for Xtream JSON API responses used below
 interface XtreamLiveItem {
@@ -87,6 +90,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
         startMovieConsumerCleanup(); // timer to gard movie consumer players
 
+        // High-level request context (helps devs trace behavior quickly)
+        logger.info(`[FETCH] /api/fetch-m3u url=${url} force=${force} prime=${prime} limits=${JSON.stringify(limits)}`);
+
         if (force) {
             const session = await getServerSession({ req, ...authOptions });
             const role = getUserRoleServerOnly(session?.user?.email);
@@ -117,6 +123,12 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             if (!service) {
                 return makeErrorResponse("Service not found", 404);
             }
+
+            logger.info(
+                `[SERVICE] name=${service.name} id=${service.id} apiType=${service.apiType ?? "m3u"} hasFileAccess=${
+                    service.hasFileAccess ? "true" : "false"
+                }`
+            );
 
             //We do not need the m3u file, but we want the json file with the entries so let's move next 3 lines to a function
 
@@ -190,27 +202,61 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
     }
 
     type XtreamLimits = { prime?: boolean; maxLive?: number; maxVod?: number; maxSeries?: number; maxEpisodesPerSeries?: number };
+    function normalizeXtreamLimits(limits: XtreamLimits | undefined, hasCache: boolean): XtreamLimits | undefined {
+        if (hasCache) return limits; // no change if cache exists
+        // First build: prefer conservative prime defaults to reduce upstream failures
+        const primeDefaults: Required<Omit<XtreamLimits, "prime">> = {
+            maxLive: 200,
+            maxVod: 200,
+            maxSeries: 100,
+            maxEpisodesPerSeries: 20,
+        };
+        const l = limits ?? {};
+        return {
+            prime: true,
+            maxLive: l.maxLive ?? primeDefaults.maxLive,
+            maxVod: l.maxVod ?? primeDefaults.maxVod,
+            maxSeries: l.maxSeries ?? primeDefaults.maxSeries,
+            maxEpisodesPerSeries: l.maxEpisodesPerSeries ?? primeDefaults.maxEpisodesPerSeries,
+        };
+    }
     async function getCachedOrFreshData(service: StreamingService, url: string, force: boolean, limits?: XtreamLimits): Promise<CashedEntries> {
         const username = service.username;
         const serviceName = service.name;
         const filePathCashed = getCacheFilePath(username, serviceName, "cashedEntries");
+        logger.info(`[CACHE] Cache file path: ${filePathCashed}`);
 
         const usingCache = !force && (await isFileFresh(filePathCashed, appConfig.playlistCacheTTLInMs));
+        const cacheExists = await fileExists(filePathCashed).catch(() => false);
 
         if (usingCache && !service.hasFileAccess) {
             logger.info("[CACHE] Using cached file:", filePathCashed);
             return await readJsonFile<CashedEntries>(filePathCashed);
         }
 
+        // If cache exists but is stale, return it immediately and refresh in background (remote only)
+        if (!usingCache && cacheExists && !force && !service.hasFileAccess) {
+            logger.info(`[CACHE] Using stale cache and refreshing in background: ${filePathCashed}`);
+            const stale = await readJsonFile<CashedEntries>(filePathCashed);
+            // fire and forget
+            triggerBackgroundRefresh(service, url, filePathCashed, limits).catch((err) => {
+                logger.warn(`[CACHE] Background refresh failed for ${service.name}`, err);
+            });
+            return stale;
+        }
+
         // If the service uses Xtream JSON API (e.g., best-smarter), build entries from JSON
         if (isXtreamJsonApi(service)) {
-            const cashed = await getFromXtreamJsonApi(service, filePathCashed, limits);
+            logger.info(`[FETCH] Strategy: Xtream JSON API`);
+            const effLimits = normalizeXtreamLimits(limits, cacheExists);
+            const cashed = await getFromXtreamJsonApi(service, filePathCashed, effLimits);
             return cashed;
         }
 
         // We need a fresh m3u file and parse it
 
         const cacheFilePathM3U = getCacheFilePath(username, serviceName, "m3u");
+        logger.info(`[CACHE] M3U cache path: ${cacheFilePathM3U}`);
 
         const rawM3U = service.hasFileAccess ? await getCachedOrFreshM3UFromLocal(service) : await getCachedOrFreshM3U(url, cacheFilePathM3U, force);
 
@@ -226,7 +272,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
             entries,
         };
 
-        logger.info(`[CACHE] Writing new file:", ${filePathCashed} at ${cashed.timeStamp}`);
+        logger.info(`[CACHE] Writing new file: ${filePathCashed} at ${cashed.timeStamp}`);
         logger.info("writing cashed entries:", {
             snapshotId: cashed.snapshotId,
             timeStamp: cashed.timeStamp,
@@ -240,6 +286,45 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         await writeJsonFile(filePathCashed, cashed);
 
         return cashed;
+    }
+
+    async function triggerBackgroundRefresh(service: StreamingService, url: string, filePathCashed: string, limits?: XtreamLimits): Promise<void> {
+        if (activeRefreshes.has(filePathCashed)) {
+            logger.info(`[CACHE] Background refresh already running for ${filePathCashed}`);
+            return;
+        }
+        activeRefreshes.add(filePathCashed);
+        logger.info(`[CACHE] Starting background refresh for ${service.name}`);
+        const lockPath = `${filePathCashed}.lock`;
+        try {
+            // create lock marker so other endpoints can report status
+            await writeFile(lockPath, new Date().toISOString());
+            if (isXtreamJsonApi(service)) {
+                await getFromXtreamJsonApi(service, filePathCashed, limits);
+            } else {
+                const cacheFilePathM3U = getCacheFilePath(service.username, service.name, "m3u");
+                const rawM3U = service.hasFileAccess
+                    ? await getCachedOrFreshM3UFromLocal(service)
+                    : await getCachedOrFreshM3U(url, cacheFilePathM3U, true); // force download fresh m3u
+                const entries = parseM3U(rawM3U);
+                const snapshotId = crypto.createHash("sha1").update(JSON.stringify(entries)).digest("hex");
+                const cashed: CashedEntries = {
+                    snapshotId,
+                    timeStamp: new Date().toISOString(),
+                    formats: extractFormats(entries),
+                    categories: extractCategories(entries),
+                    servers: [service.name],
+                    entries,
+                };
+                await writeJsonFile(filePathCashed, cashed);
+                logger.info(`[CACHE] Background refresh wrote: ${filePathCashed}`);
+            }
+        } catch (err) {
+            logger.warn(`[CACHE] Background refresh error for ${service.name}`, err);
+        } finally {
+            activeRefreshes.delete(filePathCashed);
+            deleteFileAndForget(lockPath);
+        }
     }
 
     function isXtreamJsonApi(service: StreamingService): boolean {
@@ -256,24 +341,44 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
         logger.info(`[FETCH:XTREAM] Fetching JSON for ${service.name} ${limits?.prime ? "(prime)" : ""}`);
 
-        // Fetch JSON lists (live, vod, series)
-        let [live, vod, slist] = await Promise.all<[
-            unknown,
-            unknown,
-            unknown
-        ]>([
-            fetchJson<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_live_streams`),
-            fetchJson<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_vod_streams`),
-            fetchJson<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_series`),
-        ]);
+        // Fetch JSON lists (live, vod, series) with light retry and independent fallbacks
+        let live: unknown = [];
+        let vod: unknown = [];
+        let slist: unknown = [];
+        try {
+            live = await fetchJsonRetry<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_live_streams`, 1);
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            logger.warn(`[FETCH:XTREAM] live list failed: ${msg}`);
+        }
+        try {
+            vod = await fetchJsonRetry<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_vod_streams`, 1);
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            logger.warn(`[FETCH:XTREAM] vod list failed: ${msg}`);
+        }
+        try {
+            slist = await fetchJsonRetry<unknown>(`${base}/player_api.php?username=${u}&password=${p}&action=get_series`, 1);
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            logger.warn(`[FETCH:XTREAM] series list failed: ${msg}`);
+        }
 
         if (Array.isArray(live) && limits?.maxLive) live = live.slice(0, limits.maxLive);
         if (Array.isArray(vod) && limits?.maxVod) vod = vod.slice(0, limits.maxVod);
         if (Array.isArray(slist) && limits?.maxSeries) slist = slist.slice(0, limits.maxSeries);
 
-        // Series episodes (optional but valuable). Fetch sequentially to keep it simple and robust.
+        // Series episodes (optional but valuable). Fetch sequentially; log light progress.
         const seriesEntries: M3UEntry[] = [];
-        for (const s of (Array.isArray(slist) ? (slist as XtreamSeriesItem[]) : [])) {
+        const seriesList: XtreamSeriesItem[] = Array.isArray(slist) ? (slist as XtreamSeriesItem[]) : [];
+        const totalSeries = seriesList.length;
+        let processedSeries = 0;
+        let failedSeriesInfo = 0;
+        const seriesStart = Date.now();
+        if (totalSeries > 0) {
+            logger.info(`[FETCH:XTREAM] Series list size: ${totalSeries}`);
+        }
+        for (const s of seriesList) {
             const sid = s?.series_id ?? s?.seriesId ?? s?.id;
             if (!sid) continue;
             try {
@@ -298,8 +403,44 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
                     }));
                 }
             } catch (err) {
-                logger.warn(`[FETCH:XTREAM] series_info failed for series_id=${sid}`, err);
+                failedSeriesInfo++;
+                const msg = err instanceof Error ? err.message : String(err);
+                if (failedSeriesInfo <= 3) {
+                    logger.warn(`[FETCH:XTREAM] series_info failed for series_id=${sid}: ${msg}`);
+                } else if (failedSeriesInfo === 4) {
+                    logger.warn(`[FETCH:XTREAM] many series_info failures; further details suppressed`);
+                }
             }
+            processedSeries++;
+            if (processedSeries % 25 === 0) {
+                const elapsedSec = (Date.now() - seriesStart) / 1000;
+                const rate = processedSeries > 0 && elapsedSec > 0 ? processedSeries / elapsedSec : 0;
+                const estTotalSec = rate > 0 ? totalSeries / rate : 0;
+                const leftSec = Math.max(0, estTotalSec - elapsedSec);
+                const fmt = (sec: number) => {
+                    const s = Math.round(sec);
+                    const h = Math.floor(s / 3600);
+                    const m = Math.floor((s % 3600) / 60);
+                    const ss = s % 60;
+                    return h > 0 ? `${h}h ${m}m ${ss}s` : `${m}m ${ss}s`;
+                };
+                logger.info(
+                    `[FETCH:XTREAM] progress series ${processedSeries}/${totalSeries} (fails=${failedSeriesInfo}, episodes=${seriesEntries.length}) ETA total=${fmt(estTotalSec)}, left=${fmt(leftSec)}`
+                );
+            }
+        }
+        if (totalSeries > 0) {
+            const elapsedSec = (Date.now() - seriesStart) / 1000;
+            const fmt = (sec: number) => {
+                const s = Math.round(sec);
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                const ss = s % 60;
+                return h > 0 ? `${h}h ${m}m ${ss}s` : `${m}m ${ss}s`;
+            };
+            logger.info(
+                `[FETCH:XTREAM] series phase done: ${processedSeries}/${totalSeries} (fails=${failedSeriesInfo}, episodes=${seriesEntries.length}) elapsed=${fmt(elapsedSec)}`
+            );
         }
 
         // Live entries
@@ -353,6 +494,24 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         } catch (e) {
             logger.warn(`[FETCH:XTREAM] Non-JSON response for ${url.substring(0, 80)}...`);
             throw e;
+        }
+    }
+
+    function sleep(ms: number): Promise<void> {
+        return new Promise((r) => setTimeout(r, ms));
+    }
+
+    async function fetchJsonRetry<T>(url: string, retries = 1, baseDelayMs = 300): Promise<T> {
+        let attempt = 0;
+        for (;;) {
+            try {
+                return await fetchJson<T>(url);
+            } catch (err) {
+                attempt++;
+                if (attempt > retries) throw err;
+                const jitter = Math.floor(Math.random() * 200);
+                await sleep(baseDelayMs * attempt + jitter);
+            }
         }
     }
 
