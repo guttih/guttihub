@@ -14,10 +14,8 @@ import { FetchM3URequest } from "@/types/FetchM3URequest";
 import { StreamFormat, getStreamFormatByExt } from "@/types/StreamFormat";
 import { filterEntries } from "@/utils/filterEntries";
 import { extractYears } from "@/utils/ui/extractYears";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/authOptions";
-import { getUserRoleServerOnly } from "@/utils/serverOnly/hasUserAccessLevel";
-import { isModerator } from "@/types/UserRole";
+import { auth } from "@/auth";
+import { hasRole, Role } from "@/utils/auth/accessControl";
 import { StreamingService } from "@/types/StreamingService";
 import { M3UEntry } from "@/types/M3UEntry";
 import fs from "fs";
@@ -34,9 +32,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
         startMovieConsumerCleanup(); // timer to gard movie consumer players
 
         if (force) {
-            const session = await getServerSession({ req, ...authOptions });
-            const role = getUserRoleServerOnly(session?.user?.email);
-            if (isModerator(role)) {
+            const session = await auth();
+            const role = (session?.user as any)?.role as Role | undefined;
+            if (!role || !hasRole({ role }, Role.ADMIN)) {
                 return makeErrorResponse("Unauthorized: Only admins can force refresh", 403);
             }
         }

@@ -26,6 +26,7 @@ import { LiveMonitorPanel } from "@/components/Live/LiveMonitorPanel/LiveMonitor
 import { hasRole, UserRole } from "@/utils/auth/accessControl";
 import { showMessageBox } from "@/components/ui/MessageBox";
 import { UserMenu } from "@/components/UserMenu/UserMenu";
+import LogoutButton from "@/components/ui/LogoutButton";
 
 export default function ClientApp({ userRole }: { userRole: UserRole }) {
     const { data: session, status } = useSession();
@@ -336,6 +337,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                 {/* existing user name */}
                 <div className="flex items-center gap-4 relative">
                     <div className="flex items-center justify-between mb-4">
+                        <LogoutButton />
                         <UserMenu
                             userName={session?.user?.name ?? "unknown"}
                             userRole={userRole}

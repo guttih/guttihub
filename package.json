@@ -10,6 +10,11 @@
         "rebuild": "npm run clean && npm run build",
         "deploy": "npm version patch && bash scripts/deploy.sh",
         "postinstall": "chmod +x src/scripts/*.sh",
+        "db:show": "prisma studio",
+        "db:generate": "prisma generate",
+        "db:reset": "prisma migrate reset --skip-seed && prisma generate",
+        "prisma:generate": "prisma generate",
+        "prisma:migrate": "prisma migrate dev",
         "list": "bash scripts/list.sh",
         "lint:next": "next lint",
         "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
@@ -29,10 +34,14 @@
         "hls.js": "^1.6.1",
         "lodash": "^4.17.21",
         "next": "^15.2.4",
-        "next-auth": "^4.24.11",
+        "next-auth": "^5.0.0-beta.29",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
-        "uuid": "^11.1.0"
+        "uuid": "^11.1.0",
+        "@auth/prisma-adapter": "^2.10.0",
+        "@prisma/client": "^6.14.0",
+        "steam-next-auth": "^1.0.2",
+        "bcrypt": "^6.0.0"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3",
@@ -49,6 +58,7 @@
         "eslint": "^9",
         "eslint-config-next": "15.2.4",
         "eslint-plugin-filenames": "^1.3.2",
+        "prisma": "^6.14.0",
         "tailwindcss": "^4",
         "typescript": "^5",
         "vitest": "^3.1.1"

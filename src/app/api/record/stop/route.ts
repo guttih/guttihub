@@ -1,12 +1,11 @@
 
 // src/app/api/record/schedule-org/route.ts
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/authOptions";
+import { auth } from "@/auth";
 import { ScheduleResolver } from "@/resolvers/ScheduleResolver";
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

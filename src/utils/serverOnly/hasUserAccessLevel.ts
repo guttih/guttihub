@@ -1,11 +1,7 @@
 // src/utils/serverOnly/hasUserAccessLevel.ts
 
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/authOptions";
-import { hasRole, UserRole } from "@/utils/auth/accessControl";
-import authorizedUsersJson from "@/config/authorizedUsers.json";
-
-const authorizedUsers: Record<string, string> = authorizedUsersJson;
+import { auth } from "@/auth";
+import { hasRole, Role } from "@/utils/auth/accessControl";
 
 /**
  * Get user role from email using static config lookup.
@@ -15,20 +11,17 @@ const authorizedUsers: Record<string, string> = authorizedUsersJson;
  * @param email - The user's email address.
  * @returns UserRole or null if not found.
  */
-export function getUserRoleServerOnly(email?: string | null): UserRole | null {
-    if (!email) return null;
-    return authorizedUsers[email] as UserRole ?? null;
-  }
+// Deprecated: legacy helper removed; roles now come from DB-backed session
 
 /**
  * Get user role based on the current session, and check if it meets required access level.
  * @param requiredRole - Minimum role required (e.g. "moderator", "admin")
  */
-export async function hasUserAccessLevel(requiredRole: UserRole) {
-    const session = await getServerSession(authOptions);
+export async function hasUserAccessLevel(requiredRole: Role) {
+    const session = await auth();
     const email = session?.user?.email ?? null;
-    const userRole = getUserRoleServerOnly(email); // ✅ sync, no await
-  
+    const userRole = (session?.user as any)?.role as Role | undefined;
+
     if (!email || !userRole) {
       return {
         ok: false,
@@ -37,7 +30,7 @@ export async function hasUserAccessLevel(requiredRole: UserRole) {
       };
     }
   
-    if (!hasRole(userRole, requiredRole)) {
+    if (!hasRole({ role: userRole }, requiredRole)) {
       return {
         ok: false,
         error: "Forbidden",
@@ -60,29 +53,21 @@ export async function hasUserAccessLevel(requiredRole: UserRole) {
  * This is a backend-only function.
  */
 export async function getUserSessionWithRoleServerOnly(): Promise<{
-    session: Awaited<ReturnType<typeof getServerSession>>;
+    session: Awaited<ReturnType<typeof auth>>;
     email: string | null;
-    role: UserRole | null;
+    role: Role | null;
   }> {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const email = session?.user?.email ?? null;
-    const role = email ? (authorizedUsers[email] as UserRole) ?? null : null;
-  
-    return {
-      session,
-      email,
-      role,
-    };
+    const role = (session?.user as any)?.role ?? null;
+    return { session, email, role };
   }
 
 /**
  * Returns true if the currently authenticated user has the required role.
  * Backend-only.
  */
-export async function hasUserAccessLevelServerOnly(
-    requiredRole: UserRole
-  ): Promise<boolean> {
+export async function hasUserAccessLevelServerOnly(requiredRole: Role): Promise<boolean> {
     const { role } = await getUserSessionWithRoleServerOnly();
-  
-    return !!role && hasRole(role, requiredRole);
-  }
+    return !!role && hasRole({ role }, requiredRole);
+}

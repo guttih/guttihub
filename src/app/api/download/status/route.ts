@@ -1,12 +1,11 @@
 // src/app/api/download/status/route.ts
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/authOptions";
+import { auth } from "@/auth";
 import { getDownloadJobInfo } from "@/utils/resolverUtils";
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);

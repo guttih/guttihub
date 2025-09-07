@@ -2,13 +2,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getCacheDir, fileExists, readJsonFile } from "@/utils/fileHandler";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/authOptions";
+import { auth } from "@/auth";
 import { M3UEntry } from "@/types/M3UEntry";
 
 // GET /api/cache/:cacheKey
 export async function GET(request: NextRequest, { params }: { params: Promise<{ cacheKey: string; }> }): Promise<NextResponse> {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

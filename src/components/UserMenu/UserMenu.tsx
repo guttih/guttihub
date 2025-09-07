@@ -11,7 +11,9 @@ import {
     ScheduleButton,
     HelpButton,
 } from "@/components/UserMenuCommands";
-import { hasRole, UserRole } from "@/types/UserRole";
+import { hasRole, UserRole } from "@/utils/auth/accessControl";
+import { UsersButton } from "../UserMenuCommands/UsersButton";
+import { ProfileButton } from "../UserMenuCommands/ProfileButton";
 
 type Props = {
     userName?: string;
@@ -29,6 +31,7 @@ export const UserMenu = ({ userName, userRole, onForceRefresh, onExport, canExpo
         <div className="relative group">
             <Button variant="darker">Menu</Button>
             <div className="absolute hidden group-hover:flex flex-col right-0 top-full bg-gray-800 rounded shadow-lg z-50 min-w-[320px]">
+                <ProfileButton />
                 {hasRole(userRole, "streamer") && (
                     <div>
                         <ScheduleButton />
@@ -48,12 +51,14 @@ export const UserMenu = ({ userName, userRole, onForceRefresh, onExport, canExpo
                 )}
                 {hasRole(userRole, "admin") && (
                     <div>
+                        <UsersButton />
                         <SystemCheckButton />
                         <SystemDiskInfoButton />
                         <RunCleanupButton />
                     </div>
                 )}
                 <HelpButton />
+
                 <AboutButton />
                 <Button variant="default" onClick={() => signOut({ callbackUrl: "/" })} className="px-3 py-2 rounded text-sm">
                     Logout
