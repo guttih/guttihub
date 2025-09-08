@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { StreamingServiceResolver } from "@/resolvers/StreamingServiceResolver";
 import { appConfig } from "@/config";
 import { detectStreamFormat, StreamFormat } from "@/types/StreamFormat";
+import type { M3UEntry } from "@/types/M3UEntry";
 import Hls from "hls.js";
 
 interface PlayerProps {
@@ -18,6 +19,7 @@ interface PlayerProps {
 export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [unsupported, setUnsupported] = useState(false);
+    const [playBlocked, setPlayBlocked] = useState(false);
     const [normalizedUrl, setNormalizedUrl] = useState("");
     const consumerId = useRef<string>(uuidv4());
 
@@ -25,6 +27,32 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
     const resolver = useMemo(() => new StreamingServiceResolver(), []);
     // Derive the real serviceId from prop or URL
     const resolvedServiceId = serviceId ?? resolver.findByViewingUrl(url)?.id;
+
+    // 0️⃣ Build a lightweight entry for monitor registration (best-effort)
+    const entryForMonitor: M3UEntry | null = useMemo(() => {
+        try {
+            const u = new URL(url, window.location.origin);
+            const file = u.pathname.split("/").pop() || "stream";
+            const base = file.split(".")[0] || file;
+            return {
+                tvgId: "",
+                tvgName: base,
+                tvgLogo: "",
+                groupTitle: "",
+                name: base,
+                url,
+            };
+        } catch {
+            return {
+                tvgId: "",
+                tvgName: "stream",
+                tvgLogo: "",
+                groupTitle: "",
+                name: "stream",
+                url,
+            };
+        }
+    }, [url]);
 
     // 1️⃣ Normalize & proxy the URL if needed
     useEffect(() => {
@@ -57,18 +85,28 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
                 });
                 hls.loadSource(normalizedUrl);
                 hls.attachMedia(video);
-                return () => hls.destroy();
+                // try autoplay programmatically; some browsers require it
+                const tryPlay = () => video.play().catch(() => setPlayBlocked(true));
+                const onManifest = () => setTimeout(tryPlay, 0);
+                hls.on(Hls.Events.MANIFEST_PARSED, onManifest);
+                return () => {
+                    hls.off(Hls.Events.MANIFEST_PARSED, onManifest);
+                    hls.destroy();
+                };
             } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
                 video.src = normalizedUrl;
+                video.play().catch(() => setPlayBlocked(true));
             } else {
                 setUnsupported(true);
             }
         } else {
             video.src = normalizedUrl;
+            video.play().catch(() => setPlayBlocked(true));
         }
     }, [normalizedUrl]);
 
     const hasRegistered = useRef(false);
+    const keepAliveTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -87,46 +125,64 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
                     await fetch("/api/live/consumers", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ id, serviceId: resolvedServiceId }),
+                        body: JSON.stringify({ id, serviceId: resolvedServiceId, entry: entryForMonitor }),
                     });
                     console.debug(`[PlayerClient] Registered: ${id}`);
+                    // start heartbeat to keep lastSeen fresh so cleanup doesn't evict us
+                    if (keepAliveTimer.current) clearInterval(keepAliveTimer.current);
+                    keepAliveTimer.current = setInterval(() => {
+                        fetch("/api/live/consumers", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ id, serviceId: resolvedServiceId, entry: entryForMonitor }),
+                        }).catch(() => {/* ignore */});
+                    }, 5000);
                 } catch (err) {
                     console.error("Register failed:", err);
                 }
             }
         };
 
-        // const unregister = async () => {
-        //     if (hasRegistered.current) {
-        //         hasRegistered.current = false;
-        //         try {
-        //             await fetch("/api/live/consumers", {
-        //                 method: "DELETE",
-        //                 headers: { "Content-Type": "application/json" },
-        //                 body: JSON.stringify({ id }),
-        //             });
-        //             console.debug(`[PlayerClient] Unregistered: ${id}`);
-        //         } catch (err) {
-        //             console.error("Unregister failed:", err);
-        //         }
-        //     }
-        // };
+        const unregister = async () => {
+            if (hasRegistered.current) {
+                hasRegistered.current = false;
+                try {
+                    await fetch("/api/live/consumers", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id }),
+                    });
+                    console.debug(`[PlayerClient] Unregistered: ${id}`);
+                } catch (err) {
+                    console.error("Unregister failed:", err);
+                } finally {
+                    if (keepAliveTimer.current) {
+                        clearInterval(keepAliveTimer.current);
+                        keepAliveTimer.current = null;
+                    }
+                }
+            }
+        };
 
         const handlePlay = () => {
             console.debug("🔥 PLAY triggered!");
             register();
         };
-        // const handleStop = () => {
-        //     console.debug("🔥 STOP triggered!");
-        //     unregister();
-        // };
+        const handleStop = () => {
+            console.debug("🔥 STOP triggered!");
+            unregister();
+        };
 
         video.addEventListener("play", handlePlay);
+        video.addEventListener("pause", handleStop);
+        video.addEventListener("ended", handleStop);
 
         return () => {
             video.removeEventListener("play", handlePlay);
+            video.removeEventListener("pause", handleStop);
+            video.removeEventListener("ended", handleStop);
         };
-    }, [normalizedUrl, resolvedServiceId]);
+    }, [normalizedUrl, resolvedServiceId, entryForMonitor]);
 
     useEffect(() => {
         const id = consumerId.current;
@@ -135,14 +191,14 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
             console.debug("🚪 beforeunload: unregistering", id);
 
             // This works in Chrome, Firefox, Safari with `keepalive`
-            fetch("/api/live/consumers", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id }),
-                keepalive: true,
-            }).catch((err) => {
-                console.warn("❌ beforeunload DELETE failed:", err);
-            });
+        fetch("/api/live/consumers", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+            keepalive: true,
+        }).catch((err) => {
+            console.warn("❌ beforeunload DELETE failed:", err);
+        });
         };
 
         window.addEventListener("beforeunload", onBeforeUnload);
@@ -161,15 +217,35 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
     }
 
     return (
-        <video
-            ref={videoRef}
-            controls
-            autoPlay={autoPlay}
-            className="fixed top-0 left-0 w-screen h-screen object-contain bg-black z-50"
-            onError={() => setUnsupported(true)}
-        >
-            Your browser does not support video playback.
-        </video>
+        <div className="fixed top-0 left-0 w-screen h-screen bg-black z-50 flex items-center justify-center">
+            <video
+                ref={videoRef}
+                controls
+                autoPlay={autoPlay}
+                className="w-full h-full object-contain"
+                onError={() => setUnsupported(true)}
+                onClick={() => {
+                    if (playBlocked && videoRef.current) {
+                        videoRef.current.play().then(() => setPlayBlocked(false)).catch(() => {});
+                    }
+                }}
+            >
+                Your browser does not support video playback.
+            </video>
+            {playBlocked && (
+                <button
+                    onClick={() => {
+                        const v = videoRef.current;
+                        if (!v) return;
+                        v.play().then(() => setPlayBlocked(false)).catch(() => {});
+                    }}
+                    className="absolute px-5 py-3 rounded bg-white/10 text-white ring-2 ring-white/30 hover:bg-white/20"
+                    title="Click to start playback"
+                >
+                    Click to Play
+                </button>
+            )}
+        </div>
     );
 }
 
