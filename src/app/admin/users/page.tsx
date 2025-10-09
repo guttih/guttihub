@@ -4,7 +4,6 @@
 import { useEffect, useState } from "react";
 import UserForm from "@/components/User/UserForm";
 import { UserFormData } from "@/types/user";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button/Button";
 import ConnectedAccountsPanel from "@/components/User/ConnectedAccountsPanel";
 import { useSession, signOut } from "next-auth/react";
@@ -18,7 +17,6 @@ export default function AdminUsersPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { data: session } = useSession();
-    const router = useRouter();
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -127,7 +125,9 @@ export default function AdminUsersPage() {
         <div className="max-w-5xl mx-auto p-6">
             <div className="flex items-center justify-between mb-4">
                 <h1 className="text-2xl font-bold">User Management</h1>
-                <Button onClick={() => setSelectedUser({ username: "", email: "", role: Role.VIEWER })} className="py-2 px-4">+ New User</Button>
+                <Button onClick={() => setSelectedUser({ username: "", email: "", role: Role.VIEWER })} className="py-2 px-4">
+                    + New User
+                </Button>
             </div>
 
             <div className="overflow-x-auto rounded border border-gray-700">
@@ -145,13 +145,17 @@ export default function AdminUsersPage() {
                         {users.map((u) => (
                             <tr key={u.id} className="border-t border-gray-700 hover:bg-gray-900/60">
                                 <td className="px-4 py-3">
-                                    <button className="underline" onClick={() => setSelectedUser(u)}>{u.username}</button>
+                                    <button className="underline" onClick={() => setSelectedUser(u)}>
+                                        {u.username}
+                                    </button>
                                 </td>
                                 <td className="px-4 py-3">{u.email}</td>
                                 <td className="px-4 py-3">{String(u.role ?? "")}</td>
                                 <td className="px-4 py-3">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ""}</td>
                                 <td className="px-4 py-3 text-right">
-                                    <Button variant="darker" onClick={() => handleDeleteUser(u.id!)} className="py-1 px-2">Delete</Button>
+                                    <Button variant="darker" onClick={() => handleDeleteUser(u.id!)} className="py-1 px-2">
+                                        Delete
+                                    </Button>
                                 </td>
                             </tr>
                         ))}
@@ -166,7 +170,9 @@ export default function AdminUsersPage() {
                 widthClassName="max-w-lg"
                 footer={
                     <div className="flex justify-end">
-                        <Button type="submit" form="admin-user-form" variant="important" className="py-2 px-4">Save</Button>
+                        <Button type="submit" form="admin-user-form" variant="important" className="py-2 px-4">
+                            Save
+                        </Button>
                     </div>
                 }
             >

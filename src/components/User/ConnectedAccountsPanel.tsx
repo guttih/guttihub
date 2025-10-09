@@ -2,7 +2,6 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { ProviderId } from "@/lib/auth/provider-ids";
-import { Button } from "@/components/ui/Button/Button";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -59,7 +58,9 @@ export default function ConnectedAccountsPanel({ userId, allowUnlink = true }: P
         const prev = accounts;
         setAccounts((a) => a.filter((x) => x.id !== id));
         const url = userId ? `/api/admin/users/${userId}/accounts/${id}` : `/api/user/self/accounts`;
-        const init: RequestInit = userId ? { method: "DELETE" } : { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountId: id }) };
+        const init: RequestInit = userId
+            ? { method: "DELETE" }
+            : { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountId: id }) };
         try {
             const res = await fetch(url, init);
             if (!res.ok) throw new Error("Failed to unlink");
@@ -83,8 +84,18 @@ export default function ConnectedAccountsPanel({ userId, allowUnlink = true }: P
             {accounts.map((a) => (
                 <div key={a.id} className="flex items-center justify-between rounded border px-3 py-2">
                     <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 grid place-items-center rounded-full bg-gray-600 text-white text-xs uppercase">{providerInitial(a.provider)}</span>
-                        {a.picture ? <Image src={a.picture || "/favicon.ico"} alt={a.label || a.providerAccountId} width={48} height={48} className="rounded-full ring-1 ring-gray-200" /> : null}
+                        <span className="w-6 h-6 grid place-items-center rounded-full bg-gray-600 text-white text-xs uppercase">
+                            {providerInitial(a.provider)}
+                        </span>
+                        {a.picture ? (
+                            <Image
+                                src={a.picture || "/favicon.ico"}
+                                alt={a.label || a.providerAccountId}
+                                width={48}
+                                height={48}
+                                className="rounded-full ring-1 ring-gray-200"
+                            />
+                        ) : null}
                         <div className="flex flex-col">
                             <div className="font-medium">{providerLabel(a.provider)}</div>
                             <div className="text-sm opacity-75 font-mono">{a.label ?? a.providerAccountId}</div>
@@ -100,4 +111,3 @@ export default function ConnectedAccountsPanel({ userId, allowUnlink = true }: P
         </div>
     );
 }
-
