@@ -5,10 +5,10 @@ import { hasAdminAccess } from "@/utils/auth/accessControl";
 
 export async function GET() {
     const session = await auth();
-    if (!session || !hasAdminAccess(session.user as any)) {
+    const user = session?.user;
+    if (!user || !hasAdminAccess(user)) {
         return new Response("Forbidden", { status: 403 });
     }
     const [userCount, adminCount] = await Promise.all([prisma.user.count(), prisma.user.count({ where: { role: "ADMIN" } })]);
     return Response.json({ userCount, adminCount });
 }
-

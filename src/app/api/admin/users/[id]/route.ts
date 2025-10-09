@@ -11,14 +11,15 @@ type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
     const session = await auth();
-    if (!session?.user || !hasAdminAccess(session.user as any)) {
+    const user = session?.user;
+    if (!user || !hasAdminAccess(user)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { id } = await ctx.params;
     try {
-        const user = await prisma.user.findUnique({ where: { id }, select: { id: true, username: true, email: true, role: true, createdAt: true, updatedAt: true, theme: true, profileImage: true } });
-        if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-        return NextResponse.json(user);
+        const dbUser = await prisma.user.findUnique({ where: { id }, select: { id: true, username: true, email: true, role: true, createdAt: true, updatedAt: true, theme: true, profileImage: true } });
+        if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+        return NextResponse.json(dbUser);
     } catch (err) {
         console.error("GET /api/admin/users/:id error:", err);
         return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 });
@@ -27,7 +28,8 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
     const session = await auth();
-    if (!session?.user || !hasAdminAccess(session.user as any)) {
+    const user = session?.user;
+    if (!user || !hasAdminAccess(user)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { id } = await ctx.params;
@@ -51,7 +53,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const session = await auth();
-    if (!session?.user || !hasAdminAccess(session.user as any)) {
+    const user = session?.user;
+    if (!user || !hasAdminAccess(user)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { id } = await ctx.params;
@@ -63,4 +66,3 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
         return NextResponse.json({ error: "Delete failed" }, { status: 500 });
     }
 }
-

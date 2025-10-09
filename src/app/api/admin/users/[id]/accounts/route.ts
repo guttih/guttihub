@@ -19,7 +19,8 @@ function decodeJwtPayload(token?: string | null): JwtClaims {
 export async function GET(_req: Request, ctx: { params: Promise<Params> }) {
     const { id } = await ctx.params;
     const session = await auth();
-    if (!session?.user || !hasAdminAccess(session.user as any)) {
+    const user = session?.user;
+    if (!user || !hasAdminAccess(user)) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const rows = await prisma.account.findMany({ where: { userId: id }, select: { id: true, provider: true, providerAccountId: true, id_token: true }, orderBy: { provider: "asc" } });
@@ -30,4 +31,3 @@ export async function GET(_req: Request, ctx: { params: Promise<Params> }) {
     });
     return NextResponse.json({ accounts });
 }
-

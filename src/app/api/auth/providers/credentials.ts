@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 import { visibleProvidersForUser } from "@/lib/auth/decide";
+import type { Role, Theme } from "@prisma/client";
 
 export const credentialsProvider = CredentialsProvider({
     name: "Credentials",
@@ -39,14 +40,24 @@ export const credentialsProvider = CredentialsProvider({
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) throw new Error("INVALID_PASSWORD");
 
-        return {
+        const authorizedUser = {
             id: user.id,
             name: user.username ?? undefined,
             email: user.email ?? undefined,
             username: user.username ?? null,
             role: user.role,
-            theme: user.theme,
-            profileImage: user.profileImage,
-        } as any;
+            theme: user.theme ?? undefined,
+            profileImage: user.profileImage ?? null,
+        } satisfies {
+            id: string;
+            name?: string;
+            email?: string;
+            username: string | null;
+            role: Role;
+            theme?: Theme;
+            profileImage?: string | null;
+        };
+
+        return authorizedUser;
     },
 });

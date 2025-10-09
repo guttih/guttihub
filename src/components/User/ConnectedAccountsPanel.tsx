@@ -65,7 +65,8 @@ export default function ConnectedAccountsPanel({ userId, allowUnlink = true }: P
             const res = await fetch(url, init);
             if (!res.ok) throw new Error("Failed to unlink");
             startTransition(() => router.refresh());
-        } catch (e) {
+        } catch (error) {
+            console.error("Failed to unlink account", error);
             setAccounts(prev);
         }
     }

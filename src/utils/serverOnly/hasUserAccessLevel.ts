@@ -20,7 +20,7 @@ import { hasRole, Role } from "@/utils/auth/accessControl";
 export async function hasUserAccessLevel(requiredRole: Role) {
     const session = await auth();
     const email = session?.user?.email ?? null;
-    const userRole = (session?.user as any)?.role as Role | undefined;
+    const userRole = session?.user?.role;
 
     if (!email || !userRole) {
       return {
@@ -59,7 +59,7 @@ export async function getUserSessionWithRoleServerOnly(): Promise<{
   }> {
     const session = await auth();
     const email = session?.user?.email ?? null;
-    const role = (session?.user as any)?.role ?? null;
+    const role = session?.user?.role ?? null;
     return { session, email, role };
   }
 
