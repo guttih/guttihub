@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { hasRole, Role } from "@/utils/auth/accessControl";
+import type { Session } from "next-auth";
 
 /**
  * Get user role from email using static config lookup.
@@ -23,45 +24,44 @@ export async function hasUserAccessLevel(requiredRole: Role) {
     const userRole = session?.user?.role;
 
     if (!email || !userRole) {
-      return {
-        ok: false,
-        error: "Unauthorized",
-        reason: "Missing or invalid user session",
-      };
+        return {
+            ok: false,
+            error: "Unauthorized",
+            reason: "Missing or invalid user session",
+        };
     }
-  
+
     if (!hasRole({ role: userRole }, requiredRole)) {
-      return {
-        ok: false,
-        error: "Forbidden",
-        reason: `Insufficient role (${userRole}) for required level (${requiredRole})`,
-      };
+        return {
+            ok: false,
+            error: "Forbidden",
+            reason: `Insufficient role (${userRole}) for required level (${requiredRole})`,
+        };
     }
-  
+
     return {
-      ok: true,
-      email,
-      role: userRole,
+        ok: true,
+        email,
+        role: userRole,
     };
-  }
+}
 
-
-  /**
+/**
  * Retrieves the current authenticated session and resolves the user's role based on email.
  * Returns `null` role if user is not listed in `authorizedUsers.json`.
  *
  * This is a backend-only function.
  */
 export async function getUserSessionWithRoleServerOnly(): Promise<{
-    session: Awaited<ReturnType<typeof auth>>;
+    session: Session | null;
     email: string | null;
     role: Role | null;
-  }> {
+}> {
     const session = await auth();
     const email = session?.user?.email ?? null;
     const role = session?.user?.role ?? null;
     return { session, email, role };
-  }
+}
 
 /**
  * Returns true if the currently authenticated user has the required role.

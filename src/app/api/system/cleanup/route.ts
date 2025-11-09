@@ -1,5 +1,6 @@
 // src/app/api/system/cleanup/route.ts
 
+import { Role } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { cleanupFinishedJobs, deleteOldDanglingJobs } from "@/utils/resolverUtils";
 import { hasUserAccessLevelServerOnly } from "@/utils/serverOnly/hasUserAccessLevel";
@@ -8,7 +9,7 @@ export async function POST(req: Request) {
     try {
         const { force } = await req.json().catch(() => ({}));
 
-        if (force && !(await hasUserAccessLevelServerOnly("admin"))) {
+        if (force && !(await hasUserAccessLevelServerOnly(Role.ADMIN))) {
             return NextResponse.json({ success: false, error: "You are not allowed to force cleanup." }, { status: 403 });
         }
         const validForce = !!force;

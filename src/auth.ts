@@ -22,13 +22,15 @@ if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
     throw new Error("Missing NEXTAUTH_SECRET — refusing to start in production.");
 }
 if (!process.env.NEXTAUTH_SECRET) {
-    console.error(`\n========================================================\n🚨 NEXTAUTH_SECRET is missing!\nGenerate one with:  openssl rand -base64 32\nAdd to .env.local (dev) and your prod environment.\n========================================================\n`);
+    console.error(
+        `\n========================================================\n🚨 NEXTAUTH_SECRET is missing!\nGenerate one with:  openssl rand -base64 32\nAdd to .env.local (dev) and your prod environment.\n========================================================\n`
+    );
 }
 if (!process.env.NEXTAUTH_URL) {
     console.warn("[next-auth] NEXTAUTH_URL is not set. Set it to your site origin.");
 }
 
-function hasId(u: Partial<NextAuthUser> | null | undefined): u is { id: string } {
+function hasId(u: Partial<NextAuthUser> | null | undefined): u is NextAuthUser & { id: string } {
     return typeof u?.id === "string" && u.id.length > 0;
 }
 
@@ -103,14 +105,12 @@ export const {
 
     events: {
         async createUser({ user }) {
+            if (!hasId(user)) return; // now user is NextAuthUser & { id: string }
             const email = user.email ?? null;
             const baseName = email ? email.split("@")[0] : user.name ?? `user_${user.id.slice(0, 8)}`;
-
             await prisma.user.update({
                 where: { id: user.id },
-                data: {
-                    username: baseName,
-                },
+                data: { username: baseName },
             });
         },
     },

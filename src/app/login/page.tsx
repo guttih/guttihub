@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/Button/Button";
 import { signIn, getProviders as getNextAuthProviders } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 const ProviderId = { Credentials: "credentials", AzureAd: "azure-ad", Google: "google", Steam: "steam" } as const;
 type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];
@@ -32,10 +32,15 @@ function humanizeQueryError(raw?: string | null) {
     }
 }
 
-function useAuthError() {
+function OAuthErrorBanner() {
     const params = useSearchParams();
-    const raw = params.get("error");
-    return useMemo(() => humanizeQueryError(raw), [raw]);
+    const msg = humanizeQueryError(params.get("error"));
+    if (!msg) return null;
+    return (
+        <div className="p-3 rounded text-sm text-center" style={{ backgroundColor: "#fee2e2", color: "#b91c1c" }}>
+            {msg}
+        </div>
+    );
 }
 
 export default function LoginPage() {
@@ -46,7 +51,6 @@ export default function LoginPage() {
     const [providers, setProviders] = useState<ProvidersMap | null>(null);
     const [oauthLockSet, setOauthLockSet] = useState<Set<OAuthProviderId> | null>(null);
     const router = useRouter();
-    const oauthError = useAuthError();
 
     useEffect(() => {
         let mounted = true;
@@ -90,18 +94,34 @@ export default function LoginPage() {
         setCredError("");
         const uname = username.trim();
         try {
-            const res = await fetch("/api/auth/preflight", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: uname }) });
-            const pre: { code: "OAUTH_ONLY" | "OAUTH_ONLY_MICROSOFT" | "OAUTH_ONLY_GOOGLE" | "OAUTH_ONLY_STEAM" | null; providers?: Array<"microsoft" | "google" | "steam"> } = await res.json();
+            const res = await fetch("/api/auth/preflight", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: uname }),
+            });
+            const pre: {
+                code: "OAUTH_ONLY" | "OAUTH_ONLY_MICROSOFT" | "OAUTH_ONLY_GOOGLE" | "OAUTH_ONLY_STEAM" | null;
+                providers?: Array<"microsoft" | "google" | "steam">;
+            } = await res.json();
             if (pre.code) {
                 setSubmitting(false);
                 const allowed = new Set<OAuthProviderId>();
                 if (pre.code === "OAUTH_ONLY_MICROSOFT") allowed.add(ProviderId.AzureAd);
                 else if (pre.code === "OAUTH_ONLY_GOOGLE") allowed.add(ProviderId.Google);
                 else if (pre.code === "OAUTH_ONLY_STEAM") allowed.add(ProviderId.Steam);
-                else (pre.providers ?? []).forEach((p) => allowed.add(p === "microsoft" ? ProviderId.AzureAd : p === "google" ? ProviderId.Google : ProviderId.Steam));
+                else
+                    (pre.providers ?? []).forEach((p) =>
+                        allowed.add(p === "microsoft" ? ProviderId.AzureAd : p === "google" ? ProviderId.Google : ProviderId.Steam)
+                    );
                 setOauthLockSet(allowed);
-                const labels = Array.from(allowed).map((p) => (p === ProviderId.AzureAd ? "Microsoft" : p === ProviderId.Google ? "Google" : "Steam"));
-                setCredError(labels.length === 1 ? `This account uses OAuth. Please continue with ${labels[0]}.` : `This account uses OAuth. Please continue with ${labels.join(" or ")}.`);
+                const labels = Array.from(allowed).map((p) =>
+                    p === ProviderId.AzureAd ? "Microsoft" : p === ProviderId.Google ? "Google" : "Steam"
+                );
+                setCredError(
+                    labels.length === 1
+                        ? `This account uses OAuth. Please continue with ${labels[0]}.`
+                        : `This account uses OAuth. Please continue with ${labels.join(" or ")}.`
+                );
                 return;
             }
             const result = await signIn(ProviderId.Credentials, { username: uname, password, redirect: false });
@@ -135,20 +155,52 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--background)", color: "var(--foreground)" }}>
-            <div className="shadow-xl rounded-xl p-8 w-full max-w-md border space-y-6" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border)" }}>
+            <div
+                className="shadow-xl rounded-xl p-8 w-full max-w-md border space-y-6"
+                style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border)" }}
+            >
                 <h1 className="text-2xl font-semibold text-center">Sign in</h1>
-                {(oauthError || credError) && <div className="p-3 rounded text-sm text-center" style={{ backgroundColor: "#fee2e2", color: "#b91c1c" }}>{oauthError || credError}</div>}
+                {!!credError && (
+                    <div className="p-3 rounded text-sm text-center" style={{ backgroundColor: "#fee2e2", color: "#b91c1c" }}>
+                        {credError}
+                    </div>
+                )}
+                <Suspense fallback={null}>
+                    <OAuthErrorBanner />
+                </Suspense>
                 {showCredentials && (
                     <form onSubmit={onSubmit} className="space-y-4">
                         <div>
-                            <label htmlFor="username" className="block text-sm font-medium">Username</label>
-                            <input id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="mt-1 block w-full px-4 py-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" style={{ backgroundColor: "var(--input-bg)", color: "var(--foreground)", borderColor: "var(--border)" }} />
+                            <label htmlFor="username" className="block text-sm font-medium">
+                                Username
+                            </label>
+                            <input
+                                id="username"
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                                className="mt-1 block w-full px-4 py-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                style={{ backgroundColor: "var(--input-bg)", color: "var(--foreground)", borderColor: "var(--border)" }}
+                            />
                         </div>
                         <div>
-                            <label htmlFor="password" className="block text-sm font-medium">Password</label>
-                            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1 block w-full px-4 py-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" style={{ backgroundColor: "var(--input-bg)", color: "var(--foreground)", borderColor: "var(--border)" }} />
+                            <label htmlFor="password" className="block text-sm font-medium">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="mt-1 block w-full px-4 py-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                style={{ backgroundColor: "var(--input-bg)", color: "var(--foreground)", borderColor: "var(--border)" }}
+                            />
                         </div>
-                        <Button type="submit" disabled={submitting} className="w-full py-2 px-4">{submitting ? "Signing in…" : "Sign In"}</Button>
+                        <Button type="submit" disabled={submitting} className="w-full py-2 px-4">
+                            {submitting ? "Signing in…" : "Sign In"}
+                        </Button>
                     </form>
                 )}
                 {showCredentials && anyOAuthVisible && (
@@ -160,14 +212,27 @@ export default function LoginPage() {
                 )}
                 {anyOAuthVisible && (
                     <div className="space-y-3">
-                        {showAzure && (<Button type="button" onClick={startAzure} className="w-full py-2 px-4">Continue with Microsoft</Button>)}
-                        {showGoogle && (<Button type="button" onClick={startGoogle} className="w-full py-2 px-4">Continue with Google</Button>)}
-                        {showSteam && (<Button type="button" onClick={startSteam} className="w-full py-2 px-4">Continue with Steam</Button>)}
+                        {showAzure && (
+                            <Button type="button" onClick={startAzure} className="w-full py-2 px-4">
+                                Continue with Microsoft
+                            </Button>
+                        )}
+                        {showGoogle && (
+                            <Button type="button" onClick={startGoogle} className="w-full py-2 px-4">
+                                Continue with Google
+                            </Button>
+                        )}
+                        {showSteam && (
+                            <Button type="button" onClick={startSteam} className="w-full py-2 px-4">
+                                Continue with Steam
+                            </Button>
+                        )}
                     </div>
                 )}
-                {providers && !hasAzure && !hasGoogle && !hasSteam && !hasCredentials && (<p className="text-sm text-center opacity-70">No sign-in methods are currently available. Please contact the administrator.</p>)}
+                {providers && !hasAzure && !hasGoogle && !hasSteam && !hasCredentials && (
+                    <p className="text-sm text-center opacity-70">No sign-in methods are currently available. Please contact the administrator.</p>
+                )}
             </div>
         </div>
     );
 }
-

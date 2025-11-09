@@ -26,12 +26,10 @@ export function globalProviders() {
 
 export type LinkedProviders = Record<OAuthProviderId, boolean>;
 
-export type OAuthPolicy =
-    | { kind: "ANY" }
-    | { kind: "NONE" }
-    | { kind: "ALLOW_ONLY"; allow: readonly OAuthProviderId[] };
+export type OAuthPolicy = { kind: "ANY" } | { kind: "NONE" } | { kind: "ALLOW_ONLY"; allow: readonly OAuthProviderId[] };
 
 export async function getUserPolicy(_userId: string): Promise<{ passwordEnabled: boolean; oauthPolicy: OAuthPolicy }> {
+    void _userId; // intentionally unused for now
     return { passwordEnabled: true, oauthPolicy: { kind: "ANY" } };
 }
 
@@ -46,4 +44,3 @@ export async function getLinkedProviders(userId: string): Promise<LinkedProvider
         [ProviderId.Steam]: set.has(ProviderId.Steam),
     };
 }
-
