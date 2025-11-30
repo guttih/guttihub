@@ -44,7 +44,7 @@ sudo n lts
 ==== Fedora / Rocky Linux
 [source,bash]
 ----
-sudo dnf install -y nodejs npm postgresql postgresql-server postgresql-contrib
+sudo dnf install -y nodejs npm postgresql postgresql-server postgresql-contrib ffmpeg jq curl at
 # Initialize and start PostgreSQL (RHEL/Fedora family):
 sudo /usr/bin/postgresql-setup --initdb
 sudo systemctl enable --now postgresql
@@ -193,15 +193,15 @@ ALLOW_PASSWORD_WHEN_OAUTH=false
 You need OAuth client credentials for providers you enable. Below are minimal, **working** dev setups.
 
 ==== Google — Create OAuth Client ID
-1. Open Google Cloud Console → **APIs & Services → OAuth consent screen**. Choose **External** for quick testing and add yourself under **Test users**.  
-2. Go to **APIs & Services → Credentials → Create Credentials → OAuth client ID**. Pick **Web application**.  
+1. Open Google Cloud Console → **APIs & Services → OAuth consent screen**. Choose **External** for quick testing and add yourself under **Test users**.
+2. Go to **APIs & Services → Credentials → Create Credentials → OAuth client ID**. Pick **Web application**.
 3. Add **Authorized JavaScript origins** and **Authorized redirect URIs**:
 
-   * Dev origins:  
+   * Dev origins:
      `http://localhost:3000`
-   * Dev redirect:  
+   * Dev redirect:
      `http://localhost:3000/api/auth/callback/google`
-   * Production redirect (example):  
+   * Production redirect (example):
      `https://YOUR_DOMAIN/api/auth/callback/google`
 
 4. Copy **Client ID** and **Client secret** into `.env.local`:
@@ -216,13 +216,13 @@ Notes:
 * While the consent screen is in **Testing**, only **Test users** can sign in. Publish to **In production** if you need broader access.
 
 ==== Microsoft (Entra ID / Azure AD) — App Registration
-1. Open **Azure Portal** → **Microsoft Entra ID** → **App registrations** → **New registration**.  
-   * **Supported account types**: choose what you need (many apps use **Accounts in any org directory and personal Microsoft accounts**).  
-2. Add a **Redirect URI** of type **Web**:  
-   * Dev: `http://localhost:3000/api/auth/callback/azure-ad`  
+1. Open **Azure Portal** → **Microsoft Entra ID** → **App registrations** → **New registration**.
+   * **Supported account types**: choose what you need (many apps use **Accounts in any org directory and personal Microsoft accounts**).
+2. Add a **Redirect URI** of type **Web**:
+   * Dev: `http://localhost:3000/api/auth/callback/azure-ad`
    * Prod: `https://YOUR_DOMAIN/api/auth/callback/azure-ad`
-3. After creating the app, go to **Certificates & secrets** → **New client secret** (copy the **Value** now).  
-4. Go to **API permissions** → add **Microsoft Graph → User.Read** and **Grant admin consent** (so user profile can be read).  
+3. After creating the app, go to **Certificates & secrets** → **New client secret** (copy the **Value** now).
+4. Go to **API permissions** → add **Microsoft Graph → User.Read** and **Grant admin consent** (so user profile can be read).
 5. Copy these values into `.env.local`:
 [source,env]
 ----
@@ -234,7 +234,7 @@ AZURE_AD_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx         # Directory (ten
 > Tip: Multi-tenant apps can use `AZURE_AD_TENANT_ID=common` during dev. Use your real Tenant ID when you need to restrict to a specific directory.
 
 ==== Steam
-Get a Steam Web API key at: https://steamcommunity.com/dev/apikey  
+Get a Steam Web API key at: https://steamcommunity.com/dev/apikey
 Add to `.env.local`:
 [source,env]
 ----

@@ -105,12 +105,42 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM
 
+# --- Detect available H.264 encoder ---
+detect_h264_encoder() {
+    # Priority order: libx264 (most common) -> libopenh264 -> hardware encoders -> fallback
+    if ffmpeg -encoders 2>/dev/null | grep -q "libx264"; then
+        echo "libx264"
+    elif ffmpeg -encoders 2>/dev/null | grep -q "libopenh264"; then
+        echo "libopenh264"
+    elif ffmpeg -encoders 2>/dev/null | grep -q "h264_vaapi"; then
+        echo "h264_vaapi"
+    elif ffmpeg -encoders 2>/dev/null | grep -q "h264_v4l2m2m"; then
+        echo "h264_v4l2m2m"
+    else
+        echo "copy" # fallback to copy codec if no H.264 encoder found
+    fi
+}
+
+H264_ENCODER=$(detect_h264_encoder)
+echo "Using H.264 encoder: $H264_ENCODER" >>"$LOG_FILE"
+
+# Set encoder-specific options
+if [[ "$H264_ENCODER" == "libx264" ]]; then
+    ENCODER_OPTS="-preset veryfast -g 25 -sc_threshold 0 -tune zerolatency"
+elif [[ "$H264_ENCODER" == "libopenh264" ]]; then
+    ENCODER_OPTS="-g 25 -sc_threshold 0"  # libopenh264 doesn't support preset/tune
+elif [[ "$H264_ENCODER" == "copy" ]]; then
+    ENCODER_OPTS=""  # no re-encoding
+else
+    ENCODER_OPTS="-g 25 -sc_threshold 0"  # basic options for hardware encoders
+fi
+
 # --- Start FFmpeg ---
 ffmpeg -loglevel info \
     -i "$STREAM_URL" \
     -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 \
     -user_agent "Mozilla/5.0" \
-    -c:v libx264 -preset veryfast -g 25 -sc_threshold 0 -tune zerolatency \
+    -c:v $H264_ENCODER $ENCODER_OPTS \
     -c:a aac -b:a 128k -ac 2 -ar 44100 \
     -f hls \
     -hls_time 4 \

@@ -3,12 +3,12 @@
 // import { describe, it, expect } from "vitest";
 
 // describe("Test Streaamingresolver", () => {
-   
+
 
 //     it("should return MP4 for mp4", () => {
 //         const service1 = services[0];
-//         const url1= "http://bigotvpro.com:8080/movie/k5W1gNfZWQ0C/naz4Zgthg3dn/192582.mp4"
-//         const url2= "http://bigotvpro.com:8080/series/k5W1gNfZWQ0C/naz4Zgthg3dn/122722.mkv"
+//         const url1= "http://bigotvpro.com:8080/movie/k1Ua6dBJFhwr/aZhFybTqRXwP/192582.mp4"
+//         const url2= "http://bigotvpro.com:8080/series/k1Ua6dBJFhwr/aZhFybTqRXwP/122722.mkv"
 
 //         // extract servervalues from url
 //         const serverValues1 = StreamingServiceResolver.splitStreamingSearchUrl(url1);
@@ -25,11 +25,11 @@
 //             console.log("path1", path);
 //         }
 
-        
+
 
 //         //
-        
-        
+
+
 //     });
 
 // });

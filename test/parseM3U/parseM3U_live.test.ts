@@ -24,7 +24,7 @@ function validateEntriesStructure(entries: unknown[]) {
 }
 
 describe("parseM3U comparison", () => {
-    const content1 = readFileAssetSync(getCacheFilePath("k5W1gNfZWQ0C", "bigotvpro", "m3u"));
+    const content1 = readFileAssetSync(getCacheFilePath("k1Ua6dBJFhwr", "bigotvpro", "m3u"));
     const content2 = readFileAssetSync(getCacheFilePath("7d483beb4604", "m3u.best-smarter.me", "m3u"));
 
     it("Parse 1 - entries count and structure", () => {
