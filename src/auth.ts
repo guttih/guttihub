@@ -104,10 +104,16 @@ export const {
     events: {
         async createUser({ user }) {
             const email = user.email ?? null;
-            const baseName = email ? email.split("@")[0] : user.name ?? `user_${user.id.slice(0, 8)}`;
+            const id = hasId(user) ? user.id : undefined;
+            const baseName = email ? email.split("@")[0] : user.name ?? (id ? `user_${id.slice(0, 8)}` : "user");
+
+            if (!id) {
+                console.warn("[next-auth] createUser event received user without id; skipping username update");
+                return;
+            }
 
             await prisma.user.update({
-                where: { id: user.id },
+                where: { id },
                 data: {
                     username: baseName,
                 },

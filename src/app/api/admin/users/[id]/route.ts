@@ -11,7 +11,7 @@ type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
     const session = await auth();
-    if (!session?.user || !hasAdminAccess(session.user as any)) {
+    if (!session?.user || !hasAdminAccess(session.user as { role?: string })) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { id } = await ctx.params;
@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
     const session = await auth();
-    if (!session?.user || !hasAdminAccess(session.user as any)) {
+    if (!session?.user || !hasAdminAccess(session.user as { role?: string })) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { id } = await ctx.params;
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const session = await auth();
-    if (!session?.user || !hasAdminAccess(session.user as any)) {
+    if (!session?.user || !hasAdminAccess(session.user as { role?: string })) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { id } = await ctx.params;
@@ -63,4 +63,3 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
         return NextResponse.json({ error: "Delete failed" }, { status: 500 });
     }
 }
-

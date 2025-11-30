@@ -20,7 +20,7 @@ import { hasRole, Role } from "@/utils/auth/accessControl";
 export async function hasUserAccessLevel(requiredRole: Role) {
     const session = await auth();
     const email = session?.user?.email ?? null;
-    const userRole = (session?.user as any)?.role as Role | undefined;
+    const userRole = (session?.user as { role?: Role })?.role;
 
     if (!email || !userRole) {
       return {
@@ -53,13 +53,13 @@ export async function hasUserAccessLevel(requiredRole: Role) {
  * This is a backend-only function.
  */
 export async function getUserSessionWithRoleServerOnly(): Promise<{
-    session: Awaited<ReturnType<typeof auth>>;
+    session: import("next-auth").Session | null;
     email: string | null;
     role: Role | null;
   }> {
     const session = await auth();
     const email = session?.user?.email ?? null;
-    const role = (session?.user as any)?.role ?? null;
+    const role = (session?.user as { role?: Role })?.role ?? null;
     return { session, email, role };
   }
 

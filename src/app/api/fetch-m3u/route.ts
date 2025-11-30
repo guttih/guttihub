@@ -33,7 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<M
 
         if (force) {
             const session = await auth();
-            const role = (session?.user as any)?.role as Role | undefined;
+            const role = (session?.user as { role?: Role })?.role;
             if (!role || !hasRole({ role }, Role.ADMIN)) {
                 return makeErrorResponse("Unauthorized: Only admins can force refresh", 403);
             }

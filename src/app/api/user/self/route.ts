@@ -7,7 +7,7 @@ import bcrypt from "bcrypt";
 
 export async function GET() {
     const session = await auth();
-    const id = (session?.user as any)?.id as string | undefined;
+    const id = (session?.user as { id?: string })?.id;
     if (!id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const user = await prisma.user.findUnique({ where: { id }, select: { id: true, username: true, email: true, role: true, theme: true, profileImage: true } });
     if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -16,13 +16,13 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
     const session = await auth();
-    const id = (session?.user as any)?.id as string | undefined;
+    const id = (session?.user as { id?: string })?.id;
     if (!id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
     const { username, email, password, theme, profileImage } = body as { username?: string; email?: string; password?: string; theme?: string; profileImage?: string };
 
-    const data: any = {};
+    const data: import("@prisma/client").Prisma.UserUpdateInput = {};
     if (typeof username === "string" && username.trim()) data.username = username.trim();
     if (typeof email === "string") data.email = email || null;
     if (typeof profileImage === "string") data.profileImage = profileImage;
@@ -34,4 +34,3 @@ export async function PATCH(req: NextRequest) {
     await prisma.user.update({ where: { id }, data });
     return NextResponse.json({ ok: true });
 }
-

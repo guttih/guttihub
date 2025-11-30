@@ -39,14 +39,12 @@ export const credentialsProvider = CredentialsProvider({
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) throw new Error("INVALID_PASSWORD");
 
+        // Return minimal NextAuth user shape; extra fields are populated in callbacks
         return {
             id: user.id,
             name: user.username ?? undefined,
             email: user.email ?? undefined,
-            username: user.username ?? null,
-            role: user.role,
-            theme: user.theme,
-            profileImage: user.profileImage,
-        } as any;
+            image: user.profileImage || undefined,
+        };
     },
 });

@@ -2,7 +2,6 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { ProviderId } from "@/lib/auth/provider-ids";
-import { Button } from "@/components/ui/Button/Button";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -64,7 +63,7 @@ export default function ConnectedAccountsPanel({ userId, allowUnlink = true }: P
             const res = await fetch(url, init);
             if (!res.ok) throw new Error("Failed to unlink");
             startTransition(() => router.refresh());
-        } catch (e) {
+        } catch {
             setAccounts(prev);
         }
     }
@@ -100,4 +99,3 @@ export default function ConnectedAccountsPanel({ userId, allowUnlink = true }: P
         </div>
     );
 }
-

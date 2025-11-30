@@ -12,7 +12,7 @@ function jsonError(status: number, code: string, message: string, details?: unkn
 
 export async function GET() {
     const session = await auth();
-    if (!session || !hasAdminAccess(session.user as any)) {
+    if (!session || !hasAdminAccess(session.user as { role?: string })) {
         return jsonError(401, "UNAUTHORIZED", "Unauthorized");
     }
     const users = await prisma.user.findMany({
@@ -24,7 +24,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     const session = await auth();
-    if (!session || !hasAdminAccess(session.user as any)) {
+    if (!session || !hasAdminAccess(session.user as { role?: string })) {
         return jsonError(401, "UNAUTHORIZED", "Unauthorized");
     }
     try {
@@ -49,4 +49,3 @@ export async function POST(req: NextRequest) {
         return jsonError(500, "INTERNAL_ERROR", "Something went wrong while creating the user");
     }
 }
-

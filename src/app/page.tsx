@@ -10,10 +10,9 @@ export default async function ProtectedPage() {
 
     if (!session) redirect("/login");
 
-    // TODO: Map Prisma Role -> app role string union if needed.
-    const role = (session.user as any)?.role as Role | undefined;
+    // Resolve user role from session in a type-safe way
+    const role = (session.user as { role?: Role })?.role;
     if (!role) redirect("/login");
 
-    // Temporary cast: downstream expects legacy UserRole type
-    return <ClientApp userRole={role as unknown as any} />;
+    return <ClientApp userRole={role} />;
 }
