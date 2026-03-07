@@ -113,7 +113,7 @@ export function PlayerClient({ url, serviceId, autoPlay = true }: PlayerProps) {
         if (!video || !normalizedUrl || !resolvedServiceId) return;
 
         const fmt = detectStreamFormat(normalizedUrl);
-        const isMovie = fmt === StreamFormat.MP4 || fmt === StreamFormat.MKV;
+        const isMovie = fmt === StreamFormat.MP4 || fmt === StreamFormat.MKV || fmt === StreamFormat.TS;
         if (!isMovie) return;
 
         const id = consumerId.current;

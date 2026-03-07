@@ -16,7 +16,7 @@ export const supportedFormats: StreamFormat[] = [
     StreamFormat.MKV,
     StreamFormat.M3U8, // No wideo with this format was found on servers, it's only for live streams I guess
     // StreamFormat.AVI,  // Ttried a few, but no playback
-    // StreamFormat.TS,   // Ttried a few, but no playback
+    StreamFormat.TS,   // Ttried a few, but no playback
     // StreamFormat.WEBM, // No wideo with this format was found on servers
     //  StreamFormat.FLV, // No wideo with this format was found on servers
     // StreamFormat.MOV,  // No wideo with this format was found on servers

@@ -260,7 +260,7 @@ export function StreamCard({
                     {isRecordable && allowedToRecordStream && (
                         <MediaRecordButton onClick={handleRecord} disabled={isStartingRecording} title="Watch, and start streaming" />
                     )}
-                    {allowedToDownload && extensionIsSupported && (extension === "mp4" || extension === "mkv") && (
+                    {allowedToDownload && extensionIsSupported && (extension === "mp4" || extension === "mkv" || extension === "ts") && (
                         <MediaDownloadButton onClick={handleDownload} disabled={isStartingdownloading} title="Download to disk" />
                     )}
 

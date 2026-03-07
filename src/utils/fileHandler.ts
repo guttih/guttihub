@@ -69,7 +69,7 @@ export async function deleteFile(filePath: string): Promise<void> {
 }
 
 export function deleteFileAndForget(filePath: string): Promise<void> {
-    if (filePath.endsWith(".mp4") || filePath.endsWith(".mkv")) {
+    if (filePath.endsWith(".mp4") || filePath.endsWith(".mkv") || filePath.endsWith(".ts")) {
         // If it's a media file, we don't want to delete it silently
         console.warn(`⚠️ Deleting media file ${filePath} silently is not recommended.`);
     }
