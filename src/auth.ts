@@ -42,6 +42,7 @@ export const {
     providers: getProviders(req),
     session: { strategy: "jwt" },
     secret: process.env.NEXTAUTH_SECRET,
+    trustHost: true, // Trust the host for production
     pages: { signIn: "/login" },
 
     callbacks: {
