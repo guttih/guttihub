@@ -288,8 +288,8 @@ PID=$!
 echo "FFMPEG_PID=$PID" >>"$STATUS_FILE"
 echo "🕒 Waiting for FFmpeg process (PID=$PID)..." >>"$LOG_FILE"
 
-wait $PID
-EXIT_CODE=$?
+EXIT_CODE=0
+wait "$PID" || EXIT_CODE=$?
 ACTUAL_STOP=$(date -Iseconds)
 echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
 echo "FFMPEG_EXIT=$EXIT_CODE" >>"$STATUS_FILE"
@@ -297,6 +297,11 @@ echo "FFMPEG_EXIT=$EXIT_CODE" >>"$STATUS_FILE"
 if [[ $EXIT_CODE -eq 124 || $EXIT_CODE -eq 130 || $EXIT_CODE -eq 255 ]]; then
     echo "INTERRUPTED=1" >>"$STATUS_FILE"
     echo "STATUS=stopped" >>"$STATUS_FILE"
+elif [[ $EXIT_CODE -ne 0 ]]; then
+    echo "STATUS=error" >>"$STATUS_FILE"
+    echo "ERROR=FFmpeg capture failed (exit $EXIT_CODE); see log" >>"$STATUS_FILE"
+    send_cleanup_report
+    exit "$EXIT_CODE"
 fi
 
 finalize_recording || echo "finalize_recording FAILED" >>"$LOG_FILE"

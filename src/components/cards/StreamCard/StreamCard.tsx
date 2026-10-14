@@ -128,8 +128,7 @@ export function StreamCard({
                 const { recordingId } = await startRes.json();
 
                 const playlistUrl = `/api/hls-stream/${recordingId}/playlist`;
-                entry.url = playlistUrl;
-                onPlay(entry);
+                onPlay({ ...entry, url: playlistUrl });
                 await new Promise((resolve) => setTimeout(resolve, 10000));
                 setIsStartingStreaming(false);
             } catch (err) {
