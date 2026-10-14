@@ -39,6 +39,7 @@ export const UserMenu = ({ userName, userRole, onForceRefresh, onExport, canExpo
                 )}
                 {hasRole(userRole, "moderator") && (
                     <div>
+                        <a href="/download" target="_blank" rel="noopener noreferrer" title="Open download list in a new tab" className="block px-3 py-2 text-sm hover:bg-gray-700">Downloads</a>
                         <ExportEntriesButton onExport={onExport} disabled={!canExport} />
 
                         {showForceRefresh && (

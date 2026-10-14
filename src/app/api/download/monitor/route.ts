@@ -1,5 +1,6 @@
 // src/app/api/download/monitor/route.ts
 
+import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { readDownloadJobFile, readDownloadJobInfo } from "@/utils/fileHandler";
 import { infoJsonExists } from "@/utils/fileHandler";
@@ -7,6 +8,7 @@ import { readJobLogFile, readJobStatusFile } from "@/utils/resolverUtils";
 import { extractLatestDownloadProgressPercent } from "@/utils/downloadStatusParser";
 
 export async function GET(req: NextRequest) {
+  if (!await auth()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const cacheKey = searchParams.get("cacheKey");
   const recordingId = searchParams.get("recordingId");
@@ -26,8 +28,8 @@ export async function GET(req: NextRequest) {
         createdAt: info.job.createdAt,
         outputFile: info.job.outputFile,
         currentStatus: "done",
-        statusLines: Object.entries(info.status).map(([key, val]) => `${key}: ${val}`),
-        logLines: info.logs,
+        statusLines: Object.entries(info.status).filter(([key]) => key !== "URL").map(([key, val]) => `${key}: ${val}`.split(info.job.url).join("[stream URL]")),
+        logLines: info.logs.map((line) => line.split(info.job.url).join("[stream URL]")),
         serverTime: new Date().toISOString(),
         startedAt: info.status.STARTED_AT ?? null,
       });
@@ -54,8 +56,8 @@ export async function GET(req: NextRequest) {
       createdAt: statusLinesRaw.STARTED_AT || null,
       outputFile: statusLinesRaw.OUTPUT_FILE || null,
       currentStatus: latestStatus,
-      statusLines: Object.entries(statusLinesRaw).map(([key, val]) => `${key}: ${val}`),
-      logLines: logLinesRaw,
+      statusLines: Object.entries(statusLinesRaw).filter(([key]) => key !== "URL").map(([key, val]) => `${key}: ${val}`.split(job.url).join("[stream URL]")),
+      logLines: logLinesRaw.map((line) => line.split(job.url).join("[stream URL]")),
       serverTime: new Date().toISOString(),
       startedAt: statusLinesRaw.STARTED_AT ?? null,
       progressPercent,

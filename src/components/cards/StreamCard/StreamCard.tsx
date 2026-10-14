@@ -59,6 +59,7 @@ export function StreamCard({
     const [isStartingRecording, setIsStartingRecording] = useState(false);
     const [isStartingPlaying, setIsStartingPlaying] = useState(false);
     const [isStartingDelete, setIsStartingDelete] = useState(false);
+    const [addedToQueue, setAddedToQueue] = useState(false);
     const [copied, setCopied] = useState(false);
     const handleCopy = async () => {
         try {
@@ -146,37 +147,18 @@ export function StreamCard({
         try {
             setIsStartingDownloading(true);
 
-            const res = await fetch("/api/cache", {
+            const res = await fetch("/api/download/queue", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(entry),
+                body: JSON.stringify({ action: "add", entry, serviceId }),
             });
-
-            if (!res.ok) {
-                throw new Error("Failed to cache entry");
-            }
-
-            const { cacheKey } = await res.json(); // ✅ first res.json()
-
-            const startRes = await fetch("/api/download/start", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ cacheKey, entry, user: userName }),
-            });
-
-            if (!startRes.ok) {
-                console.error("Failed to start download");
-                setIsStartingDownloading(false);
-                return;
-            }
-
-            const { recordingId } = await startRes.json(); // 🛠 Correct: startRes.json() not res.json()!
-
-            console.log("✅ Started download job:", recordingId);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to add download");
+            setAddedToQueue(true);
         } catch (err) {
-            console.error("❌ Error starting download:", err);
+            showMessageBox({ variant: "error", title: "Download list", message: (err as Error).message });
         } finally {
-            setIsStartingDownloading(false); // 🛠 You had `setIsStartingRecording(false)` typo before
+            setIsStartingDownloading(false);
         }
     };
 
@@ -249,6 +231,7 @@ export function StreamCard({
                     {entry.groupTitle}
                 </p>
 
+                {addedToQueue && <a href="/download" target="_blank" rel="noopener noreferrer" title="Open download list in a new tab" className="text-sm text-purple-300 hover:underline">Added · Open download list</a>}
                 {/* Grouped control buttons */}
                 <div className="absolute bottom-4 right-4 flex gap-2">
                     {showPlay && <MediaPlayButton onClick={handlePlay} disabled={isStartingPlaying} title="Play Now" />}
@@ -259,8 +242,8 @@ export function StreamCard({
                     {isRecordable && allowedToRecordStream && (
                         <MediaRecordButton onClick={handleRecord} disabled={isStartingRecording} title="Watch, and start streaming" />
                     )}
-                    {allowedToDownload && extensionIsSupported && (extension === "mp4" || extension === "mkv" || extension === "ts") && (
-                        <MediaDownloadButton onClick={handleDownload} disabled={isStartingdownloading} title="Download to disk" />
+                    {!addedToQueue && allowedToDownload && extensionIsSupported && (extension === "mp4" || extension === "mkv" || extension === "ts") && (
+                        <MediaDownloadButton onClick={handleDownload} disabled={isStartingdownloading} title="Add to queue" aria-label="Add to queue" />
                     )}
 
                     {allowedToDelete && <MediaDeleteButton onClick={handleDelete} disabled={isStartingDelete} title="Delete file from disk" />}

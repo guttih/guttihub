@@ -43,7 +43,7 @@ export default function DownloadStatusClient({ job }: Props) {
         )}
       </div>
 
-      <DownloadMonitor cacheKey={job.cacheKey} />
+      <DownloadMonitor cacheKey={job.cacheKey} recordingId={job.recordingId} />
 
       {status === "done" && (
         <div className="mt-6 text-green-400 bg-green-900 border border-green-700 rounded p-3 text-sm">

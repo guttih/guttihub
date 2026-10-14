@@ -23,7 +23,7 @@ export default function HelpPage() {
                 <h3 className="mt-6 font-semibold">Whitelist Only Favorites</h3>
                 <p>Exclude nearly everything, then delete what you want to show:</p>
                 <RegexBlock title="Field: Group Title">
-                    {`^(?!.*\\bPolskie\\b)(?!.*\\bBollywood\\b)(?!.*\\bTurkish\\b)(?!.*\\bDanish\\b)(?!.*\\bTR\\b)(?!.*\\bEx-Yu\\b)(?!.*\\bNL\\b)(?!.*\\bArabic\\b)(?!.*\\bFrançais\\b)(?!.*\\bPortugal\\b)(?!.*\\bGerman\\b)(?!.*\\bSwedish\\b)(?=\\S).*`}
+                    {`^(?!.*\\bPolskie\\b)(?!.*\\bBollywood\\b)(?!.*\\bTurkish\\b)(?!.*\\bDanish\\b)(?!.*\\bTR\\b)(?!.*\\bEx-Yu\\b)(?!.*\\bNL\\b)(?!.*\\bArabic\\b)(?!.*\\bFrançais\\b)(?!.*\\bPortugal\\b)(?!.*\\bPortuguês\\b)(?!.*\\bGerman\\b)(?!.*\\bSwedish\\b)(?=\\S).*`}
                 </RegexBlock>
 
                 <h3 className="mt-6 font-semibold">Match Specific Providers</h3>

@@ -620,7 +620,7 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                                 showPlayButton={showPlayButton}
                                 showStreamButton={showStreaming}
                                 showDeleteButton={activeService?.hasFileAccess}
-                                showDownloadButton={canPlay && !activeService?.hasFileAccess}
+                                showDownloadButton={!activeService?.hasFileAccess}
                                 onPlay={(entry) => handlePlay(entry)}
                                 onDelete={(deletedEntry) => setEntries((prev) => prev.filter((e) => e.url !== deletedEntry.url))}
                             />

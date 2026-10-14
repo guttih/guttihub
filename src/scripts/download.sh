@@ -8,9 +8,14 @@ set -euo pipefail
 # --- Default ---
 LOGLEVEL="error"
 PARENT_PID=$$
+MANAGED_QUEUE=0
 # --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
     case "$1" in
+    --managedQueue)
+        MANAGED_QUEUE=1
+        shift
+        ;;
     --baseUrl)
         BASE_URL="$2"
         shift 2
@@ -108,7 +113,7 @@ get_content_length() {
 }
 
 send_cleanup_report() {
-    if [[ -n "${BASE_URL:-}" ]]; then
+    if [[ "$MANAGED_QUEUE" -eq 0 && -n "${BASE_URL:-}" ]]; then
         if ! curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
             -H "Content-Type: application/json" \
             -d "{\"cacheKey\":\"$CACHE_KEY\"}"; then
@@ -123,7 +128,6 @@ cleanup() {
     ACTUAL_STOP=$(date -Iseconds)
     echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
     echo "INTERRUPTED=1" >>"$STATUS_FILE"
-    echo "STATUS=stopped" >>"$STATUS_FILE"
 
     if [[ -n "${PID:-}" ]]; then
         echo "Sending SIGINT to curl PID $PID" >>"$LOG_FILE"
@@ -137,6 +141,8 @@ cleanup() {
         rm -f "$TMP_OUTPUT_FILE"
     fi
 
+    wait "${PID:-}" 2>/dev/null || true
+    echo "STATUS=stopped" >>"$STATUS_FILE"
     send_cleanup_report
     exit 0
 }
@@ -156,8 +162,8 @@ echo "PID=$PID" >>"$STATUS_FILE"
 echo "Curl PID $PID started at $STARTED_AT" >>"$LOG_FILE"
 
 # --- Wait for download ---
-wait $PID
-EXIT_CODE=$?
+EXIT_CODE=0
+wait "$PID" || EXIT_CODE=$?
 
 ACTUAL_STOP=$(date -Iseconds)
 echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"

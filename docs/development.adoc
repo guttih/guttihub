@@ -330,3 +330,14 @@ atq
 ----
 
 If this command fails, scheduling recordings will not work.
+== Download queue
+
+Moderators and administrators can add MP4, MKV and TS search results with the download button, then open *Menu > Downloads* (`/download`). The shared queue starts paused. *Start queue* downloads one item at a time; more items can be added while it runs, including after it becomes empty. *Pause queue* lets the active download finish. *Cancel* stops the active transfer and discards its partial file. Failed and cancelled items can be retried from the beginning; removing a completed row only removes its queue history, not its media file.
+
+Queue state is stored in `.cache/download-queue/queue.json`, separately from recording-job metadata. Keep this directory with the application's persistent storage; it contains source URLs and must remain private. State is written by atomic rename under a Linux `flock` lock, which also coordinates multiple Next/PM2 workers on the same host. The server requires `flock` (normally provided by util-linux) and Linux procfs for worker ownership checks and cancellation.
+
+Next.js instrumentation starts a server-side poller every three seconds, so progress does not depend on an open browser. Active transfers are reconciled after an app restart, and interrupted launches become retryable failures. The queue checks existing playback/recording consumers against the provider's configured connection limit before launching. Other playback/recording launch paths do not share the queue lock, so this check is not an atomic reservation across all app activity.
+
+Queued downloads use the existing downloader with `--managedQueue`; the queue handles finalization rather than the legacy cleanup callback. A finalization error holds the queue until it can safely finalize the output. Download failures advance to the next item. Queue API access and controls require a moderator or administrator session. No database migration is needed.
+
+*Create M3U playlist* saves a uniquely named `.m3u` beside the final media files. It includes only completed rows still in the queue, in their current queue order, and references their actual final filenames with relative paths. It is a snapshot: create another playlist to include later downloads. If a referenced file or its finalization metadata is unavailable, creation fails without writing a partial playlist.

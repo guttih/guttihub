@@ -29,10 +29,10 @@ interface DownloadMonitorProps {
 export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 2000 }: DownloadMonitorProps) {
     const [monitorData, setMonitorData] = useState<DownloadMonitorData | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [stopCountdown, setStopCountdown] = useState<number | null>(null);
 
     useEffect(() => {
         let mounted = true;
+        let finished = false;
 
         const fetchMonitorData = async () => {
             try {
@@ -46,15 +46,8 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
 
                 if (mounted) {
                     setMonitorData(json);
-                    const lowerStatus = json.currentStatus?.toLowerCase();
-
-                    if (["done", "error"].includes(lowerStatus)) {
-                        if (stopCountdown === null) {
-                            setStopCountdown(5);
-                        }
-                    } else {
-                        setStopCountdown(null);
-                    }
+                    setError(null);
+                    finished = ["done", "error", "stopped"].includes(json.currentStatus?.toLowerCase());
                 }
             } catch (err) {
                 console.error("❌ Download monitor fetch failed:", err);
@@ -63,22 +56,13 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
         };
 
         fetchMonitorData();
-        const interval = setInterval(() => {
-            if (stopCountdown !== null && stopCountdown <= 0) {
-                clearInterval(interval);
-            } else {
-                fetchMonitorData();
-                if (stopCountdown !== null) {
-                    setStopCountdown((prev) => (prev !== null ? prev - 1 : null));
-                }
-            }
-        }, intervalMs);
+        const interval = setInterval(() => { if (!finished) void fetchMonitorData(); }, intervalMs);
 
         return () => {
             mounted = false;
             clearInterval(interval);
         };
-    }, [cacheKey, recordingId, intervalMs, stopCountdown]);
+    }, [cacheKey, recordingId, intervalMs]);
 
     if (error) return <div className="p-4 text-red-400">❌ {error}</div>;
     if (!monitorData) return <div className="p-4 text-gray-400">Loading download monitor info...</div>;
@@ -88,6 +72,7 @@ export default function DownloadMonitor({ cacheKey, recordingId, intervalMs = 20
             <div className="bg-gray-900 p-4 rounded-xl shadow-md space-y-2">
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold">Download Monitor</h2>
+                    <a href="/download" target="_blank" rel="noopener noreferrer" title="Open download list in a new tab" className="text-sm text-purple-300 hover:underline">Download list</a>
                 </div>
 
                 <div className="text-sm space-y-1 mb-4">

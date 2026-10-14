@@ -57,7 +57,7 @@ function StatusPageContent() {
   if (error) return <div className="p-6 text-red-400">{error}</div>;
   if (!job) return <div className="p-6 text-gray-400">Loading download job info...</div>;
 
-  return <DownloadMonitor cacheKey={job.cacheKey} />;
+  return <DownloadMonitor cacheKey={job.cacheKey} recordingId={job.recordingId} />;
 }
 
 export default function DownloadStatusPage() {
