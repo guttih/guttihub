@@ -99,19 +99,24 @@ LOG_FILE="${OUTPUT_FILE}.log"
 STATUS_FILE="${OUTPUT_FILE}.status"
 TS_FILE="${OUTPUT_FILE%.mp4}.ts"
 HLS_PLAYLIST="${OUTPUT_FILE%.mp4}.m3u8"
-HLS_DIR="${OUTPUT_FILE%.mp4}_hls"
 
-# --- Timestamps ---
+# Durations are wall-clock seconds. Every retry shares this deadline.
+[[ "$DURATION" =~ ^[1-9][0-9]*$ && ${#DURATION} -le 7 ]] || { echo "Invalid duration" >&2; exit 1; }
+[[ "$RECORDING_TYPE" == hls || "$RECORDING_TYPE" == ts ]] || exit 1
 STARTED_AT=$(date -Iseconds)
-ESTIMATED_STOP=$(date -d "$STARTED_AT + $DURATION seconds" -Iseconds 2>/dev/null || date -v+${DURATION}S -Iseconds)
+DEADLINE=$((SECONDS + DURATION))
+ESTIMATED_STOP=$(date -d "@$(( $(date +%s) + DURATION ))" -Iseconds)
+TIMEOUT=$DURATION
+# Packaging gets at least an hour; optimization gets at least six hours.
+PACKAGE_LIMIT=$((DURATION + 3600))
+OPTIMIZE_LIMIT=$((DURATION * 4 + 21600))
+PARTS_DIR="${OUTPUT_FILE%.mp4}_parts"
+mkdir -p "$PARTS_DIR"
+CONCAT_FILE="$PARTS_DIR/inputs.txt"
+: > "$CONCAT_FILE"
+PID=""
+STOP_REQUESTED=0
 
-# --- Timeouts ---
-SCALED_BUFFER=$((DURATION / 20))
-[[ $SCALED_BUFFER -gt 600 ]] && SCALED_BUFFER=600
-BUFFER=$((300 + SCALED_BUFFER))
-TIMEOUT=$((DURATION + BUFFER))
-
-# --- Initial Status ---
 cat >"$STATUS_FILE" <<EOF
 STATUS=recording
 STARTED_AT=$STARTED_AT
@@ -128,181 +133,135 @@ LOG_FILE=$LOG_FILE
 PID=$PARENT_PID
 EOF
 
-# --- Prepare HLS Folder if Needed ---
-if [[ "$RECORDING_TYPE" == "hls" ]]; then
-    echo "DEBUG: mkdir -p $HLS_DIR" >>"$LOG_FILE"
-    mkdir -p "$HLS_DIR"
-    ls -la "$HLS_DIR" >>"$LOG_FILE"
-fi
-
-# --- Finalization ---
-finalize_recording() {
-    INPUT_FILE=""
-
-    if [[ "$RECORDING_TYPE" == "hls" && -f "$HLS_PLAYLIST" ]]; then
-        echo "⏳ Waiting for HLS playlist to finalize..." >>"$LOG_FILE"
-        for i in {1..30}; do
-            if grep -q "#EXT-X-ENDLIST" "$HLS_PLAYLIST"; then
-                echo "✅ Playlist finalized after $i seconds." >>"$LOG_FILE"
-                break
-            fi
-            sleep 1
-        done
-
-        if ! grep -q "#EXT-X-ENDLIST" "$HLS_PLAYLIST"; then
-            echo "⚠️ Playlist did not finalize cleanly." >>"$LOG_FILE"
-            if grep -q "INTERRUPTED=1" "$STATUS_FILE"; then
-                echo "🚧 Proceeding with packaging anyway due to interrupt." >>"$LOG_FILE"
-            else
-                echo "STATUS=error" >>"$STATUS_FILE"
-                echo "ERROR=Playlist did not finalize with #EXT-X-ENDLIST" >>"$STATUS_FILE"
-                return
-            fi
-        fi
-
-        INPUT_FILE="$HLS_PLAYLIST"
-    elif [[ -f "$TS_FILE" ]]; then
-        INPUT_FILE="$TS_FILE"
+# timeout owns a separate process group. Do not use --foreground: its
+# kill-after must reach FFmpeg and its descendants, not just the launcher.
+run_bounded() {
+    local limit="$1"
+    shift
+    local code=0
+    setsid timeout --signal=INT --kill-after=10 "${limit}s" "$@" >>"$LOG_FILE" 2>&1 &
+    PID=$!
+    echo "FFMPEG_PID=$PID" >>"$STATUS_FILE"
+    wait "$PID" || code=$?
+    # A trapped signal can interrupt wait before the child exits.
+    if [[ $STOP_REQUESTED -eq 1 ]]; then
+        wait "$PID" 2>/dev/null || true
     fi
+    PID=""
+    return "$code"
+}
 
-    if [[ -z "$INPUT_FILE" ]]; then
-        echo "STATUS=error" >>"$STATUS_FILE"
-        echo "ERROR=No input file found for packaging" >>"$STATUS_FILE"
-        return
-    fi
-
-    echo "STATUS=packaging" >>"$STATUS_FILE"
-
-    if [[ "$RECORDING_TYPE" == "hls" ]]; then
-        if ! (
-            cd "$(dirname "$HLS_PLAYLIST")" &&
-                ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
-                    -y \
-                    -i "$(basename "$HLS_PLAYLIST")" \
-                    -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1
-        ); then
-            echo "STATUS=error" >>"$STATUS_FILE"
-            echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
-            return
-        fi
-    else
-        if ! ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
-            -i "$INPUT_FILE" -c copy "$OUTPUT_FILE" >>"$LOG_FILE" 2>&1; then
-            echo "STATUS=error" >>"$STATUS_FILE"
-            echo "ERROR=Final transmux failed" >>"$STATUS_FILE"
-            return
-        fi
-    fi
-
-    echo "STATUS=optimizing" >>"$STATUS_FILE"
-
-    if ffmpeg -loglevel "$LOGLEVEL" -fflags +genpts \
-        -y \
-        -i "$OUTPUT_FILE" \
-        -c:v libx264 -preset veryfast -crf 23 \
-        -c:a aac -b:a 128k \
-        "${OUTPUT_FILE}.opt.mp4" >>"$LOG_FILE" 2>&1; then
-        mv "${OUTPUT_FILE}.opt.mp4" "$OUTPUT_FILE"
-        if grep -q '^INTERRUPTED=1' "$STATUS_FILE"; then
-            echo "Recording was interrupted, keeping STATUS=stopped" >>"$LOG_FILE"
-            echo "STATUS=stopped" >>"$STATUS_FILE"
-        else
-            echo "STATUS=done" >>"$STATUS_FILE"
-        fi
-
-        [[ "$RECORDING_TYPE" == "hls" ]] && rm -rf "$HLS_PLAYLIST" "$HLS_DIR"
-        [[ "$RECORDING_TYPE" == "ts" && -f "$TS_FILE" ]] && rm "$TS_FILE"
-    else
-        echo "STATUS=error" >>"$STATUS_FILE"
-        echo "ERROR=Optimization failed" >>"$STATUS_FILE"
+request_stop() {
+    STOP_REQUESTED=1
+    echo "INTERRUPTED=1" >>"$STATUS_FILE"
+    if [[ -n "$PID" ]]; then
+        # timeout handles INT and starts its own forced-kill grace period.
+        kill -INT "$PID" 2>/dev/null || true
     fi
 }
+trap request_stop INT TERM
 
 send_cleanup_report() {
-    echo "send_cleanup_report: BASE_URL='$BASE_URL' CACHE_KEY='$CACHE_KEY'" >>"$LOG_FILE"
-    if [[ -n "${BASE_URL:-}" ]]; then
-        if curl -s --fail -X POST "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
-            -H "Content-Type: application/json" \
-            -d "{\"cacheKey\":\"$CACHE_KEY\"}" >/dev/null; then
-            echo "✅ Cleanup report sent for job $CACHE_KEY" >>"$LOG_FILE"
-        else
-            echo "❌ Cleanup report failed (exit $?) for job $CACHE_KEY" >>"$LOG_FILE"
-        fi
+    if curl --connect-timeout 5 --max-time 20 -s --fail -X POST \
+        "$BASE_URL/api/job/has-ended/$CACHE_KEY" \
+        -H "Content-Type: application/json" \
+        -d "{\"cacheKey\":\"$CACHE_KEY\"}" >/dev/null; then
+        echo "Cleanup report sent" >>"$LOG_FILE"
     else
-        echo "⚠️ BASE_URL not set — skipping cleanup report" >>"$LOG_FILE"
+        echo "Cleanup report failed" >>"$LOG_FILE"
     fi
 }
 
-# --- Trap Handler ---
-cleanup_and_exit() {
-    echo "INTERRUPTED=1" >>"$STATUS_FILE"
-    echo "STATUS=stopped" >>"$STATUS_FILE"
-    echo "🧨 Sending SIGINT to process group -$PID" >>"$LOG_FILE"
-    kill -INT "$PID" 2>/dev/null || true
+# Only HTTP inputs accept these options. Outer retries also cover other
+# protocols and FFmpeg versions which do not support an optional setting.
+RECONNECT_ARGS=()
+if [[ "$STREAM_URL" == http://* || "$STREAM_URL" == https://* ]]; then
+    RECONNECT_ARGS=(-reconnect 1 -reconnect_streamed 1 -reconnect_at_eof 1
+        -reconnect_on_network_error 1 -reconnect_on_http_error 408,429,5xx
+        -reconnect_delay_max 5 -rw_timeout 15000000)
+fi
 
-    sleep 5
-    kill -TERM -- -"$PID" 2>/dev/null || true
+attempt=0
+while [[ $STOP_REQUESTED -eq 0 && $SECONDS -lt $DEADLINE ]]; do
+    attempt=$((attempt + 1))
+    remaining=$((DEADLINE - SECONDS))
+    echo "CAPTURE_ATTEMPT=$attempt" >>"$STATUS_FILE"
+    # Relative paths simplify concat escaping, even when output paths contain quotes.
+    part="attempt_$attempt"
+    capture_args=()
+    if [[ "$RECORDING_TYPE" == hls ]]; then
+        mkdir -p "$PARTS_DIR/$part"
+        input="$PARTS_DIR/$part.m3u8"
+        echo "HLS_PLAYLIST=$input" >>"$STATUS_FILE"
+        capture_args=(-c:v libx264 -preset ultrafast -g 25 -sc_threshold 0
+            -c:a aac -b:a 128k -ac 2 -ar 44100 -f hls -hls_time 4
+            -hls_list_size 0 -hls_segment_filename "$PARTS_DIR/$part/segment_%06d.ts"
+            -hls_base_url "$part/" "$input")
+    else
+        input="$PARTS_DIR/$part.ts"
+        echo "TS_FILE=$input" >>"$STATUS_FILE"
+        capture_args=(-c copy -f mpegts "$input")
+    fi
+    code=0
+    run_bounded "$remaining" ffmpeg -nostdin -loglevel "$LOGLEVEL" \
+        "${RECONNECT_ARGS[@]}" -i "$STREAM_URL" -t "$remaining" \
+        "${capture_args[@]}" || code=$?
+    echo "FFMPEG_EXIT=$code" >>"$STATUS_FILE"
+    if [[ -s "$input" ]]; then
+        if [[ "$RECORDING_TYPE" == hls ]]; then
+            # A forced kill may leave a valid playlist open. Seal the local
+            # snapshot so packaging never waits for more live segments.
+            if grep -q '^#EXTINF:' "$input"; then
+                grep -q '^#EXT-X-ENDLIST' "$input" || echo '#EXT-X-ENDLIST' >>"$input"
+                printf "file '%s'\n" "$(basename "$input")" >>"$CONCAT_FILE"
+            fi
+        else
+            printf "file '%s'\n" "$(basename "$input")" >>"$CONCAT_FILE"
+        fi
+    fi
+    [[ $STOP_REQUESTED -eq 1 || $SECONDS -ge $DEADLINE ]] && break
+    echo "Capture ended early (exit $code); retrying without resetting deadline" >>"$LOG_FILE"
+    remaining=$((DEADLINE - SECONDS))
+    [[ $remaining -gt 2 ]] && remaining=2
+    sleep "$remaining" || true
+done
 
-    wait "$PID" 2>/dev/null || echo "⚠️ Child already exited"
+echo "ACTUAL_STOP=$(date -Iseconds)" >>"$STATUS_FILE"
 
-    echo "⚙️ Finalizing recording after interrupt..." >>"$LOG_FILE"
-
-    # CALL IT SAFELY
-    {
-        finalize_recording
-    } || {
-        echo "⚠️ finalize_recording failed" >>"$LOG_FILE"
-    }
-
-    # THIS ALWAYS RUNS NOW
-    echo "📡 Calling send_cleanup_report" >>"$LOG_FILE"
-    send_cleanup_report
-
-    echo "✅ Exiting after graceful interrupt." >>"$LOG_FILE"
-    exit 0
+finalize_recording() {
+    if [[ ! -s "$CONCAT_FILE" ]]; then
+        echo "ERROR=No captured media available" >>"$STATUS_FILE"
+        return 1
+    fi
+    echo "STATUS=packaging" >>"$STATUS_FILE"
+    if ! run_bounded "$PACKAGE_LIMIT" ffmpeg -nostdin -loglevel "$LOGLEVEL" \
+        -y -fflags +genpts -f concat -safe 0 -protocol_whitelist file,crypto,data \
+        -i "$CONCAT_FILE" -c copy -movflags +faststart "${OUTPUT_FILE}.packaged.mp4"; then
+        echo "ERROR=Packaging failed or timed out; capture parts retained" >>"$STATUS_FILE"
+        return 1
+    fi
+    mv "${OUTPUT_FILE}.packaged.mp4" "$OUTPUT_FILE"
+    echo "STATUS=optimizing" >>"$STATUS_FILE"
+    if run_bounded "$OPTIMIZE_LIMIT" ffmpeg -nostdin -loglevel "$LOGLEVEL" \
+        -y -i "$OUTPUT_FILE" -c:v libx264 -preset veryfast -crf 23 \
+        -c:a aac -b:a 128k -movflags +faststart "${OUTPUT_FILE}.opt.mp4"; then
+        mv "${OUTPUT_FILE}.opt.mp4" "$OUTPUT_FILE"
+    else
+        echo "WARNING=Optimization failed or timed out; keeping packaged MP4" >>"$STATUS_FILE"
+        rm -f "${OUTPUT_FILE}.opt.mp4"
+    fi
+    # Remove only this job's temporary capture parts after successful packaging.
+    rm -rf -- "$PARTS_DIR"
+    if [[ $STOP_REQUESTED -eq 1 ]]; then
+        echo "STATUS=stopped" >>"$STATUS_FILE"
+    else
+        echo "STATUS=done" >>"$STATUS_FILE"
+    fi
 }
 
-trap cleanup_and_exit SIGINT SIGTERM
-
-# --- Start Recording ---
-if [[ "$RECORDING_TYPE" == "hls" ]]; then
-    setsid timeout --foreground ${TIMEOUT}s ffmpeg -loglevel "$LOGLEVEL" \
-        -i "$STREAM_URL" \
-        -t "$DURATION" \
-        -c:v libx264 -preset ultrafast -g 25 -sc_threshold 0 \
-        -c:a aac -b:a 128k -ac 2 -ar 44100 \
-        -f hls \
-        -hls_time 4 \
-        -hls_list_size 0 \
-        -hls_flags append_list \
-        -hls_segment_filename "${HLS_DIR}/segment_%03d.ts" \
-        -hls_base_url "$(basename "$HLS_DIR")/" \
-        "$HLS_PLAYLIST" >>"$LOG_FILE" 2>&1 &
-else
-    setsid timeout --foreground ${TIMEOUT}s ffmpeg -loglevel "$LOGLEVEL" \
-        -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 -rw_timeout 30000000 \
-        -i "$STREAM_URL" -t "$DURATION" -c copy -f mpegts "$TS_FILE" >>"$LOG_FILE" 2>&1 &
-fi
-
-PID=$!
-echo "FFMPEG_PID=$PID" >>"$STATUS_FILE"
-echo "🕒 Waiting for FFmpeg process (PID=$PID)..." >>"$LOG_FILE"
-
-EXIT_CODE=0
-wait "$PID" || EXIT_CODE=$?
-ACTUAL_STOP=$(date -Iseconds)
-echo "ACTUAL_STOP=$ACTUAL_STOP" >>"$STATUS_FILE"
-echo "FFMPEG_EXIT=$EXIT_CODE" >>"$STATUS_FILE"
-
-if [[ $EXIT_CODE -eq 124 || $EXIT_CODE -eq 130 || $EXIT_CODE -eq 255 ]]; then
-    echo "INTERRUPTED=1" >>"$STATUS_FILE"
-    echo "STATUS=stopped" >>"$STATUS_FILE"
-elif [[ $EXIT_CODE -ne 0 ]]; then
+# Stop requests during capture must not also cancel subsequent packaging.
+trap ':' INT TERM
+if ! finalize_recording; then
     echo "STATUS=error" >>"$STATUS_FILE"
-    echo "ERROR=FFmpeg capture failed (exit $EXIT_CODE); see log" >>"$STATUS_FILE"
-    send_cleanup_report
-    exit "$EXIT_CODE"
 fi
-
-finalize_recording || echo "finalize_recording FAILED" >>"$LOG_FILE"
 send_cleanup_report

@@ -3,6 +3,7 @@ import { createReadStream, existsSync, statSync } from "fs";
 import path from "path";
 import { Readable } from "stream";
 import { trackViewer } from "@/utils/liveViewers";
+import { validRecordingId } from "@/utils/record/recordingHls";
 import { getWorkDir } from "@/utils/fileHandler";
 
 export async function GET(
@@ -12,6 +13,12 @@ export async function GET(
   const { params } = context as { params: { recordingId: string; filename: string } };
   const { recordingId, filename } = await params;
 
+  const attempt = req.nextUrl.searchParams.get("attempt");
+  if (!validRecordingId(recordingId) || !/^segment_\d+\.ts$/.test(filename)
+      || (attempt !== null && !/^[1-9][0-9]*$/.test(attempt))) {
+    return new Response("Invalid segment path", { status: 400 });
+  }
+
   trackViewer(recordingId, req.headers.get("x-forwarded-for") || "unknown");
 
   const recordDir = getWorkDir();
@@ -19,7 +26,9 @@ export async function GET(
     return new Response("Recordings directory not found", { status: 404 });
   }
 
-  const segmentPath = path.resolve(recordDir, `${recordingId}_hls`, filename);
+  const segmentPath = attempt
+    ? path.join(recordDir, `${recordingId}_parts`, `attempt_${attempt}`, filename)
+    : path.join(recordDir, `${recordingId}_hls`, filename);
 
   if (!existsSync(segmentPath)) {
     return new Response("Segment not found", { status: 404 });

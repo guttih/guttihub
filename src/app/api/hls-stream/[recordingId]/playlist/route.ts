@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
-import { existsSync, readFileSync } from "fs";
-import path from "path";
+import { readRecordingPlaylist, validRecordingId } from "@/utils/record/recordingHls";
 import { trackViewer } from "@/utils/liveViewers";
 import { getWorkDir } from "@/utils/fileHandler";
 
 export async function GET(req: NextRequest, context: unknown) {
     const { params } = context as { params: { recordingId: string } };
     const { recordingId } = await params;
+
+    if (!validRecordingId(recordingId)) return new Response("Invalid recording ID", { status: 400 });
 
     trackViewer(recordingId, req.headers.get("x-forwarded-for") || "unknown");
 
@@ -15,16 +16,9 @@ export async function GET(req: NextRequest, context: unknown) {
         return new Response("Recordings directory not found", { status: 404 });
     }
 
-    const playlistPath = path.resolve(recordDir, `${recordingId}.m3u8`);
-    if (!existsSync(playlistPath)) {
-        return new Response("Playlist not found", { status: 404 });
-    }
+    const playlist = readRecordingPlaylist(recordDir, recordingId);
+    if (!playlist) return new Response("Playlist not found", { status: 404 });
 
-    let playlist = readFileSync(playlistPath, "utf-8");
-
-    // 🧙 Rewrite segment URLs
-    const segmentBaseUrl = `/api/hls-stream/${recordingId}/segments/`;
-    playlist = playlist.replace(/^(.*\/)?segment_(\d+)\.ts$/gm, (_, __, num) => `${segmentBaseUrl}segment_${num}.ts`);
     return new Response(playlist, {
         status: 200,
         headers: {

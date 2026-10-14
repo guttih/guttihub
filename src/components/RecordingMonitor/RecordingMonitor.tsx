@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge/StatusBadge";
-import { ProgressBarTime } from "@/components/ProgressBarTime/ProgressBarTime";
+import { ProgressBarTime, formatDuration } from "@/components/ProgressBarTime/ProgressBarTime";
 import { BaseButton } from "@/components/ui/BaseButton/BaseButton";
 
 export interface MonitorData {
@@ -13,6 +13,7 @@ export interface MonitorData {
     duration?: number;
     createdAt?: string;
     outputFile?: string;
+    playbackUrl?: string | null;
     currentStatus: string;
     statusLines: string[];
     logLines: string[];
@@ -27,7 +28,7 @@ interface RecordingMonitorProps {
     cacheKey?: string;
     intervalMs?: number;
     onStopRecording?: () => void;
-    onStatusChange?: (status: string) => void;
+    onStatusChange?: (status: string, playbackUrl?: string | null) => void;
 
 }
 
@@ -35,6 +36,7 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
     const [monitorData, setMonitorData] = useState<MonitorData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const lastStatus = useRef<string | null>(null);
+    const lastPlaybackUrl = useRef<string | null>(null);
 
     const [stopCountdown, setStopCountdown] = useState<number | null>(null);
     
@@ -52,15 +54,17 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
                 if (!res.ok) throw new Error(json.error || "Failed to fetch monitor data");
 
                 if (mounted) {
+                    setError(null);
                     setMonitorData(json);
 
                     const newStatus = json.currentStatus?.toLowerCase();
-                    if (newStatus && newStatus !== lastStatus.current) {
+                    if (newStatus && (newStatus !== lastStatus.current || (json.playbackUrl ?? null) !== lastPlaybackUrl.current)) {
                       lastStatus.current = newStatus;
-                      onStatusChange?.(newStatus);
+                      lastPlaybackUrl.current = json.playbackUrl ?? null;
+                      onStatusChange?.(newStatus, json.playbackUrl);
                     }
                     
-                    if (["done", "stopped", "error"].includes(newStatus )) {
+                    if (newStatus === "error" || (["done", "stopped"].includes(newStatus) && json.playbackUrl)) {
                         if (stopCountdown === null) {
                             setStopCountdown(5); // start 5 pulls grace period
                         }
@@ -93,7 +97,7 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
             mounted = false;
             clearInterval(interval);
         };
-    }, [cacheKey, intervalMs, stopCountdown]);
+    }, [cacheKey, intervalMs, stopCountdown, onStatusChange]);
 
     if (error) {
         return <div className="p-4 text-red-400">❌ {error}</div>;
@@ -126,18 +130,19 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
                     <div>
                         <b>user:</b> {monitorData?.user ?? "(unknown)"}
                     </div>
-                    <div>
-                        <b>duration:</b> {monitorData?.duration ? `${monitorData.duration}s` : "?"}
-                    </div>
-                    <div>
-                        <b>createdAt:</b> {monitorData?.createdAt ?? "(unknown)"}
-                    </div>
+
                 </div>
 
                 {/* Recording Status */}
                 <div className="flex items-center gap-2 mb-2">
                     <span className="font-bold">Recording Status:</span>
                     <StatusBadge status={monitorData?.currentStatus ?? "unknown"} />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm py-2">
+                    <div><span className="block text-gray-400">Start time</span><span className="font-mono">{monitorData.startedAt ? new Date(monitorData.startedAt).toLocaleString([], { hour12: false }) : "—"}</span></div>
+                    <div><span className="block text-gray-400">Scheduled end</span><span className="font-mono">{monitorData.expectedStop ? new Date(monitorData.expectedStop).toLocaleString([], { hour12: false }) : "—"}</span></div>
+                    <div><span className="block text-gray-400">Duration</span><span className="font-mono">{monitorData.duration ? formatDuration(monitorData.duration) : "—"}</span></div>
                 </div>
 
                 {/* Progress Bar */}
@@ -147,12 +152,12 @@ export default function RecordingMonitor({ cacheKey, intervalMs = 2000, onStopRe
                     monitorData.serverTime &&
                     "recording" === monitorData?.currentStatus.toLowerCase() && (
                     // !["done", "error", "stopped"].includes(monitorData?.currentStatus.toLowerCase()) && (
-                        <ProgressBarTime start={monitorData.startedAt} end={monitorData.expectedStop} now={monitorData.serverTime} showTime />
+                        <ProgressBarTime start={monitorData.startedAt} end={monitorData.expectedStop} now={monitorData.serverTime} display="elapsed" showTime />
                     )}
 
                 {/* Last checked time */}
                 <div className="text-xs text-gray-400 mt-2">
-                    Last checked at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    Last checked at {monitorData.serverTime ? new Date(monitorData.serverTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }) : "—"}
                 </div>
 
                 {/* Error message if status is error */}

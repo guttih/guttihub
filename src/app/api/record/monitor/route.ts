@@ -1,9 +1,12 @@
 // src/app/api/record/monitor/route.ts
 
+import path from "path";
+import { services } from "@/config";
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { infoJsonExists, readRecordingJobInfo, readRecordingJobFile } from "@/utils/fileHandler";
 import { readJobLogFile, readJobStatusFile } from "@/utils/resolverUtils";
+import { getLatestStatus } from "@/utils/statusHelpers";
 import { isPidRunningFromStatus } from "@/utils/record/recordingJobUtils";
 
 export async function GET(req: NextRequest) {
@@ -28,14 +31,21 @@ export async function GET(req: NextRequest) {
     // --- Finalized recordings first ---
     if (recordingId && infoJsonExists(recordingId)) {
       const info = await readRecordingJobInfo(recordingId);
+      const service = services.find((service) => service.hasFileAccess);
+      const relativePath = info.job.finalOutputFile
+        ? path.relative(path.resolve("public/videos"), path.resolve(info.job.finalOutputFile)) : "";
+      const playbackUrl = service && relativePath && !relativePath.startsWith("..") && !path.isAbsolute(relativePath)
+        ? `/api/video/${encodeURIComponent(service.id)}/${relativePath.split(path.sep).map(encodeURIComponent).join("/")}`
+        : null;
       return NextResponse.json({
         recordingId,
         cacheKey: info.job.cacheKey,
         user: info.job.user,
         duration: info.job.duration,
         createdAt: info.job.createdAt,
-        outputFile: info.job.outputFile,
-        currentStatus: "done",
+        outputFile: info.job.finalOutputFile,
+        playbackUrl,
+        currentStatus: getLatestStatus(info.status.STATUS) === "unknown" ? "done" : getLatestStatus(info.status.STATUS),
         statusLines: Object.entries(info.status).map(([key, val]) => `${key}: ${val}`),
         logLines: info.logs,
         serverTime: new Date().toISOString(),
@@ -50,9 +60,7 @@ export async function GET(req: NextRequest) {
     const statusLinesRaw = await readJobStatusFile(job.statusFile);
     const logLinesRaw = await readJobLogFile(job.logFile);
 
-    let latestStatus = Array.isArray(statusLinesRaw.STATUS)
-      ? statusLinesRaw.STATUS[statusLinesRaw.STATUS.length - 1]
-      : statusLinesRaw.STATUS ?? "unknown";
+    let latestStatus = getLatestStatus(statusLinesRaw.STATUS);
 
     // 🔥 Detect if FFmpeg is actually dead
     if ((latestStatus === "recording" || latestStatus === "live") && !(await isPidRunningFromStatus(job.statusFile))) {
@@ -66,7 +74,10 @@ export async function GET(req: NextRequest) {
       user: statusLinesRaw.USER || "(unknown)",
       duration: Number(statusLinesRaw.DURATION) || null,
       createdAt: statusLinesRaw.STARTED_AT || null,
-      outputFile: statusLinesRaw.HLS_PLAYLIST || null,
+      outputFile: statusLinesRaw.HLS_PLAYLIST
+        ? getLatestStatus(statusLinesRaw.HLS_PLAYLIST)
+        : statusLinesRaw.TS_FILE ? getLatestStatus(statusLinesRaw.TS_FILE) : null,
+      playbackUrl: null,
       currentStatus: latestStatus,
       statusLines: Object.entries(statusLinesRaw).map(([key, val]) => `${key}: ${val}`),
       logLines: logLinesRaw,

@@ -17,9 +17,10 @@ export default function SchedulePage() {
     const [jobs, setJobs] = useState<ScheduledJobEnriched[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [now, setNow] = useState(new Date());
+    const [now, setNow] = useState<Date | null>(null);
 
     useEffect(() => {
+        setNow(new Date());
         const interval = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(interval);
     }, []);
@@ -96,7 +97,7 @@ export default function SchedulePage() {
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold text-white">Scheduled recordings</h1>
                 <span className="font-mono text-sm bg-gray-800 text-gray-300 px-3 py-1 rounded shadow-sm ring-1 ring-gray-700">
-                    {now.toLocaleString(undefined, { hour12: false })}
+                    {now ? now.toLocaleString(undefined, { hour12: false }) : "—"}
                 </span>
             </div>
 
