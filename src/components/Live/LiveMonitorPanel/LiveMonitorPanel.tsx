@@ -20,10 +20,11 @@ function getSafeLogoUrl(url?: string): string | undefined {
     return undefined;
 }
 
-export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Live Streams", onInlinePlay }: LiveMonitorPanelProps) {
+export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "Active Connections", onInlinePlay }: LiveMonitorPanelProps) {
     const [jobs, setJobs] = useState<EnrichedJob[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [keepAtTop, setKeepAtTop] = useState(false);
 
     const canStopStream = hasRole(userRole, "streamer");
     const canStopRecording = hasRole(userRole, "moderator");
@@ -87,7 +88,7 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
     }
 
     return (
-        <div className="w-full max-w-screen-xl mx-auto p-4 mt-8 border-t border-gray-600 text-white">
+        <div className={`w-full max-w-screen-xl mx-auto p-4 mt-8 mb-6 border-t border-gray-600 bg-black text-white ${keepAtTop ? "sticky top-0 z-20 max-h-dvh overflow-y-auto" : ""}`}>
             <h2 className="text-lg font-bold mb-3">{title}</h2>
 
             {loading && <p className="text-gray-400">Loading...</p>}
@@ -108,49 +109,70 @@ export function LiveMonitorPanel({ userRole, hideIfNone = true, title = "🧪 Li
                         status: job.status,
                     };
 
-                    if (job.status === "live" && job.format === "hls-live") {
-                        return (
-                            <MonitorCardStream
-                                key={job.cacheKey}
-                                {...commonProps}
-                                cacheKey={job.cacheKey}
-                                onKill={canStopStream ? () => handleKill(job.cacheKey) : undefined}
-                                onInlinePlay={onInlinePlay}
-                                watchUrl={makeWhachableRecordingUrl(job.recordingId)}
-                            />
-                        );
-                    } else if (job.status === "recording") {
-                        return (
-                            <MonitorCardRecording
-                                key={job.cacheKey}
-                                {...commonProps}
-                                cacheKey={job.cacheKey}
-                                watchUrl={makeWhachableRecordingUrl(job.recordingId)}
-                                duration={job.duration}
-                                onKill={canStopRecording ? () => handleKill(job.cacheKey) : undefined}
-                            />
-                        );
-                    } else if (job.status === "downloading") {
-                        return (
-                            <MonitorCardDownload
-                                key={job.cacheKey}
-                                {...commonProps}
-                                cacheKey={job.cacheKey}
-                                onKill={canStopRecording ? () => handleKill(job.cacheKey) : undefined}
-                            />
-                        );
-                    } else if (job.status === "playing") {
-                        return (
-                            <MonitorCardMovie
-                                key={job.cacheKey}
-                                {...commonProps}
-                                cacheKey={job.cacheKey}
-                                onKill={canStopRecording ? () => handleKill(job.cacheKey) : undefined}
-                            />
-                        );
-                    } else {
-                        return null;
-                    }
+                    const renderCard = () => {
+                        if (job.status === "live" && job.format === "hls-live") {
+                            return (
+                                <MonitorCardStream
+                                    key={job.cacheKey}
+                                    {...commonProps}
+                                    cacheKey={job.cacheKey}
+                                    onKill={canStopStream ? () => handleKill(job.cacheKey) : undefined}
+                                    onInlinePlay={onInlinePlay}
+                                    watchUrl={makeWhachableRecordingUrl(job.recordingId)}
+                                />
+                            );
+                        } else if (job.status === "recording") {
+                            return (
+                                <MonitorCardRecording
+                                    key={job.cacheKey}
+                                    {...commonProps}
+                                    cacheKey={job.cacheKey}
+                                    watchUrl={makeWhachableRecordingUrl(job.recordingId)}
+                                    duration={job.duration}
+                                    onKill={canStopRecording ? () => handleKill(job.cacheKey) : undefined}
+                                />
+                            );
+                        } else if (job.status === "downloading") {
+                            return (
+                                <MonitorCardDownload
+                                    key={job.cacheKey}
+                                    {...commonProps}
+                                    cacheKey={job.cacheKey}
+                                    onKill={canStopRecording ? () => handleKill(job.cacheKey) : undefined}
+                                />
+                            );
+                        } else if (job.status === "playing") {
+                            return (
+                                <MonitorCardMovie
+                                    key={job.cacheKey}
+                                    {...commonProps}
+                                    cacheKey={job.cacheKey}
+                                    onKill={canStopRecording ? () => handleKill(job.cacheKey) : undefined}
+                                />
+                            );
+                        } else {
+                            return null;
+                        }
+                    };
+
+                    return (
+                        <div key={job.cacheKey} className="relative">
+                            <button
+                                type="button"
+                                aria-label={keepAtTop ? "Unpin monitor panel" : "Pin monitor panel to top"}
+                                title={keepAtTop ? "Unpin monitor panel" : "Pin monitor panel to top"}
+                                aria-pressed={keepAtTop}
+                                onClick={() => setKeepAtTop((pinned) => !pinned)}
+                                className={`absolute right-1 top-1 rounded p-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400 ${keepAtTop ? "text-purple-400 hover:text-purple-300" : "text-gray-500 hover:text-gray-300"}`}
+                            >
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={`h-3.5 w-3.5 ${keepAtTop ? "" : "rotate-45"}`}>
+                                    <path d="M9 3h6l-1 7 4 4v2H6v-2l4-4-1-7Z" fill={keepAtTop ? "currentColor" : "none"} />
+                                    <path d="M12 16v6" />
+                                </svg>
+                            </button>
+                            {renderCard()}
+                        </div>
+                    );
                 })}
             </div>
         </div>

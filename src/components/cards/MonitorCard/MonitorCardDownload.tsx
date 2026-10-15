@@ -87,6 +87,20 @@ export function MonitorCardDownload({ name, groupTitle, logoUrl, serviceName, st
                     {isLaunchingMonitor ? "⏳ Launching monitor..." : "🖥️ Monitor"}
                 </Button>
 
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => window.open("/download", "_blank", "noopener,noreferrer")}
+                    title="Open download queue in a new tab"
+                    className="w-full text-left"
+                >
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="inline-block w-4 h-4 mr-1 align-text-bottom">
+                        <path d="M4 5h10M4 10h7M4 15h5M4 20h10M18 9v11m-4-4 4 4 4-4" />
+                    </svg>
+                    Download queue
+                    <span className="sr-only"> (opens in a new tab)</span>
+                </Button>
+
                 {onKill && (
                     <Button variant="danger" size="sm" onClick={() => onKill(cacheKey)} className="w-full text-left">
                         🔴 Kill

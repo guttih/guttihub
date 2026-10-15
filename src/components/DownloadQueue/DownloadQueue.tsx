@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Button } from "@/components/ui/Button/Button";
 import { useCallback, useEffect, useState } from "react";
 import type { DownloadQueueState, QueueAction } from "@/types/DownloadQueue";
 import DownloadMonitor from "@/components/DownloadMonitor/DownloadMonitor";
@@ -49,7 +50,6 @@ export default function DownloadQueue() {
         } catch (err) { setPlaylistMessage((err as Error).message); }
         finally { setBusy(false); }
     }
-    const button = "rounded bg-gray-700 px-3 py-2 text-sm hover:bg-gray-600 disabled:opacity-50";
     const details = queue?.items.find((item) => item.id === selected);
     return (
         <main className="mx-auto max-w-5xl space-y-6 p-6">
@@ -60,10 +60,10 @@ export default function DownloadQueue() {
                     <p className="text-gray-400">{queue?.items.filter((item) => item.status === "queued").length ?? 0} queued · {queue?.running ? "Queue running" : "Queue paused"}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                <button className={button} disabled={busy || !queue?.items.some((item) => item.status === "completed")} title="Save completed downloads in queue order as an M3U playlist beside the media files" onClick={() => void createPlaylist()}>Create M3U playlist</button>
-                <button className={button} disabled={busy || !queue} onClick={() => void act(queue?.running ? "pause" : "start")}>
-                    {queue?.running ? "Pause queue" : "Start queue"}
-                </button>
+                    <Button variant="secondary" disabled={busy || !queue?.items.some((item) => item.status === "completed")} title="Save completed downloads in queue order as an M3U playlist beside the media files" onClick={() => void createPlaylist()}>Create M3U playlist</Button>
+                    <Button variant={queue?.running ? "warning" : "success"} disabled={busy || !queue} onClick={() => void act(queue?.running ? "pause" : "start")}>
+                        {queue?.running ? "Pause queue" : "Start queue"}
+                    </Button>
                 </div>
             </div>
             <p className="text-sm text-gray-400">Shared download list. Add movies or episodes from search. Downloads continue when you close this page. Pausing lets the current download finish.</p>
@@ -82,13 +82,23 @@ export default function DownloadQueue() {
                                     <div><h3 className="font-semibold">{item.entry.name}</h3><p className="text-sm text-gray-400">Added by {item.user}</p></div>
                                     <div className="flex flex-wrap gap-2">
                                         {item.status === "queued" && <>
-                                            <button className={button} disabled={busy || index === 0} title="Move this item up to download sooner" aria-label="Move up in download queue" onClick={() => void act("moveUp", item.id)}>↑</button>
-                                            <button className={button} disabled={busy || index === items.length - 1} title="Move this item down to download later" aria-label="Move down in download queue" onClick={() => void act("moveDown", item.id)}>↓</button>
+                                            <Button disabled={busy || index === 0} title="Move this item up to download sooner" aria-label="Move up in download queue" onClick={() => void act("moveUp", item.id)}>↑</Button>
+                                            <Button disabled={busy || index === items.length - 1} title="Move this item down to download later" aria-label="Move down in download queue" onClick={() => void act("moveDown", item.id)}>↓</Button>
                                         </>}
-                                        {item.status === "downloading" && <button className={button} disabled={busy || item.cancelRequested} onClick={() => void act("cancel", item.id)}>{item.cancelRequested ? "Cancelling…" : "Cancel"}</button>}
-                                        {["failed", "cancelled"].includes(item.status) && <button className={button} disabled={busy} onClick={() => void act("retry", item.id)}>Retry</button>}
-                                        {item.status !== "downloading" && <button className={button} disabled={busy} onClick={() => void act("remove", item.id)}>Remove</button>}
-                                        {item.status === "downloading" && <button className={button} onClick={() => setSelected(selected === item.id ? null : item.id)}>Details</button>}
+                                        {item.status === "downloading" && <Button variant="danger" disabled={busy || item.cancelRequested} onClick={() => void act("cancel", item.id)}>{item.cancelRequested ? "Cancelling…" : "Cancel"}</Button>}
+                                        {["failed", "cancelled"].includes(item.status) && <Button variant="important" disabled={busy} onClick={() => void act("retry", item.id)}>Retry</Button>}
+                                        {item.status === "completed" && (
+                                            <Button
+                                                variant="important"
+                                                title="Play downloaded file in a new tab"
+                                                onClick={() => window.open(`/player?${new URLSearchParams({ streamUrl: `/api/download/queue/${encodeURIComponent(item.id)}/play` })}`, "_blank", "noopener,noreferrer")}
+                                            >
+                                                ▶️ Play
+                                                <span className="sr-only"> (opens in a new tab)</span>
+                                            </Button>
+                                        )}
+                                        {item.status !== "downloading" && <Button variant="danger" disabled={busy} onClick={() => void act("remove", item.id)}>Remove</Button>}
+                                        {item.status === "downloading" && <Button variant="secondary" onClick={() => setSelected(selected === item.id ? null : item.id)}>Details</Button>}
                                     </div>
                                 </div>
                                 {item.status === "downloading" && <div className="space-y-1">

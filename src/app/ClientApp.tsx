@@ -543,12 +543,10 @@ export default function ClientApp({ userRole }: { userRole: UserRole }) {
                     </div>
                 </fieldset>
             </div>
-            <div className="flex flex-wrap items-end gap-4 mb-6">
-                <LiveMonitorPanel
-                    userRole={userRole}
-                    // onInlinePlay={handlePlay}
-                />
-            </div>
+            <LiveMonitorPanel
+                userRole={userRole}
+                // onInlinePlay={handlePlay}
+            />
             {player.visible && player.mode === "inline" && (
                 <InlinePlayer
                     key={player.url}

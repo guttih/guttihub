@@ -222,7 +222,7 @@ export const InlinePlayer: React.FC<InlinePlayerProps> = ({
                 width,
                 height,
                 position: draggable ? "fixed" : undefined,
-                zIndex: draggable ? 50 : undefined,
+                zIndex: draggable ? 50 : 30,
             }}
         >
             {draggable && (
